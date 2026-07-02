@@ -19,7 +19,19 @@ body {
 
 h1 {
   font-size: 1.4rem;
-  margin: 0 0 16px;
+  margin: 0;
+}
+
+/* 상단 줄: 제목 + 내보내기 버튼 */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.export-btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
 }
 
 /* 쏟아붓기 입력창 — 크고 눈에 띄게 */

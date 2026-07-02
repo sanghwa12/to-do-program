@@ -8,8 +8,10 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
-import TaskItem, { PRIORITY_LABEL } from "./components/TaskItem.jsx";
+import TaskItem from "./components/TaskItem.jsx";
 import { todayStr } from "./date.js";
+import { PRIORITY_LABEL } from "./labels.js";
+import { exportBackup } from "./export.js";
 
 const TABS = ["오늘", "전체", "날짜", "우선순위", "카테고리"];
 
@@ -28,7 +30,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1>할 일</h1>
+      <header className="top">
+        <h1>할 일</h1>
+        {/* F06: 전체 할 일을 .md 파일로 백업 (Obsidian 호환) */}
+        <button className="export-btn" onClick={exportBackup}>
+          내보내기
+        </button>
+      </header>
 
       <QuickInput />
 

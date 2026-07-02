@@ -6,9 +6,7 @@
 import { useState } from "react";
 import { toggleDone, updateTask, deleteTask } from "../db.js";
 import { todayStr, daysLate } from "../date.js";
-
-// 우선순위 코드 → 한글 표시 (App.jsx의 그룹 제목에서도 사용)
-export const PRIORITY_LABEL = { high: "높음", med: "중간", low: "낮음" };
+import { PRIORITY_LABEL } from "../labels.js";
 
 export default function TaskItem({ task, categories }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
