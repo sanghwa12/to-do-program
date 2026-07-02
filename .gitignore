@@ -1,0 +1,10 @@
+# 설치된 라이브러리 (npm install로 언제든 다시 생성 가능 — 커밋하지 않음)
+node_modules/
+
+# 빌드 결과물 (npm run build로 다시 생성 가능)
+dist/
+
+# 개인 설정 / 로그
+.claude/settings.local.json
+*.log
+.DS_Store
