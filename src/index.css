@@ -53,6 +53,13 @@ h1 {
   margin-top: 32px;
 }
 
+/* 입력창 아래 날짜 인식 미리보기 */
+.parse-hint {
+  margin: 6px 2px 0;
+  font-size: 0.8rem;
+  color: #4a7dff;
+}
+
 /* 정리 뷰 탭 (F03) */
 .tabs {
   display: flex;

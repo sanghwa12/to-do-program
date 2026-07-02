@@ -21,14 +21,15 @@ db.version(1).stores({
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
 
-/** 새 할 일 추가 — 제목(title)만 있으면 됩니다. (쏟아붓기!) */
-export async function addTask(title) {
+/** 새 할 일 추가 — 제목(title)만 있으면 됩니다. (쏟아붓기!)
+ *  extra에 선택 필드를 같이 줄 수 있음 (예: { dueDate: "2026-07-02" }) */
+export async function addTask(title, extra = {}) {
   const task = {
     id: crypto.randomUUID(),           // 고유 번호 자동 생성
     title: title,                       // 할 일 내용
     done: false,                        // 처음엔 미완료
     createdAt: new Date().toISOString(), // 만든 시각 자동 기록
-    // memo, dueDate, priority, category는 선택 사항 — 나중에 붙일 수 있음
+    ...extra, // 입력에서 인식된 마감일 등 (없으면 아무것도 안 붙음)
   };
   await db.tasks.add(task);
 }
