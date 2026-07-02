@@ -41,6 +41,44 @@ h1 {
   margin-top: 32px;
 }
 
+/* 정리 뷰 탭 (F03) */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 2px solid #e0e0e0;
+}
+.tab {
+  border: none;
+  background: none;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: #666;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+}
+.tab:hover {
+  background: #ececec;
+}
+.tab.active {
+  color: #4a7dff;
+  font-weight: bold;
+  border-bottom: 2px solid #4a7dff;
+  margin-bottom: -2px;
+}
+
+/* 그룹 제목 (날짜/우선순위/카테고리 뷰) */
+.group-title {
+  font-size: 0.95rem;
+  margin: 18px 2px 6px;
+  color: #555;
+}
+.group-count {
+  font-size: 0.75rem;
+  color: #999;
+  font-weight: normal;
+}
+
 /* 할 일 목록 */
 .task-list {
   list-style: none;
@@ -80,6 +118,42 @@ h1 {
   font-size: 0.85rem;
   color: #777;
   white-space: pre-wrap;
+}
+
+/* 날짜·우선순위·카테고리 뱃지 */
+.task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0 28px;
+}
+.badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f0f0f0;
+  color: #555;
+}
+.badge.late {
+  background: #ffe3e3;
+  color: #c00;
+  font-weight: bold;
+}
+.badge.pri-high {
+  background: #ffe3e3;
+  color: #c00;
+}
+.badge.pri-med {
+  background: #fff3d6;
+  color: #a06b00;
+}
+.badge.pri-low {
+  background: #e3f0ff;
+  color: #1a5fb4;
+}
+.badge.cat {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .task-buttons {
@@ -123,4 +197,26 @@ button.delete {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+}
+
+/* 편집 모드의 날짜·우선순위·카테고리 입력 줄 */
+.edit-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.edit-extras label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: #666;
+}
+.edit-extras input,
+.edit-extras select {
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
 }

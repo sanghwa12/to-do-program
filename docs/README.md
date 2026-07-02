@@ -11,9 +11,9 @@
 
 | ID  | 파일 | 기능 | 마일스톤 | 상태 |
 |-----|------|------|----------|------|
-| F01 | [01-data-storage.md](01-data-storage.md) | 할 일 데이터 저장 (IndexedDB) | 1 | 계획됨 |
-| F02 | [02-quick-capture.md](02-quick-capture.md) | 빠른 입력 + 기본 목록 (쏟아붓기) | 1 | 계획됨 |
-| F03 | [03-organize-views.md](03-organize-views.md) | 정리 뷰 (오늘·날짜·우선순위·카테고리) | 2 | 계획됨 |
+| F01 | [01-data-storage.md](01-data-storage.md) | 할 일 데이터 저장 (IndexedDB) | 1 | 구현완료 |
+| F02 | [02-quick-capture.md](02-quick-capture.md) | 빠른 입력 + 기본 목록 (쏟아붓기) | 1 | 구현완료 |
+| F03 | [03-organize-views.md](03-organize-views.md) | 정리 뷰 (오늘·날짜·우선순위·카테고리) | 2 | 개발중 |
 | F06 | [06-export-backup.md](06-export-backup.md) | 파일 내보내기 (백업·Obsidian 호환) | 3 | 계획됨 |
 | F04 | [04-review-digest.md](04-review-digest.md) | 정리본(리뷰) 화면 — 형태 미정 | 4 | 스텁 |
 | F05 | [05-pwa-install.md](05-pwa-install.md) | PWA 설치 (선택) | 5 | 스텁 |
