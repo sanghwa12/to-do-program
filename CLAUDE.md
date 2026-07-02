@@ -33,7 +33,9 @@ type Task = {
   id: string;                          // 자동 생성 (crypto.randomUUID)
   title: string;                       // 할 일 내용 (필수)
   memo?: string;                       // 상세 메모 (선택)
-  dueDate?: string;                    // 언제 할 일인지, "YYYY-MM-DD" (없으면 날짜 미정)
+  dueDate?: string;                    // 날짜, "YYYY-MM-DD" (마감일·당일·기간의 끝. 없으면 날짜 미정)
+  startDate?: string;                  // 기간의 시작일 (dateKind가 "range"일 때만)
+  dateKind?: "due" | "day" | "range";  // 날짜의 의미: ~까지 마감 | 그날 당일 | 기간
   priority?: "low" | "med" | "high";   // 우선순위 (선택)
   category?: string;                   // 카테고리 (예: "업무", "개인") (선택)
   done: boolean;                       // 완료 여부

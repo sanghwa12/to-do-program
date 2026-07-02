@@ -158,6 +158,11 @@ h1 {
   color: #c00;
   font-weight: bold;
 }
+.badge.ongoing {
+  background: #e3f0ff;
+  color: #1a5fb4;
+  font-weight: bold;
+}
 .badge.pri-high {
   background: #ffe3e3;
   color: #c00;

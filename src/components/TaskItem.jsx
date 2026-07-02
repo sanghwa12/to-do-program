@@ -13,6 +13,8 @@ export default function TaskItem({ task, categories }) {
   const [title, setTitle] = useState(task.title);
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
+  const [dateKind, setDateKind] = useState(task.dateKind || "due"); // 날짜의 의미
+  const [startDate, setStartDate] = useState(task.startDate || ""); // 기간의 시작
   const [priority, setPriority] = useState(task.priority || "");
   const [category, setCategory] = useState(task.category || "");
 
@@ -21,10 +23,14 @@ export default function TaskItem({ task, categories }) {
     e.preventDefault();
     const newTitle = title.trim();
     if (newTitle === "") return; // 제목을 비워서 저장하는 건 막음
+    // 날짜 종류 정리: 날짜가 없으면 종류도 없음. "기간"인데 시작일이 없으면 "마감"으로.
+    const kind = !dueDate ? undefined : dateKind === "range" && !startDate ? "due" : dateKind;
     await updateTask(task.id, {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: dueDate || undefined,
+      dateKind: kind,
+      startDate: kind === "range" ? startDate : undefined,
       priority: priority || undefined,
       category: category.trim() || undefined,
     });
@@ -36,6 +42,8 @@ export default function TaskItem({ task, categories }) {
     setTitle(task.title);
     setMemo(task.memo || "");
     setDueDate(task.dueDate || "");
+    setDateKind(task.dateKind || "due");
+    setStartDate(task.startDate || "");
     setPriority(task.priority || "");
     setCategory(task.category || "");
     setEditing(false);
@@ -68,6 +76,30 @@ export default function TaskItem({ task, categories }) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </label>
+            {/* 날짜의 의미: ~까지 마감 / 그날 당일 / 기간 */}
+            {dueDate && (
+              <label>
+                날짜 종류
+                <select
+                  value={dateKind}
+                  onChange={(e) => setDateKind(e.target.value)}
+                >
+                  <option value="due">마감 (~까지)</option>
+                  <option value="day">당일</option>
+                  <option value="range">기간</option>
+                </select>
+              </label>
+            )}
+            {dueDate && dateKind === "range" && (
+              <label>
+                시작일
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </label>
+            )}
             <label>
               우선순위
               <select
@@ -109,8 +141,24 @@ export default function TaskItem({ task, categories }) {
   }
 
   // ----- 보통 모드 화면 -----
-  // 마감이 지났는지 (미완료 + 마감일이 오늘 이전)
-  const late = !task.done && task.dueDate && task.dueDate < todayStr();
+  const today = todayStr();
+  // 날짜가 지났는지 (미완료 + 날짜(기간이면 끝)가 오늘 이전)
+  const late = !task.done && task.dueDate && task.dueDate < today;
+  // 기간 한가운데인지 (예: 11/11~11/23 사이의 오늘)
+  const ongoing =
+    !task.done &&
+    task.dateKind === "range" &&
+    task.startDate &&
+    task.startDate <= today &&
+    today <= task.dueDate;
+
+  // 날짜 뱃지 문구: 종류에 따라 다르게 (F03 R2b)
+  function dateBadgeText() {
+    if (task.dateKind === "range" && task.startDate)
+      return `📅 ${task.startDate} ~ ${task.dueDate}`;
+    if (task.dateKind === "day") return `📅 ${task.dueDate} 당일`;
+    return `📅 ~${task.dueDate}`; // 마감 (예전 데이터도 마감으로 취급)
+  }
 
   return (
     <li className={"task-item" + (task.done ? " done" : "")}>
@@ -128,9 +176,14 @@ export default function TaskItem({ task, categories }) {
       {(task.dueDate || task.priority || task.category) && (
         <div className="task-badges">
           {task.dueDate && (
-            <span className={"badge" + (late ? " late" : "")}>
-              📅 {task.dueDate}
+            <span
+              className={
+                "badge" + (late ? " late" : "") + (ongoing ? " ongoing" : "")
+              }
+            >
+              {dateBadgeText()}
               {late && ` · ${daysLate(task.dueDate)}일 지남`}
+              {ongoing && " · 진행중"}
             </span>
           )}
           {task.priority && (

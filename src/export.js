@@ -14,7 +14,11 @@ import { PRIORITY_LABEL } from "./labels.js";
 function taskToLine(task) {
   const box = task.done ? "x" : " "; // 완료면 [x], 미완료면 [ ]
   let line = `- [${box}] ${task.title}`;
-  if (task.dueDate) line += ` 📅 ${task.dueDate}`;
+  // 날짜 종류에 맞게 표기 (마감 ~날짜 / 당일 / 기간 시작~끝)
+  if (task.dateKind === "range" && task.startDate)
+    line += ` 📅 ${task.startDate} ~ ${task.dueDate}`;
+  else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
+  else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
   if (task.priority) line += ` (${PRIORITY_LABEL[task.priority]})`;
   if (task.category) line += ` #${task.category}`;
   // 메모는 들여쓴 다음 줄로 (줄바꿈이 있으면 " / "로 이어붙임)

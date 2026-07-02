@@ -77,11 +77,19 @@ function TaskView({ tab, tasks, categories }) {
     );
   }
 
-  // [오늘] 마감이 오늘이거나 이미 지난(밀린) 미완료 할 일 (F03 R2)
+  // [오늘] 날짜가 오늘이거나 이미 지난(밀린) 미완료 할 일 (F03 R2)
+  // 기간(range)은 시작일이 됐으면 표시 (진행 중인 일이니까)
   if (tab === "오늘") {
     const today = todayStr();
     const list = tasks
-      .filter((t) => !t.done && t.dueDate && t.dueDate <= today)
+      .filter(
+        (t) =>
+          !t.done &&
+          t.dueDate &&
+          (t.dateKind === "range" && t.startDate
+            ? t.startDate <= today
+            : t.dueDate <= today)
+      )
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate)); // 밀린 것부터 위로
     return (
       <TaskList

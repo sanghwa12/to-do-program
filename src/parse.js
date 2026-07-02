@@ -1,11 +1,11 @@
 // ============================================================
-// 입력 텍스트에서 마감일 자동 인식 (F02 R9)
+// 입력 텍스트에서 날짜 자동 인식 (F02 R9~R11)
 // ------------------------------------------------------------
-// "도서 반납 (~7/2)"  → { title: "도서 반납", dueDate: "2026-07-02" }
-// "보고서 초안쓰기"    → { title: "보고서 초안쓰기" }  (날짜 없음)
-//
-// 인식하는 표기: ~월/일  (괄호는 있어도 되고 없어도 됨)
-//   예: ~7/2, (~7/2), ~7-2, ~2026/7/2, ~2026-07-02
+// 3가지 종류를 알아듣습니다:
+//   마감(due)  : "도서 반납 (~7/2)", "~내일", "~금요일"  → 그날까지
+//   당일(day)  : "연구실 안전점검 7/7" (맨 날짜, 문장 끝만) → 그날
+//   기간(range): "학부실험 조교 11/11~11/23"             → 그 기간 동안
+// 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // ============================================================
 import { todayStr } from "./date.js";
 
@@ -14,36 +14,112 @@ function fmt(year, month, day) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/** Date 객체 → "YYYY-MM-DD" */
+function dateToStr(d) {
+  return fmt(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+/** 월/일이 말이 되는 값인지 */
+function validMD(month, day) {
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+}
+
+/** (연도?, 월, 일) → "YYYY-MM-DD". 연도 생략 시 올해, 지난 날짜면 내년 */
+function resolveYMD(yearStr, monthStr, dayStr) {
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!validMD(month, day)) return null; // 엉터리 날짜
+  const year = yearStr ? Number(yearStr) : new Date().getFullYear();
+  let result = fmt(year, month, day);
+  if (!yearStr && result < todayStr()) {
+    result = fmt(year + 1, month, day); // 예: 12월에 "1/5" → 내년 1월 5일
+  }
+  return result;
+}
+
+// "~오늘 / ~내일 / ~모레 / ~금요일" 같은 말 날짜 처리
+const WEEKDAY_NUM = { 일: 0, 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6 };
+
+function resolveWord(word) {
+  const today = new Date(todayStr() + "T00:00:00");
+  const plus = (n) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + n);
+    return dateToStr(d);
+  };
+  if (word === "오늘") return plus(0);
+  if (word === "내일") return plus(1);
+  if (word === "모레") return plus(2);
+  // "금요일" → 다가오는 금요일 (오늘이 금요일이면 오늘)
+  const target = WEEKDAY_NUM[word[0]];
+  const diff = (target - today.getDay() + 7) % 7;
+  return plus(diff);
+}
+
+// 날짜 조각 패턴: (연도-)월-일, 구분자는 / - . 허용
+const D = "(?:(\\d{4})[/\\-.])?(\\d{1,2})[/\\-.](\\d{1,2})";
+// 기간: 날짜~날짜 (어디에 있어도 인식)
+const RANGE_RE = new RegExp(`\\(?\\s*${D}\\s*~\\s*${D}\\s*\\)?`);
+// 마감(숫자): ~날짜 (어디에 있어도 인식)
+const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\s*\\)?`);
+// 마감(말): ~오늘, ~내일, ~모레, ~월요일 ... ~일요일
+const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)\s*\)?/;
+// 당일: 맨 날짜 — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
+const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?\\s*$`);
+
+/** 인식된 표기를 제목에서 빼고 공백 정리 */
+function stripTitle(text, matched) {
+  return text.replace(matched, " ").replace(/\s+/g, " ").trim();
+}
+
 /**
- * 입력 텍스트를 { title, dueDate? }로 분해.
+ * 입력 텍스트를 { title, dueDate?, startDate?, dateKind? }로 분해.
  * 날짜 표기가 없거나 이상하면 전체를 제목으로 그대로 반환.
  */
 export function parseQuickInput(text) {
-  const plain = { title: text.trim() }; // 날짜 없이 그대로 쓸 때의 결과
+  const plain = { title: text.trim() };
 
-  // ~ 뒤에 오는 날짜 표기 찾기: (연도?)월(구분자)일 — 구분자는 / - . 허용
-  const re = /\(?\s*~\s*(?:(\d{4})[/\-.])?(\d{1,2})[/\-.](\d{1,2})\s*\)?/;
-  const m = text.match(re);
-  if (!m) return plain; // ~날짜 표기가 없음 → 마감 없는 할 일
-
-  const [matched, yearStr, monthStr, dayStr] = m;
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-
-  // 말이 안 되는 날짜(예: 13월, 40일)면 인식 취소
-  if (month < 1 || month > 12 || day < 1 || day > 31) return plain;
-
-  // 연도를 안 썼으면 올해로. 단, 이미 지난 날짜면 내년으로
-  // (예: 12월에 "~1/5"라고 쓰면 내년 1월 5일이라는 뜻일 테니까)
-  let year = yearStr ? Number(yearStr) : new Date().getFullYear();
-  let dueDate = fmt(year, month, day);
-  if (!yearStr && dueDate < todayStr()) {
-    dueDate = fmt(year + 1, month, day);
+  // 1) 기간: 11/11~11/23 (마감 ~보다 먼저 검사해야 함 — "~11/23" 부분만 잡히지 않게)
+  let m = text.match(RANGE_RE);
+  if (m) {
+    const start = resolveYMD(m[1], m[2], m[3]);
+    let end = resolveYMD(m[4], m[5], m[6]);
+    if (start && end) {
+      // 연도 생략한 기간이 해를 넘는 경우 (예: 12/28~1/3) → 끝을 다음 해로
+      if (end < start) {
+        const [y, mo, d] = end.split("-").map(Number);
+        end = fmt(y + 1, mo, d);
+      }
+      const title = stripTitle(text, m[0]);
+      if (title) return { title, startDate: start, dueDate: end, dateKind: "range" };
+    }
   }
 
-  // 날짜 표기를 제목에서 빼고, 남는 공백 정리
-  const title = text.replace(matched, " ").replace(/\s+/g, " ").trim();
-  if (title === "") return plain; // 날짜만 있고 제목이 없으면 인식 취소
+  // 2) 마감: ~7/2 또는 ~내일 / ~금요일
+  m = text.match(DUE_NUM_RE);
+  if (m) {
+    const due = resolveYMD(m[1], m[2], m[3]);
+    if (due) {
+      const title = stripTitle(text, m[0]);
+      if (title) return { title, dueDate: due, dateKind: "due" };
+    }
+  }
+  m = text.match(DUE_WORD_RE);
+  if (m) {
+    const due = resolveWord(m[1]);
+    const title = stripTitle(text, m[0]);
+    if (title) return { title, dueDate: due, dateKind: "due" };
+  }
 
-  return { title, dueDate };
+  // 3) 당일: 문장 끝의 맨 날짜 (예: "연구실 안전점검 7/7")
+  m = text.match(DAY_RE);
+  if (m) {
+    const day = resolveYMD(m[1], m[2], m[3]);
+    if (day) {
+      const title = stripTitle(text, m[0]);
+      if (title) return { title, dueDate: day, dateKind: "day" };
+    }
+  }
+
+  return plain; // 날짜 표기 없음
 }
