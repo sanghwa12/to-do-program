@@ -16,7 +16,7 @@
 | F03 | [03-organize-views.md](03-organize-views.md) | 정리 뷰 (오늘·날짜·우선순위·카테고리) | 2 | 개발중 |
 | F06 | [06-export-backup.md](06-export-backup.md) | 파일 내보내기 (백업·Obsidian 호환) | 3 | 개발중 |
 | F04 | [04-review-digest.md](04-review-digest.md) | 정리본(리뷰) 화면 — 형태 미정 | 4 | 스텁 |
-| F05 | [05-pwa-install.md](05-pwa-install.md) | PWA 설치 (선택) | 5 | 스텁 |
+| F05 | [05-pwa-install.md](05-pwa-install.md) | PWA 설치 (선택) | 5 | 개발중 |
 
 > 새 기능을 추가할 때는 [00-template.md](00-template.md)를 복사해서 새 문서를 만들고,
 > 위 표에 한 줄 추가하세요.
