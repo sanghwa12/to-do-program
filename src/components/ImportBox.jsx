@@ -7,8 +7,8 @@ import { useState } from "react";
 import { addManyTasks } from "../db.js";
 import { parseImport } from "../parse.js";
 
-export default function ImportBox() {
-  const [open, setOpen] = useState(false);
+// open / onClose를 부모(App)가 제어 — 상단 "⋯ 메뉴 > 가져오기"에서 엶
+export default function ImportBox({ open, onClose }) {
   const [text, setText] = useState("");
 
   const drafts = parseImport(text); // 지금 붙여넣은 내용의 변환 결과 (미리보기)
@@ -18,17 +18,10 @@ export default function ImportBox() {
     const n = await addManyTasks(drafts);
     alert(`${n}개의 할 일을 추가했어요.`);
     setText("");
-    setOpen(false);
+    onClose();
   }
 
-  // 닫혀 있을 때는 여는 버튼만
-  if (!open) {
-    return (
-      <button className="import-toggle" onClick={() => setOpen(true)}>
-        가져오기
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
     <div className="import-box">
@@ -51,8 +44,8 @@ export default function ImportBox() {
         </button>
         <button
           onClick={() => {
-            setOpen(false);
             setText("");
+            onClose();
           }}
         >
           취소

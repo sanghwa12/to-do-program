@@ -28,6 +28,8 @@ export default function App() {
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
   const [catFilter, setCatFilter] = useState(null); // 카테고리 필터 (null=전체)
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
+  const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
+  const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
 
   // 목록: 휴지통에 없는 할 일만 (deletedAt 없는 것). DB가 바뀌면 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -88,11 +90,61 @@ export default function App() {
     <div className="app">
       <header className="top">
         <h1>할 일</h1>
-        {/* F06: 전체 할 일을 .md 파일로 백업 (Obsidian 호환) */}
+        {/* 자주 안 쓰는 액션은 ⋯ 메뉴 하나로 모음 (D00: 액션 정리) */}
         {!showTrash && (
-          <button className="export-btn" onClick={exportBackup}>
-            내보내기
-          </button>
+          <div className="menu-wrap">
+            <button
+              className="menu-btn"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="메뉴"
+            >
+              ⋯
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="menu-backdrop"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="menu">
+                  <button
+                    onClick={() => {
+                      setShowImport(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    가져오기
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportBackup();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    내보내기
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowTrash(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    🗑 휴지통
+                    {trash && trash.length > 0 ? ` (${trash.length})` : ""}
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      setConfirmClear(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    모두 지우기
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </header>
 
@@ -108,8 +160,19 @@ export default function App() {
         <>
           <QuickInput />
 
-          {/* F02 R12: 여러 줄 붙여넣기로 한 번에 가져오기 */}
-          <ImportBox />
+          {/* F02 R12: 여러 줄 붙여넣기 (⋯ 메뉴 > 가져오기 에서 엶) */}
+          <ImportBox open={showImport} onClose={() => setShowImport(false)} />
+
+          {/* 모두 지우기 확인 (⋯ 메뉴에서 눌렀을 때) */}
+          {confirmClear && (
+            <div className="clear-confirm">
+              모두 휴지통으로 보낼까요?
+              <button className="delete" onClick={handleClearAll}>
+                모두 보내기
+              </button>
+              <button onClick={() => setConfirmClear(false)}>취소</button>
+            </div>
+          )}
 
           {/* 정리 뷰 탭 */}
           <nav className="tabs">
@@ -138,28 +201,6 @@ export default function App() {
             />
           )}
 
-          {/* 아래 줄: 휴지통 열기 + 모두 지우기 */}
-          <div className="bottom-bar">
-            <button className="link-btn" onClick={() => setShowTrash(true)}>
-              🗑 휴지통{trash && trash.length > 0 ? ` (${trash.length})` : ""}
-            </button>
-            {confirmClear ? (
-              <span className="danger-confirm">
-                모두 휴지통으로 보낼까요?
-                <button className="delete" onClick={handleClearAll}>
-                  모두 보내기
-                </button>
-                <button onClick={() => setConfirmClear(false)}>취소</button>
-              </span>
-            ) : (
-              <button
-                className="reset-btn"
-                onClick={() => setConfirmClear(true)}
-              >
-                모두 지우기
-              </button>
-            )}
-          </div>
         </>
       )}
 

@@ -60,12 +60,54 @@ h1 {
   color: #4a7dff;
 }
 
-/* 여러 줄 가져오기 */
-.import-toggle {
-  margin-top: 8px;
-  font-size: 0.8rem;
-  color: #666;
+/* 상단 ⋯ 메뉴 (D00: 액션 정리) */
+.menu-wrap {
+  position: relative;
 }
+.menu-btn {
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #666;
+  padding: 4px 10px;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 11;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+.menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #333;
+}
+.menu button:hover {
+  background: #f0f0f0;
+}
+.menu button.danger {
+  color: #c00;
+}
+
+/* 여러 줄 가져오기 */
 .import-box {
   margin-top: 8px;
 }
@@ -221,38 +263,39 @@ h1 {
   background: #f0f0f0;
   color: #555;
 }
+/* D00 색 줄이기: 강조색(빨강)은 '밀림'에만. 나머지는 회색 기본,
+   중요도는 색 대신 굵기로만 구분해 화면을 차분하게 유지 */
 .badge.late {
   background: #ffe3e3;
   color: #c00;
   font-weight: bold;
 }
 .badge.ongoing {
-  background: #e3f0ff;
-  color: #1a5fb4;
   font-weight: bold;
 }
 .badge.pri-high {
-  background: #ffe3e3;
-  color: #c00;
+  color: #333;
+  font-weight: bold;
 }
-.badge.pri-med {
-  background: #fff3d6;
-  color: #a06b00;
-}
-.badge.pri-low {
-  background: #e3f0ff;
-  color: #1a5fb4;
-}
-.badge.cat {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
+/* pri-med, pri-low, cat 은 .badge 기본(회색) 그대로 사용 */
 
+/* D00 항목 버튼 숨기기: 평소엔 안 보이고, 마우스 올리거나 포커스 때만 노출 */
 .task-buttons {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
   margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.task-item:hover .task-buttons,
+.task-item:focus-within .task-buttons {
+  opacity: 1;
+}
+/* 삭제 확인 중이거나 휴지통 화면에선 항상 보이게 */
+.task-buttons.confirm,
+.task-item.trashed .task-buttons {
+  opacity: 1;
 }
 
 button {
@@ -280,16 +323,15 @@ button.delete {
   margin-right: auto;
 }
 
-/* 맨 아래 줄: 휴지통 열기 + 모두 지우기 */
-.bottom-bar {
-  margin-top: 40px;
-  padding-top: 16px;
-  border-top: 1px solid #eee;
+/* 모두 지우기 확인 줄 */
+.clear-confirm {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #c00;
 }
 .link-btn {
   border: none;
