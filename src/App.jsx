@@ -16,11 +16,12 @@ import {
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
+import CalendarView from "./components/CalendarView.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
 
-const TABS = ["오늘", "전체", "날짜", "우선순위", "카테고리"];
+const TABS = ["오늘", "달력", "전체", "날짜", "우선순위", "카테고리"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -234,6 +235,13 @@ function TaskView({
   catFilter,
   setCatFilter,
 }) {
+  // [달력] 월간 달력 위에서 날짜 있는 할 일 보기 (F07)
+  if (tab === "달력") {
+    return (
+      <CalendarView tasks={tasks} categories={categories} onDelete={onDelete} />
+    );
+  }
+
   // [전체] 최신순 그대로
   if (tab === "전체") {
     return (

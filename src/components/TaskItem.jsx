@@ -26,12 +26,19 @@ export default function TaskItem({ task, categories, onDelete }) {
     if (newTitle === "") return; // 제목을 비워서 저장하는 건 막음
     // 날짜 종류 정리: 날짜가 없으면 종류도 없음. "기간"인데 시작일이 없으면 "마감"으로.
     const kind = !dueDate ? undefined : dateKind === "range" && !startDate ? "due" : dateKind;
+    // 기간의 시작일이 끝일보다 늦으면 앞뒤를 자동으로 바꿔줌
+    // (역전된 기간은 달력 등에서 안 보이게 되므로 저장 시점에 바로잡음)
+    let saveStart = kind === "range" ? startDate : undefined;
+    let saveDue = dueDate || undefined;
+    if (kind === "range" && saveStart > saveDue) {
+      [saveStart, saveDue] = [saveDue, saveStart];
+    }
     await updateTask(task.id, {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
-      dueDate: dueDate || undefined,
+      dueDate: saveDue,
       dateKind: kind,
-      startDate: kind === "range" ? startDate : undefined,
+      startDate: saveStart,
       priority: priority || undefined,
       category: category.trim() || undefined,
     });
