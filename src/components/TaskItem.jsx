@@ -3,10 +3,14 @@
 // 보통 모드: 체크박스 + 제목 + 날짜·우선순위·카테고리 뱃지 + 수정/삭제
 // 편집 모드: 제목·메모에 더해 날짜·우선순위·카테고리를 "나중에" 붙일 수 있음 (F03 R1)
 // ------------------------------------------------------------
-import { useState } from "react";
-import { toggleDone, updateTask } from "../db.js";
+import { useState, useRef } from "react";
+import { db, toggleDone, updateTask } from "../db.js";
 import { todayStr, daysLate } from "../date.js";
 import { PRIORITY_LABEL } from "../labels.js";
+
+// 우선순위 점 클릭 시 순환 순서: 없음 → 높음 → 중간 → 낮음 → 없음
+// (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
+const NEXT_PRIORITY = { high: "med", med: "low", low: undefined };
 
 export default function TaskItem({ task, categories, onDelete }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
@@ -45,8 +49,8 @@ export default function TaskItem({ task, categories, onDelete }) {
     setEditing(false);
   }
 
-  // 편집 취소 — 고치던 내용은 버리고 원래대로
-  function handleCancel() {
+  // 폼 내용을 지금 저장돼 있는 값으로 다시 채움
+  function syncFormFromTask() {
     setTitle(task.title);
     setMemo(task.memo || "");
     setDueDate(task.dueDate || "");
@@ -54,6 +58,18 @@ export default function TaskItem({ task, categories, onDelete }) {
     setStartDate(task.startDate || "");
     setPriority(task.priority || "");
     setCategory(task.category || "");
+  }
+
+  // 편집 시작 — 반드시 최신 값으로 폼을 채우고 시작
+  // (점 클릭처럼 폼 밖에서 바뀐 값이, 저장할 때 옛 값으로 되돌아가지 않게)
+  function startEditing() {
+    syncFormFromTask();
+    setEditing(true);
+  }
+
+  // 편집 취소 — 고치던 내용은 버리고 원래대로
+  function handleCancel() {
+    syncFormFromTask();
     setEditing(false);
   }
 
@@ -168,20 +184,45 @@ export default function TaskItem({ task, categories, onDelete }) {
     return `📅 ~${task.dueDate}`; // 마감 (예전 데이터도 마감으로 취급)
   }
 
+  // 우선순위 점 클릭 → 다음 단계로 순환 (R13)
+  // 연타해도 한 클릭 = 한 단계가 되도록, 클릭들을 줄 세워 차례로 처리하고
+  // 매번 저장소의 최신 값을 읽어 다음 단계를 계산함
+  const clickQueue = useRef(Promise.resolve());
+  function cyclePriority() {
+    clickQueue.current = clickQueue.current.then(async () => {
+      const current = (await db.tasks.get(task.id))?.priority;
+      const next = current ? NEXT_PRIORITY[current] : "high";
+      await updateTask(task.id, { priority: next });
+    });
+  }
+
   return (
     <li className={"task-item" + (task.done ? " done" : "")}>
-      <label className="task-main">
-        <input
-          type="checkbox"
-          checked={task.done}
-          onChange={() => toggleDone(task)}
+      <div className="task-main-row">
+        {/* 우선순위 점: ●높음/●중간/●낮음/○없음 — 클릭하면 변경 */}
+        <button
+          className={"pri-dot pri-" + (task.priority || "none")}
+          onClick={cyclePriority}
+          title={
+            "우선순위: " +
+            (task.priority ? PRIORITY_LABEL[task.priority] : "없음") +
+            " (클릭해서 변경)"
+          }
+          aria-label="우선순위 변경"
         />
-        <span className="task-title">{task.title}</span>
-      </label>
+        <label className="task-main">
+          <input
+            type="checkbox"
+            checked={task.done}
+            onChange={() => toggleDone(task)}
+          />
+          <span className="task-title">{task.title}</span>
+        </label>
+      </div>
       {task.memo && <p className="task-memo">{task.memo}</p>}
 
-      {/* 날짜·우선순위·카테고리 뱃지 (있는 것만 표시) */}
-      {(task.dueDate || task.priority || task.category) && (
+      {/* 날짜·카테고리 뱃지 (있는 것만 표시) */}
+      {(task.dueDate || task.category) && (
         <div className="task-badges">
           {task.dueDate && (
             <span
@@ -194,11 +235,7 @@ export default function TaskItem({ task, categories, onDelete }) {
               {ongoing && " · 진행중"}
             </span>
           )}
-          {task.priority && (
-            <span className={"badge pri-" + task.priority}>
-              {PRIORITY_LABEL[task.priority]}
-            </span>
-          )}
+          {/* 우선순위는 제목 앞 점(●)으로 표시 — 글자 뱃지는 제거 (R13, D00) */}
           {task.category && <span className="badge cat">#{task.category}</span>}
         </div>
       )}
@@ -220,7 +257,7 @@ export default function TaskItem({ task, categories, onDelete }) {
         </div>
       ) : (
         <div className="task-buttons">
-          <button onClick={() => setEditing(true)}>수정</button>
+          <button onClick={startEditing}>수정</button>
           <button className="delete" onClick={() => setConfirmDelete(true)}>
             삭제
           </button>

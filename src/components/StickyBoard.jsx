@@ -27,6 +27,10 @@ export default function StickyBoard({ tasks }) {
                 checked={t.done}
                 onChange={() => toggleDone(t)}
               />
+              {/* 우선순위가 있으면 색 점으로 표시 (R13과 동일한 색) */}
+              {t.priority && (
+                <span className={"pri-dot static pri-" + t.priority} />
+              )}
               <span
                 className={
                   "sticky-text" + (t.priority === "high" ? " hi" : "")
