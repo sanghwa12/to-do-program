@@ -58,17 +58,30 @@ export async function updateTask(id, changes) {
   await db.tasks.update(id, changes);
 }
 
-/** 할 일 삭제 */
-export async function deleteTask(id) {
-  await db.tasks.delete(id);
+// ------------------------------------------------------------
+// 휴지통 (소프트 삭제)
+// "삭제"는 진짜로 지우지 않고 deletedAt(버린 시각)을 찍어 휴지통으로 보냄.
+// 목록에서는 안 보이지만 데이터는 남아 있어 언제든 복원 가능.
+// "완전 삭제"에서만 진짜로 제거됨.
+// ------------------------------------------------------------
+
+/** 휴지통으로 보내기 (소프트 삭제) — id 배열 (1개도 배열로) */
+export async function trashTasks(ids) {
+  const now = new Date().toISOString();
+  await db.tasks.where("id").anyOf(ids).modify({ deletedAt: now });
 }
 
-/** 여러 개 한 번에 삭제 (카테고리별/전체 삭제용) */
-export async function deleteManyTasks(ids) {
+/** 휴지통에서 복원 — deletedAt을 지워 목록으로 되돌림 */
+export async function restoreTasks(ids) {
+  await db.tasks.where("id").anyOf(ids).modify({ deletedAt: null });
+}
+
+/** 완전 삭제 (진짜 제거, 되돌릴 수 없음) — id 배열 */
+export async function permanentDeleteTasks(ids) {
   await db.tasks.bulkDelete(ids);
 }
 
-/** 삭제한 할 일들을 원래 그대로(같은 id·내용) 되살리기 — 되돌리기용 (1개도 배열로) */
-export async function restoreManyTasks(tasks) {
-  await db.tasks.bulkAdd(tasks);
+/** 휴지통 비우기 — 버려진 것 전부 완전 삭제 */
+export async function emptyTrash() {
+  await db.tasks.filter((t) => !!t.deletedAt).delete();
 }

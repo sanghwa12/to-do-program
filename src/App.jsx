@@ -6,7 +6,13 @@
 // ============================================================
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteTask, deleteManyTasks, restoreManyTasks } from "./db.js";
+import {
+  db,
+  trashTasks,
+  restoreTasks,
+  permanentDeleteTasks,
+  emptyTrash,
+} from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
@@ -18,13 +24,28 @@ const TABS = ["오늘", "전체", "날짜", "우선순위", "카테고리"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
-  const [undo, setUndo] = useState(null); // 방금 삭제한 할 일 (되돌리기용)
+  const [undo, setUndo] = useState(null); // 방금 휴지통에 넣은 것 (실행취소용)
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
   const [catFilter, setCatFilter] = useState(null); // 카테고리 필터 (null=전체)
+  const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
 
-  // DB의 할 일 목록을 실시간 구독 — DB가 바뀌면 화면도 자동 갱신
+  // 목록: 휴지통에 없는 할 일만 (deletedAt 없는 것). DB가 바뀌면 자동 갱신
   const tasks = useLiveQuery(() =>
-    db.tasks.orderBy("createdAt").reverse().toArray()
+    db.tasks
+      .orderBy("createdAt")
+      .reverse()
+      .filter((t) => !t.deletedAt)
+      .toArray()
+  );
+
+  // 휴지통: 버려진(deletedAt 있는) 할 일. 최근 버린 것부터
+  const trash = useLiveQuery(() =>
+    db.tasks
+      .filter((t) => !!t.deletedAt)
+      .toArray()
+      .then((arr) =>
+        arr.sort((a, b) => (b.deletedAt || "").localeCompare(a.deletedAt || ""))
+      )
   );
 
   // 이미 써 본 카테고리 목록 (편집 화면의 자동완성 후보로 씀)
@@ -32,35 +53,34 @@ export default function App() {
     ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
   ];
 
-  // 삭제한 항목(들)을 기억해 두고 "되돌리기" 알림을 띄움 (1개도 배열로)
-  // 시간 제한 없음 — 되돌리기 또는 닫기(✕)를 누를 때까지 계속 떠 있음
-  function showUndo(deletedTasks, label) {
-    setUndo({ tasks: deletedTasks, label });
+  // 휴지통에 넣은 항목(들)의 id를 기억해 "실행취소" 알림을 띄움
+  function showUndo(ids, label) {
+    setUndo({ ids, label });
   }
 
-  // 한 개 삭제
+  // 한 개 → 휴지통
   async function handleDelete(task) {
-    await deleteTask(task.id);
-    showUndo([task], `"${task.title}"`);
+    await trashTasks([task.id]);
+    showUndo([task.id], `"${task.title}"`);
   }
 
-  // 카테고리별 삭제 (그 카테고리의 할 일 전체)
+  // 카테고리별 → 휴지통
   async function handleDeleteCategory(list, label) {
-    await deleteManyTasks(list.map((t) => t.id));
-    showUndo(list, label);
+    await trashTasks(list.map((t) => t.id));
+    showUndo(list.map((t) => t.id), label);
   }
 
-  // 모두 지우기 (전체 삭제) — 되돌리기 가능
+  // 전체 → 휴지통
   async function handleClearAll() {
     const all = tasks ?? [];
-    await deleteManyTasks(all.map((t) => t.id));
+    await trashTasks(all.map((t) => t.id));
     setConfirmClear(false);
-    showUndo(all, `전체 ${all.length}개`);
+    showUndo(all.map((t) => t.id), `전체 ${all.length}개`);
   }
 
-  // 되돌리기: 기억해 둔 항목(들)을 원래 그대로 복구
+  // 실행취소: 방금 휴지통에 넣은 것들을 목록으로 복원
   async function handleUndo() {
-    if (undo) await restoreManyTasks(undo.tasks);
+    if (undo) await restoreTasks(undo.ids);
     setUndo(null);
   }
 
@@ -69,48 +89,85 @@ export default function App() {
       <header className="top">
         <h1>할 일</h1>
         {/* F06: 전체 할 일을 .md 파일로 백업 (Obsidian 호환) */}
-        <button className="export-btn" onClick={exportBackup}>
-          내보내기
-        </button>
+        {!showTrash && (
+          <button className="export-btn" onClick={exportBackup}>
+            내보내기
+          </button>
+        )}
       </header>
 
-      <QuickInput />
-
-      {/* F02 R12: 여러 줄 붙여넣기로 한 번에 가져오기 */}
-      <ImportBox />
-
-      {/* 정리 뷰 탭 */}
-      <nav className="tabs">
-        {TABS.map((name) => (
-          <button
-            key={name}
-            className={"tab" + (tab === name ? " active" : "")}
-            onClick={() => setTab(name)}
-          >
-            {name}
-          </button>
-        ))}
-      </nav>
-
-      {tasks === undefined ? (
-        <p className="hint">불러오는 중...</p>
-      ) : (
-        <TaskView
-          tab={tab}
-          tasks={tasks}
-          categories={categories}
-          onDelete={handleDelete}
-          onDeleteCategory={handleDeleteCategory}
-          catFilter={catFilter}
-          setCatFilter={setCatFilter}
+      {showTrash ? (
+        <TrashView
+          trash={trash}
+          onBack={() => setShowTrash(false)}
+          onRestore={(t) => restoreTasks([t.id])}
+          onPurge={(ids) => permanentDeleteTasks(ids)}
+          onEmpty={emptyTrash}
         />
+      ) : (
+        <>
+          <QuickInput />
+
+          {/* F02 R12: 여러 줄 붙여넣기로 한 번에 가져오기 */}
+          <ImportBox />
+
+          {/* 정리 뷰 탭 */}
+          <nav className="tabs">
+            {TABS.map((name) => (
+              <button
+                key={name}
+                className={"tab" + (tab === name ? " active" : "")}
+                onClick={() => setTab(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </nav>
+
+          {tasks === undefined ? (
+            <p className="hint">불러오는 중...</p>
+          ) : (
+            <TaskView
+              tab={tab}
+              tasks={tasks}
+              categories={categories}
+              onDelete={handleDelete}
+              onDeleteCategory={handleDeleteCategory}
+              catFilter={catFilter}
+              setCatFilter={setCatFilter}
+            />
+          )}
+
+          {/* 아래 줄: 휴지통 열기 + 모두 지우기 */}
+          <div className="bottom-bar">
+            <button className="link-btn" onClick={() => setShowTrash(true)}>
+              🗑 휴지통{trash && trash.length > 0 ? ` (${trash.length})` : ""}
+            </button>
+            {confirmClear ? (
+              <span className="danger-confirm">
+                모두 휴지통으로 보낼까요?
+                <button className="delete" onClick={handleClearAll}>
+                  모두 보내기
+                </button>
+                <button onClick={() => setConfirmClear(false)}>취소</button>
+              </span>
+            ) : (
+              <button
+                className="reset-btn"
+                onClick={() => setConfirmClear(true)}
+              >
+                모두 지우기
+              </button>
+            )}
+          </div>
+        </>
       )}
 
-      {/* 되돌리기 알림 (되돌리기 또는 닫기를 누를 때까지 계속 떠 있음) */}
+      {/* 실행취소 알림 (실행취소 또는 닫기를 누를 때까지 계속 떠 있음) */}
       {undo && (
         <div className="toast">
-          <span>{undo.label} 삭제됨</span>
-          <button onClick={handleUndo}>되돌리기</button>
+          <span>{undo.label} 휴지통으로 이동</span>
+          <button onClick={handleUndo}>실행취소</button>
           <button
             className="toast-close"
             onClick={() => setUndo(null)}
@@ -120,23 +177,6 @@ export default function App() {
           </button>
         </div>
       )}
-
-      {/* 초기화 (드물게 쓰는 위험한 동작이라 맨 아래·작게) */}
-      <div className="danger-zone">
-        {confirmClear ? (
-          <span className="danger-confirm">
-            정말 전부 삭제할까요? (되돌리기 가능 · 걱정되면 "내보내기"로 백업)
-            <button className="delete" onClick={handleClearAll}>
-              전부 삭제
-            </button>
-            <button onClick={() => setConfirmClear(false)}>취소</button>
-          </span>
-        ) : (
-          <button className="reset-btn" onClick={() => setConfirmClear(true)}>
-            모두 지우기
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -305,6 +345,90 @@ function TaskView({
           )
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------------------
+// 휴지통 화면 (F02 R7d): 버린 할 일을 복원하거나 완전 삭제
+// ------------------------------------------------------------
+function TrashView({ trash, onBack, onRestore, onPurge, onEmpty }) {
+  const items = trash ?? [];
+  return (
+    <div className="trash">
+      <div className="trash-head">
+        <button className="link-btn" onClick={onBack}>
+          ← 뒤로
+        </button>
+        <h2 className="trash-title">휴지통 ({items.length})</h2>
+        {items.length > 0 && (
+          <EmptyTrashButton count={items.length} onEmpty={onEmpty} />
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="hint">휴지통이 비어 있어요.</p>
+      ) : (
+        <ul className="task-list">
+          {items.map((t) => (
+            <li key={t.id} className="task-item trashed">
+              <span className="task-title">{t.title}</span>
+              {t.category && <span className="badge cat">#{t.category}</span>}
+              <div className="task-buttons">
+                <button onClick={() => onRestore(t)}>복원</button>
+                <PurgeButton onConfirm={() => onPurge([t.id])} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** 한 개 완전 삭제 버튼 (확인 필요) */
+function PurgeButton({ onConfirm }) {
+  const [confirm, setConfirm] = useState(false);
+  if (!confirm) {
+    return (
+      <button className="delete" onClick={() => setConfirm(true)}>
+        완전 삭제
+      </button>
+    );
+  }
+  return (
+    <span className="danger-confirm">
+      완전히 지울까요?
+      <button className="delete" onClick={onConfirm}>
+        삭제
+      </button>
+      <button onClick={() => setConfirm(false)}>취소</button>
+    </span>
+  );
+}
+
+/** 휴지통 비우기 버튼 (확인 필요) */
+function EmptyTrashButton({ count, onEmpty }) {
+  const [confirm, setConfirm] = useState(false);
+  if (!confirm) {
+    return (
+      <button className="reset-btn" onClick={() => setConfirm(true)}>
+        비우기
+      </button>
+    );
+  }
+  return (
+    <span className="danger-confirm">
+      {count}개를 완전히 지울까요? (되돌릴 수 없음)
+      <button
+        className="delete"
+        onClick={() => {
+          onEmpty();
+          setConfirm(false);
+        }}
+      >
+        비우기
+      </button>
+      <button onClick={() => setConfirm(false)}>취소</button>
+    </span>
   );
 }
 

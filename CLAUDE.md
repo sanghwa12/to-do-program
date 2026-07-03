@@ -40,6 +40,7 @@ type Task = {
   category?: string;                   // 카테고리 (예: "업무", "개인") (선택)
   done: boolean;                       // 완료 여부
   createdAt: string;                   // 생성 시각 (ISO 8601, 자동)
+  deletedAt?: string | null;           // 휴지통에 버린 시각 (있으면 휴지통에 있음, 없으면 목록에)
 };
 ```
 - 입력할 때 title만 필수. 나머지는 **나중에 붙여도 되는 선택 사항** (쏟아붓기를 막지 않기 위해).

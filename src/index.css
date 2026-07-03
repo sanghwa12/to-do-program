@@ -280,12 +280,26 @@ button.delete {
   margin-right: auto;
 }
 
-/* 초기화 구역 (맨 아래, 눈에 안 띄게) */
-.danger-zone {
+/* 맨 아래 줄: 휴지통 열기 + 모두 지우기 */
+.bottom-bar {
   margin-top: 40px;
   padding-top: 16px;
   border-top: 1px solid #eee;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.link-btn {
+  border: none;
+  background: none;
+  color: #666;
+  font-size: 0.85rem;
+}
+.link-btn:hover {
+  background: none;
+  text-decoration: underline;
 }
 .reset-btn {
   border: none;
@@ -296,6 +310,29 @@ button.delete {
 .reset-btn:hover {
   background: none;
   color: #c00;
+}
+
+/* 휴지통 화면 */
+.trash-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+.trash-title {
+  font-size: 1.1rem;
+  margin: 0;
+  margin-right: auto;
+}
+.task-item.trashed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.task-item.trashed .task-title {
+  color: #999;
+  margin-right: auto;
 }
 .danger-confirm {
   font-size: 0.8rem;

@@ -20,8 +20,9 @@
 
 ## 요구사항 (검증 항목)
 - [ ] R1. `Task` 데이터 구조가 CLAUDE.md의 데이터 모델과 일치한다.
-      필드: `id, title, memo?, dueDate?, startDate?, dateKind?, priority?, category?, done, createdAt`
+      필드: `id, title, memo?, dueDate?, startDate?, dateKind?, priority?, category?, done, createdAt, deletedAt?`
       (dateKind: "due" 마감 | "day" 당일 | "range" 기간 — 2026-07-02 추가)
+      (deletedAt: 휴지통에 버린 시각. 있으면 휴지통, 없으면 목록 — 2026-07-03 추가)
 - [ ] R2. Dexie.js로 IndexedDB 데이터베이스를 정의한 파일이 있다 (예: `src/db.js`).
 - [ ] R3. `tasks` 테이블(스토어)이 정의되어 있고, `id`로 조회 가능한 스키마다.
 - [ ] R4. 할 일 저장/조회/수정/삭제 함수(또는 Dexie 호출)가 존재한다.
