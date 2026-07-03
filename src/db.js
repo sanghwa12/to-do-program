@@ -62,3 +62,8 @@ export async function updateTask(id, changes) {
 export async function deleteTask(id) {
   await db.tasks.delete(id);
 }
+
+/** 삭제한 할 일을 원래 그대로(같은 id·내용) 되살리기 — 되돌리기용 */
+export async function restoreTask(task) {
+  await db.tasks.add(task);
+}

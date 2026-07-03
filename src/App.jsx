@@ -6,7 +6,7 @@
 // ============================================================
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "./db.js";
+import { db, deleteTask, restoreTask } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
@@ -18,6 +18,7 @@ const TABS = ["오늘", "전체", "날짜", "우선순위", "카테고리"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
+  const [undo, setUndo] = useState(null); // 방금 삭제한 할 일 (되돌리기용)
 
   // DB의 할 일 목록을 실시간 구독 — DB가 바뀌면 화면도 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -28,6 +29,22 @@ export default function App() {
   const categories = [
     ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
   ];
+
+  // 삭제: 지운 뒤 그 항목을 기억해 두고 "되돌리기" 알림을 잠깐 띄움
+  async function handleDelete(task) {
+    await deleteTask(task.id);
+    setUndo(task);
+    // 6초 뒤 자동으로 알림 닫기 (그 사이 안 되돌리면 삭제 확정)
+    setTimeout(() => {
+      setUndo((cur) => (cur && cur.id === task.id ? null : cur));
+    }, 6000);
+  }
+
+  // 되돌리기: 기억해 둔 항목을 원래 그대로 복구
+  async function handleUndo() {
+    if (undo) await restoreTask(undo);
+    setUndo(null);
+  }
 
   return (
     <div className="app">
@@ -60,7 +77,20 @@ export default function App() {
       {tasks === undefined ? (
         <p className="hint">불러오는 중...</p>
       ) : (
-        <TaskView tab={tab} tasks={tasks} categories={categories} />
+        <TaskView
+          tab={tab}
+          tasks={tasks}
+          categories={categories}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* 되돌리기 알림 (삭제 직후 잠깐 뜸) */}
+      {undo && (
+        <div className="toast">
+          <span>"{undo.title}" 삭제됨</span>
+          <button onClick={handleUndo}>되돌리기</button>
+        </div>
       )}
     </div>
   );
@@ -69,13 +99,14 @@ export default function App() {
 // ------------------------------------------------------------
 // 선택된 탭에 맞게 할 일을 정리해서 보여주는 부분
 // ------------------------------------------------------------
-function TaskView({ tab, tasks, categories }) {
+function TaskView({ tab, tasks, categories, onDelete }) {
   // [전체] 최신순 그대로
   if (tab === "전체") {
     return (
       <TaskList
         tasks={tasks}
         categories={categories}
+        onDelete={onDelete}
         emptyHint="할 일이 없어요. 위에 입력하고 Enter를 누르세요!"
       />
     );
@@ -99,6 +130,7 @@ function TaskView({ tab, tasks, categories }) {
       <TaskList
         tasks={list}
         categories={categories}
+        onDelete={onDelete}
         emptyHint="오늘 할 일이 없어요. 다른 탭에서 할 일에 날짜를 붙여보세요."
       />
     );
@@ -126,7 +158,11 @@ function TaskView({ tab, tasks, categories }) {
                 {group.title}{" "}
                 <span className="group-count">{group.tasks.length}</span>
               </h2>
-              <TaskList tasks={group.tasks} categories={categories} />
+              <TaskList
+                tasks={group.tasks}
+                categories={categories}
+                onDelete={onDelete}
+              />
             </section>
           )
       )}
@@ -135,14 +171,19 @@ function TaskView({ tab, tasks, categories }) {
 }
 
 /** 할 일 목록 하나를 그리는 공통 부품 */
-function TaskList({ tasks, categories, emptyHint }) {
+function TaskList({ tasks, categories, onDelete, emptyHint }) {
   if (tasks.length === 0) {
     return emptyHint ? <p className="hint">{emptyHint}</p> : null;
   }
   return (
     <ul className="task-list">
       {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} categories={categories} />
+        <TaskItem
+          key={task.id}
+          task={task}
+          categories={categories}
+          onDelete={onDelete}
+        />
       ))}
     </ul>
   );

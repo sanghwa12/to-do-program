@@ -4,12 +4,13 @@
 // 편집 모드: 제목·메모에 더해 날짜·우선순위·카테고리를 "나중에" 붙일 수 있음 (F03 R1)
 // ------------------------------------------------------------
 import { useState } from "react";
-import { toggleDone, updateTask, deleteTask } from "../db.js";
+import { toggleDone, updateTask } from "../db.js";
 import { todayStr, daysLate } from "../date.js";
 import { PRIORITY_LABEL } from "../labels.js";
 
-export default function TaskItem({ task, categories }) {
+export default function TaskItem({ task, categories, onDelete }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
+  const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
   const [title, setTitle] = useState(task.title);
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
@@ -195,12 +196,29 @@ export default function TaskItem({ task, categories }) {
         </div>
       )}
 
-      <div className="task-buttons">
-        <button onClick={() => setEditing(true)}>수정</button>
-        <button className="delete" onClick={() => deleteTask(task.id)}>
-          삭제
-        </button>
-      </div>
+      {/* 평소엔 수정/삭제 버튼, 삭제 누르면 그 자리에서 한 번 더 확인 (R7a) */}
+      {confirmDelete ? (
+        <div className="task-buttons confirm">
+          <span className="confirm-text">삭제할까요?</span>
+          <button
+            className="delete"
+            onClick={() => {
+              onDelete(task);
+              setConfirmDelete(false);
+            }}
+          >
+            삭제
+          </button>
+          <button onClick={() => setConfirmDelete(false)}>취소</button>
+        </div>
+      ) : (
+        <div className="task-buttons">
+          <button onClick={() => setEditing(true)}>수정</button>
+          <button className="delete" onClick={() => setConfirmDelete(true)}>
+            삭제
+          </button>
+        </div>
+      )}
     </li>
   );
 }
