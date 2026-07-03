@@ -6,7 +6,7 @@
 // ============================================================
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteTask, restoreTask } from "./db.js";
+import { db, deleteTask, restoreTask, clearAllTasks } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
@@ -19,6 +19,7 @@ const TABS = ["오늘", "전체", "날짜", "우선순위", "카테고리"];
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
   const [undo, setUndo] = useState(null); // 방금 삭제한 할 일 (되돌리기용)
+  const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
 
   // DB의 할 일 목록을 실시간 구독 — DB가 바뀌면 화면도 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -43,6 +44,13 @@ export default function App() {
   // 되돌리기: 기억해 둔 항목을 원래 그대로 복구
   async function handleUndo() {
     if (undo) await restoreTask(undo);
+    setUndo(null);
+  }
+
+  // 모두 지우기 (초기화) — 되돌릴 수 없음
+  async function handleClearAll() {
+    await clearAllTasks();
+    setConfirmClear(false);
     setUndo(null);
   }
 
@@ -92,6 +100,23 @@ export default function App() {
           <button onClick={handleUndo}>되돌리기</button>
         </div>
       )}
+
+      {/* 초기화 (드물게 쓰는 위험한 동작이라 맨 아래·작게) */}
+      <div className="danger-zone">
+        {confirmClear ? (
+          <span className="danger-confirm">
+            정말 전부 삭제할까요? 되돌릴 수 없어요 (먼저 "내보내기"로 백업 권장)
+            <button className="delete" onClick={handleClearAll}>
+              전부 삭제
+            </button>
+            <button onClick={() => setConfirmClear(false)}>취소</button>
+          </span>
+        ) : (
+          <button className="reset-btn" onClick={() => setConfirmClear(true)}>
+            모두 지우기
+          </button>
+        )}
+      </div>
     </div>
   );
 }

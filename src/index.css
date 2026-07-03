@@ -246,6 +246,33 @@ button.delete {
   margin-right: auto;
 }
 
+/* 초기화 구역 (맨 아래, 눈에 안 띄게) */
+.danger-zone {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+.reset-btn {
+  border: none;
+  background: none;
+  color: #bbb;
+  font-size: 0.8rem;
+}
+.reset-btn:hover {
+  background: none;
+  color: #c00;
+}
+.danger-confirm {
+  font-size: 0.8rem;
+  color: #c00;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* 되돌리기 알림 (화면 아래 가운데) */
 .toast {
   position: fixed;

@@ -67,3 +67,8 @@ export async function deleteTask(id) {
 export async function restoreTask(task) {
   await db.tasks.add(task);
 }
+
+/** 모든 할 일 삭제 (초기화). 되돌릴 수 없으므로 화면에서 반드시 확인받고 호출할 것 */
+export async function clearAllTasks() {
+  await db.tasks.clear();
+}
