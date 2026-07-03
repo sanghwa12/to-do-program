@@ -385,17 +385,18 @@ h1 {
   border-color: #999;
   background: #f0f0f0;
 }
+/* 신호등 색: 빨강=높음(급해!), 주황=중간(주의), 초록=낮음(여유) */
 .pri-dot.pri-high {
-  background: #d9534f;
-  border-color: #d9534f;
+  background: #e03131;
+  border-color: #e03131;
 }
 .pri-dot.pri-med {
-  background: #e8a33d;
-  border-color: #e8a33d;
+  background: #f59f00;
+  border-color: #f59f00;
 }
 .pri-dot.pri-low {
-  background: #7ba7d9;
-  border-color: #7ba7d9;
+  background: #37b24d;
+  border-color: #37b24d;
 }
 .pri-dot.pri-high:hover,
 .pri-dot.pri-med:hover,

@@ -3,12 +3,11 @@
 // 오늘 탭 하단에 항상 보여줌 — 잊히지 않게.
 // 여기서는 보기 + 완료 체크만 (수정·삭제는 "전체" 탭에서 — 단순 유지)
 // ------------------------------------------------------------
-import { toggleDone } from "../db.js";
 
 // 우선순위 정렬 순서: 높음 → 중간 → 낮음 → 미지정
 const ORDER = { high: 0, med: 1, low: 2 };
 
-export default function StickyBoard({ tasks }) {
+export default function StickyBoard({ tasks, onToggle }) {
   const sorted = [...tasks].sort(
     (a, b) => (ORDER[a.priority] ?? 3) - (ORDER[b.priority] ?? 3)
   );
@@ -25,7 +24,7 @@ export default function StickyBoard({ tasks }) {
               <input
                 type="checkbox"
                 checked={t.done}
-                onChange={() => toggleDone(t)}
+                onChange={() => onToggle(t)}
               />
               {/* 우선순위가 있으면 색 점으로 표시 (R13과 동일한 색) */}
               {t.priority && (

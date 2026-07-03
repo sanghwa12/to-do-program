@@ -53,6 +53,11 @@ export async function toggleDone(task) {
   await db.tasks.update(task.id, { done: !task.done });
 }
 
+/** 완료 표시 풀기 (실행취소용) — 잘못 체크한 것을 미완료로 되돌림 */
+export async function uncheckTasks(ids) {
+  await db.tasks.where("id").anyOf(ids).modify({ done: false });
+}
+
 /** 할 일 수정 — 바꿀 내용만 골라서 전달 (예: { title: "새 제목", memo: "메모" }) */
 export async function updateTask(id, changes) {
   await db.tasks.update(id, changes);

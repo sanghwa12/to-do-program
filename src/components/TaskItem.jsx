@@ -4,7 +4,7 @@
 // 편집 모드: 제목·메모에 더해 날짜·우선순위·카테고리를 "나중에" 붙일 수 있음 (F03 R1)
 // ------------------------------------------------------------
 import { useState, useRef } from "react";
-import { db, toggleDone, updateTask } from "../db.js";
+import { db, updateTask } from "../db.js";
 import { todayStr, daysLate } from "../date.js";
 import { PRIORITY_LABEL } from "../labels.js";
 
@@ -12,7 +12,7 @@ import { PRIORITY_LABEL } from "../labels.js";
 // (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
 const NEXT_PRIORITY = { high: "med", med: "low", low: undefined };
 
-export default function TaskItem({ task, categories, onDelete }) {
+export default function TaskItem({ task, categories, onToggle, onDelete }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
   const [title, setTitle] = useState(task.title);
@@ -214,7 +214,7 @@ export default function TaskItem({ task, categories, onDelete }) {
           <input
             type="checkbox"
             checked={task.done}
-            onChange={() => toggleDone(task)}
+            onChange={() => onToggle(task)}
           />
           <span className="task-title">{task.title}</span>
         </label>

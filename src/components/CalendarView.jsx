@@ -16,7 +16,7 @@ import {
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_CHIPS = 3; // 한 칸에 보여줄 최대 칩 수 (R5)
 
-export default function CalendarView({ tasks, categories, onDelete }) {
+export default function CalendarView({ tasks, categories, onToggle, onDelete }) {
   const today = todayStr();
   const [todayY, todayM] = today.split("-").map(Number);
 
@@ -124,6 +124,7 @@ export default function CalendarView({ tasks, categories, onDelete }) {
                   key={task.id}
                   task={task}
                   categories={categories}
+                  onToggle={onToggle}
                   onDelete={onDelete}
                 />
               ))}

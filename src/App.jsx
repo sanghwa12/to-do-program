@@ -8,6 +8,8 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   db,
+  toggleDone,
+  uncheckTasks,
   trashTasks,
   restoreTasks,
   permanentDeleteTasks,
@@ -21,6 +23,7 @@ import StickyBoard from "./components/StickyBoard.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
+import { sortForAllTab } from "./sort.js";
 
 const TABS = ["오늘", "달력", "전체", "날짜", "우선순위", "카테고리"];
 
@@ -57,21 +60,31 @@ export default function App() {
     ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
   ];
 
-  // 휴지통에 넣은 항목(들)의 id를 기억해 "실행취소" 알림을 띄움
-  function showUndo(ids, label) {
-    setUndo({ ids, label });
+  // 방금 한 동작을 기억해 "실행취소" 알림을 띄움
+  // type: "trash"(휴지통으로 감) | "done"(완료로 체크됨)
+  function showUndo(type, ids, label) {
+    setUndo({ type, ids, label });
+  }
+
+  // 완료 체크: 미완료→완료로 바꿀 때만 실행취소 알림 (R5a)
+  // (오늘 탭·메모판에선 체크 즉시 사라지므로, 잘못 눌러도 여기서 복구)
+  async function handleToggle(task) {
+    await toggleDone(task);
+    if (!task.done) {
+      showUndo("done", [task.id], `"${task.title}"`);
+    }
   }
 
   // 한 개 → 휴지통
   async function handleDelete(task) {
     await trashTasks([task.id]);
-    showUndo([task.id], `"${task.title}"`);
+    showUndo("trash", [task.id], `"${task.title}"`);
   }
 
   // 카테고리별 → 휴지통
   async function handleDeleteCategory(list, label) {
     await trashTasks(list.map((t) => t.id));
-    showUndo(list.map((t) => t.id), label);
+    showUndo("trash", list.map((t) => t.id), label);
   }
 
   // 전체 → 휴지통
@@ -79,12 +92,15 @@ export default function App() {
     const all = tasks ?? [];
     await trashTasks(all.map((t) => t.id));
     setConfirmClear(false);
-    showUndo(all.map((t) => t.id), `전체 ${all.length}개`);
+    showUndo("trash", all.map((t) => t.id), `전체 ${all.length}개`);
   }
 
-  // 실행취소: 방금 휴지통에 넣은 것들을 목록으로 복원
+  // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
-    if (undo) await restoreTasks(undo.ids);
+    if (undo) {
+      if (undo.type === "trash") await restoreTasks(undo.ids);
+      else if (undo.type === "done") await uncheckTasks(undo.ids);
+    }
     setUndo(null);
   }
 
@@ -196,6 +212,7 @@ export default function App() {
               tab={tab}
               tasks={tasks}
               categories={categories}
+              onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteCategory={handleDeleteCategory}
               catFilter={catFilter}
@@ -209,7 +226,9 @@ export default function App() {
       {/* 실행취소 알림 (실행취소 또는 닫기를 누를 때까지 계속 떠 있음) */}
       {undo && (
         <div className="toast">
-          <span>{undo.label} 휴지통으로 이동</span>
+          <span>
+            {undo.label} {undo.type === "trash" ? "휴지통으로 이동" : "완료됨"}
+          </span>
           <button onClick={handleUndo}>실행취소</button>
           <button
             className="toast-close"
@@ -231,6 +250,7 @@ function TaskView({
   tab,
   tasks,
   categories,
+  onToggle,
   onDelete,
   onDeleteCategory,
   catFilter,
@@ -239,16 +259,22 @@ function TaskView({
   // [달력] 월간 달력 위에서 날짜 있는 할 일 보기 (F07)
   if (tab === "달력") {
     return (
-      <CalendarView tasks={tasks} categories={categories} onDelete={onDelete} />
+      <CalendarView
+        tasks={tasks}
+        categories={categories}
+        onToggle={onToggle}
+        onDelete={onDelete}
+      />
     );
   }
 
-  // [전체] 최신순 그대로
+  // [전체] 급한 것부터, 완료는 맨 아래 (F03 R8)
   if (tab === "전체") {
     return (
       <TaskList
-        tasks={tasks}
+        tasks={sortForAllTab(tasks)}
         categories={categories}
+        onToggle={onToggle}
         onDelete={onDelete}
         emptyHint="할 일이 없어요. 위에 입력하고 Enter를 누르세요!"
       />
@@ -278,10 +304,13 @@ function TaskView({
         <TaskList
           tasks={list}
           categories={categories}
+          onToggle={onToggle}
           onDelete={onDelete}
           emptyHint="오늘 마감인 할 일이 없어요."
         />
-        {undated.length > 0 && <StickyBoard tasks={undated} />}
+        {undated.length > 0 && (
+          <StickyBoard tasks={undated} onToggle={onToggle} />
+        )}
       </div>
     );
   }
@@ -343,6 +372,7 @@ function TaskView({
           <TaskList
             tasks={list}
             categories={categories}
+            onToggle={onToggle}
             onDelete={onDelete}
             emptyHint="이 카테고리에 할 일이 없어요."
           />
@@ -366,6 +396,7 @@ function TaskView({
                 <TaskList
                   tasks={group.tasks}
                   categories={categories}
+                  onToggle={onToggle}
                   onDelete={onDelete}
                 />
               </section>
@@ -396,6 +427,7 @@ function TaskView({
               <TaskList
                 tasks={group.tasks}
                 categories={categories}
+                onToggle={onToggle}
                 onDelete={onDelete}
               />
             </section>
@@ -515,7 +547,7 @@ function DeleteCategoryButton({ count, label, onConfirm }) {
 }
 
 /** 할 일 목록 하나를 그리는 공통 부품 */
-function TaskList({ tasks, categories, onDelete, emptyHint }) {
+function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
   if (tasks.length === 0) {
     return emptyHint ? <p className="hint">{emptyHint}</p> : null;
   }
@@ -526,6 +558,7 @@ function TaskList({ tasks, categories, onDelete, emptyHint }) {
           key={task.id}
           task={task}
           categories={categories}
+          onToggle={onToggle}
           onDelete={onDelete}
         />
       ))}
