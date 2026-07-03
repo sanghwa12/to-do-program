@@ -148,6 +148,12 @@ h1 {
   font-size: 0.72rem;
 }
 
+/* 카테고리 통째 삭제 버튼 */
+.cat-delete {
+  margin: 2px 0 8px;
+  text-align: right;
+}
+
 /* 그룹 제목 (날짜/우선순위/카테고리 뷰) */
 .group-title {
   font-size: 0.95rem;

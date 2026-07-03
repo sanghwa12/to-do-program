@@ -63,12 +63,12 @@ export async function deleteTask(id) {
   await db.tasks.delete(id);
 }
 
-/** 삭제한 할 일을 원래 그대로(같은 id·내용) 되살리기 — 되돌리기용 */
-export async function restoreTask(task) {
-  await db.tasks.add(task);
+/** 여러 개 한 번에 삭제 (카테고리별/전체 삭제용) */
+export async function deleteManyTasks(ids) {
+  await db.tasks.bulkDelete(ids);
 }
 
-/** 모든 할 일 삭제 (초기화). 되돌릴 수 없으므로 화면에서 반드시 확인받고 호출할 것 */
-export async function clearAllTasks() {
-  await db.tasks.clear();
+/** 삭제한 할 일들을 원래 그대로(같은 id·내용) 되살리기 — 되돌리기용 (1개도 배열로) */
+export async function restoreManyTasks(tasks) {
+  await db.tasks.bulkAdd(tasks);
 }

@@ -6,7 +6,7 @@
 // ============================================================
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, deleteTask, restoreTask, clearAllTasks } from "./db.js";
+import { db, deleteTask, deleteManyTasks, restoreManyTasks } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
@@ -32,26 +32,37 @@ export default function App() {
     ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
   ];
 
-  // 삭제: 지운 뒤 그 항목을 기억해 두고 "되돌리기" 알림을 잠깐 띄움
+  // 삭제한 항목(들)을 기억해 두고 "되돌리기" 알림을 6초간 띄움 (1개도 배열로)
+  function showUndo(deletedTasks, label) {
+    const entry = { tasks: deletedTasks, label };
+    setUndo(entry);
+    // 6초 뒤 자동으로 닫기 (그 사이 새 삭제가 있었으면 그건 건드리지 않음)
+    setTimeout(() => setUndo((cur) => (cur === entry ? null : cur)), 6000);
+  }
+
+  // 한 개 삭제
   async function handleDelete(task) {
     await deleteTask(task.id);
-    setUndo(task);
-    // 6초 뒤 자동으로 알림 닫기 (그 사이 안 되돌리면 삭제 확정)
-    setTimeout(() => {
-      setUndo((cur) => (cur && cur.id === task.id ? null : cur));
-    }, 6000);
+    showUndo([task], `"${task.title}"`);
   }
 
-  // 되돌리기: 기억해 둔 항목을 원래 그대로 복구
-  async function handleUndo() {
-    if (undo) await restoreTask(undo);
-    setUndo(null);
+  // 카테고리별 삭제 (그 카테고리의 할 일 전체)
+  async function handleDeleteCategory(list, label) {
+    await deleteManyTasks(list.map((t) => t.id));
+    showUndo(list, label);
   }
 
-  // 모두 지우기 (초기화) — 되돌릴 수 없음
+  // 모두 지우기 (전체 삭제) — 되돌리기 가능
   async function handleClearAll() {
-    await clearAllTasks();
+    const all = tasks ?? [];
+    await deleteManyTasks(all.map((t) => t.id));
     setConfirmClear(false);
+    showUndo(all, `전체 ${all.length}개`);
+  }
+
+  // 되돌리기: 기억해 둔 항목(들)을 원래 그대로 복구
+  async function handleUndo() {
+    if (undo) await restoreManyTasks(undo.tasks);
     setUndo(null);
   }
 
@@ -91,6 +102,7 @@ export default function App() {
           tasks={tasks}
           categories={categories}
           onDelete={handleDelete}
+          onDeleteCategory={handleDeleteCategory}
           catFilter={catFilter}
           setCatFilter={setCatFilter}
         />
@@ -99,7 +111,7 @@ export default function App() {
       {/* 되돌리기 알림 (삭제 직후 잠깐 뜸) */}
       {undo && (
         <div className="toast">
-          <span>"{undo.title}" 삭제됨</span>
+          <span>{undo.label} 삭제됨</span>
           <button onClick={handleUndo}>되돌리기</button>
         </div>
       )}
@@ -108,7 +120,7 @@ export default function App() {
       <div className="danger-zone">
         {confirmClear ? (
           <span className="danger-confirm">
-            정말 전부 삭제할까요? 되돌릴 수 없어요 (먼저 "내보내기"로 백업 권장)
+            정말 전부 삭제할까요? (되돌리기 6초 가능 · 걱정되면 "내보내기"로 백업)
             <button className="delete" onClick={handleClearAll}>
               전부 삭제
             </button>
@@ -127,7 +139,15 @@ export default function App() {
 // ------------------------------------------------------------
 // 선택된 탭에 맞게 할 일을 정리해서 보여주는 부분
 // ------------------------------------------------------------
-function TaskView({ tab, tasks, categories, onDelete, catFilter, setCatFilter }) {
+function TaskView({
+  tab,
+  tasks,
+  categories,
+  onDelete,
+  onDeleteCategory,
+  catFilter,
+  setCatFilter,
+}) {
   // [전체] 최신순 그대로
   if (tab === "전체") {
     return (
@@ -200,15 +220,24 @@ function TaskView({ tab, tasks, categories, onDelete, catFilter, setCatFilter })
       </div>
     );
 
-    // 특정 카테고리를 골랐으면 그것만 목록으로
+    // 특정 카테고리를 골랐으면 그것만 목록으로 + 카테고리 통째 삭제 버튼
     if (catFilter !== null) {
-      const list =
-        catFilter === "__none__"
-          ? tasks.filter((t) => !t.category)
-          : tasks.filter((t) => t.category === catFilter);
+      const isUncat = catFilter === "__none__";
+      const list = isUncat
+        ? tasks.filter((t) => !t.category)
+        : tasks.filter((t) => t.category === catFilter);
+      const label = isUncat ? "미지정" : `#${catFilter}`;
       return (
         <div>
           {chips}
+          {list.length > 0 && (
+            <DeleteCategoryButton
+              key={catFilter}
+              count={list.length}
+              label={label}
+              onConfirm={() => onDeleteCategory(list, `${label} ${list.length}개`)}
+            />
+          )}
           <TaskList
             tasks={list}
             categories={categories}
@@ -270,6 +299,31 @@ function TaskView({ tab, tasks, categories, onDelete, catFilter, setCatFilter })
             </section>
           )
       )}
+    </div>
+  );
+}
+
+/** 카테고리 통째 삭제 버튼 (누르면 그 자리에서 한 번 더 확인) */
+function DeleteCategoryButton({ count, label, onConfirm }) {
+  const [confirm, setConfirm] = useState(false);
+  if (!confirm) {
+    return (
+      <div className="cat-delete">
+        <button className="reset-btn" onClick={() => setConfirm(true)}>
+          {label} {count}개 모두 삭제
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="cat-delete">
+      <span className="danger-confirm">
+        {label} {count}개를 삭제할까요? (되돌리기 가능)
+        <button className="delete" onClick={onConfirm}>
+          삭제
+        </button>
+        <button onClick={() => setConfirm(false)}>취소</button>
+      </span>
     </div>
   );
 }
