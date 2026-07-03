@@ -46,11 +46,16 @@ export async function exportBackup() {
     "",
   ];
 
-  // 공지 (알아둘 것, F08 R7) — 백업에서 빠지지 않게
+  // 알아둘 것 (F08 R7) — 백업에서 빠지지 않게
+  // 일정 공지는 📢, 참고 정보는 📎 (가져오기는 두 줄 다 건너뜀)
   if (notes.length > 0) {
-    lines.push(`## 공지 (${notes.length}개)`);
+    lines.push(`## 알아둘 것 (${notes.length}개)`);
     for (const n of notes) {
-      lines.push(`- 📢 ${n.text}${n.date ? ` 📅 ${n.date}` : ""}`);
+      const icon = n.date ? "📢" : "📎";
+      let line = `- ${icon} ${n.text}`;
+      if (n.date) line += ` 📅 ${n.date}`;
+      if (n.memo) line += ` — ${n.memo}`;
+      lines.push(line);
     }
     lines.push("");
   }

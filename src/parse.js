@@ -150,9 +150,9 @@ export function parseImportLine(line) {
     t = t.replace(/^[-*]\s+/, "");
   }
 
-  // 백업 파일의 공지 줄(📢)은 할 일로 만들지 않고 건너뜀
-  // (공지를 가져오기로 복원하는 방법은 미결정 — 최소한 할 일 오염은 방지)
-  if (t.startsWith("📢")) return null;
+  // 백업 파일의 "알아둘 것" 줄(📢 일정 공지 / 📎 참고)은 할 일로 만들지 않고 건너뜀
+  // (알아둘 것을 가져오기로 복원하는 방법은 미결정 — 최소한 할 일 오염은 방지)
+  if (t.startsWith("📢") || t.startsWith("📎")) return null;
 
   t = t.replace(/📅/g, " "); // 내보내기 형식의 달력 이모지 제거
 
