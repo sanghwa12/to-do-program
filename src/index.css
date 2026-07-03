@@ -162,6 +162,116 @@ h1 {
   margin-bottom: -2px;
 }
 
+/* 공지판 (F08) — 무채색 게시판, 오늘 탭 맨 위 */
+.notice-board {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.notice-title {
+  font-size: 0.95rem;
+  margin: 0;
+  color: #444;
+}
+.notice-input {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.notice-input:focus {
+  outline: none;
+  border-color: #4a7dff;
+}
+.notice-empty {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin: 8px 0 2px;
+}
+.notice-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.notice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  border-top: 1px dashed #eee;
+  font-size: 0.88rem;
+}
+.notice-item.past {
+  opacity: 0.45; /* 날짜 지난 공지는 흐리게 (R4) */
+}
+.notice-text {
+  margin-right: auto;
+}
+.notice-buttons {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.notice-item:hover .notice-buttons,
+.notice-item:focus-within .notice-buttons {
+  opacity: 1;
+}
+.notice-edit-form {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.notice-edit-form input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.notice-edit-form input[type="date"] {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.notice-collapsed {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 8px 12px;
+  text-align: left;
+  background: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* 달력의 공지 칩·선택일 공지 줄 (F08 R6) */
+.cal-chip.notice {
+  background: #fff;
+  border: 1px solid #ccc;
+  color: #555;
+}
+.cal-note-line {
+  margin: 4px 2px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
 /* 메모판 (F03 R2c) — 스티커 메모 은유의 연한 노랑 (D00 색 예외로 문서화됨) */
 .sticky-board {
   margin-top: 20px;

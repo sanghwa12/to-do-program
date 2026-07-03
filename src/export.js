@@ -28,8 +28,9 @@ function taskToLine(task) {
 
 /** 전체 할 일을 .md 파일로 만들어 다운로드 */
 export async function exportBackup() {
-  // 저장된 할 일을 읽기만 함 (변경 ❌) — 만든 순서대로
+  // 저장된 할 일·공지를 읽기만 함 (변경 ❌) — 만든 순서대로
   const tasks = await db.tasks.orderBy("createdAt").toArray();
+  const notes = await db.notes.orderBy("createdAt").toArray();
   const today = todayStr();
   const todo = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
@@ -44,6 +45,15 @@ export async function exportBackup() {
     ...done.map(taskToLine),
     "",
   ];
+
+  // 공지 (알아둘 것, F08 R7) — 백업에서 빠지지 않게
+  if (notes.length > 0) {
+    lines.push(`## 공지 (${notes.length}개)`);
+    for (const n of notes) {
+      lines.push(`- 📢 ${n.text}${n.date ? ` 📅 ${n.date}` : ""}`);
+    }
+    lines.push("");
+  }
 
   // 브라우저의 파일 다운로드 기능만 사용 (외부 전송 없음)
   const blob = new Blob([lines.join("\n")], {

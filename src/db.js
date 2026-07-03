@@ -17,6 +17,12 @@ db.version(1).stores({
   tasks: "id, done, dueDate, priority, category, createdAt",
 });
 
+// version 2: "공지(알아둘 것)" 보관함 추가 (F08)
+// — 기존 tasks 데이터는 그대로 유지되고 notes 칸만 새로 생김
+db.version(2).stores({
+  notes: "id, date, createdAt",
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -89,4 +95,33 @@ export async function permanentDeleteTasks(ids) {
 /** 휴지통 비우기 — 버려진 것 전부 완전 삭제 */
 export async function emptyTrash() {
   await db.tasks.filter((t) => !!t.deletedAt).delete();
+}
+
+// ------------------------------------------------------------
+// 공지 (알아둘 것) — F08. 완료 개념이 없는 정보 메모.
+// ------------------------------------------------------------
+
+/** 공지 추가 — 내용(text)과 선택적 날짜("그 일이 있는 날") */
+export async function addNote(text, date) {
+  await db.notes.add({
+    id: crypto.randomUUID(),
+    text,
+    date: date || undefined,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+/** 공지 수정 */
+export async function updateNote(id, changes) {
+  await db.notes.update(id, changes);
+}
+
+/** 공지 삭제 (실행취소는 restoreNotes로) */
+export async function deleteNote(id) {
+  await db.notes.delete(id);
+}
+
+/** 삭제한 공지 되살리기 — 실행취소용 */
+export async function restoreNotes(notes) {
+  await db.notes.bulkAdd(notes);
 }

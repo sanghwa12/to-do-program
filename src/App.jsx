@@ -14,12 +14,15 @@ import {
   restoreTasks,
   permanentDeleteTasks,
   emptyTrash,
+  deleteNote,
+  restoreNotes,
 } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import StickyBoard from "./components/StickyBoard.jsx";
+import NoticeBoard from "./components/NoticeBoard.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
@@ -35,6 +38,7 @@ export default function App() {
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
   const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
+  const [noticeOpen, setNoticeOpen] = useState(true); // 공지판 펼침? (탭 오가도 유지, R3)
 
   // 목록: 휴지통에 없는 할 일만 (deletedAt 없는 것). DB가 바뀌면 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -54,6 +58,9 @@ export default function App() {
         arr.sort((a, b) => (b.deletedAt || "").localeCompare(a.deletedAt || ""))
       )
   );
+
+  // 공지 (알아둘 것, F08)
+  const notes = useLiveQuery(() => db.notes.toArray());
 
   // 이미 써 본 카테고리 목록 (편집 화면의 자동완성 후보로 씀)
   const categories = [
@@ -95,11 +102,18 @@ export default function App() {
     showUndo("trash", all.map((t) => t.id), `전체 ${all.length}개`);
   }
 
+  // 공지 삭제 (실행취소를 위해 지운 공지 자체를 기억해 둠)
+  async function handleDeleteNote(note) {
+    await deleteNote(note.id);
+    setUndo({ type: "note", notes: [note], label: `"${note.text}" 공지` });
+  }
+
   // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
     if (undo) {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
+      else if (undo.type === "note") await restoreNotes(undo.notes);
     }
     setUndo(null);
   }
@@ -205,12 +219,23 @@ export default function App() {
             ))}
           </nav>
 
+          {/* 공지판 (F08): 오늘 탭 맨 위 — 행정 도우미의 게시판 */}
+          {tab === "오늘" && notes && (
+            <NoticeBoard
+              notes={notes}
+              onDelete={handleDeleteNote}
+              open={noticeOpen}
+              onToggleOpen={() => setNoticeOpen((o) => !o)}
+            />
+          )}
+
           {tasks === undefined ? (
             <p className="hint">불러오는 중...</p>
           ) : (
             <TaskView
               tab={tab}
               tasks={tasks}
+              notes={notes ?? []}
               categories={categories}
               onToggle={handleToggle}
               onDelete={handleDelete}
@@ -227,7 +252,12 @@ export default function App() {
       {undo && (
         <div className="toast">
           <span>
-            {undo.label} {undo.type === "trash" ? "휴지통으로 이동" : "완료됨"}
+            {undo.label}{" "}
+            {undo.type === "trash"
+              ? "휴지통으로 이동"
+              : undo.type === "note"
+                ? "삭제됨"
+                : "완료됨"}
           </span>
           <button onClick={handleUndo}>실행취소</button>
           <button
@@ -249,6 +279,7 @@ export default function App() {
 function TaskView({
   tab,
   tasks,
+  notes,
   categories,
   onToggle,
   onDelete,
@@ -256,11 +287,12 @@ function TaskView({
   catFilter,
   setCatFilter,
 }) {
-  // [달력] 월간 달력 위에서 날짜 있는 할 일 보기 (F07)
+  // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)
   if (tab === "달력") {
     return (
       <CalendarView
         tasks={tasks}
+        notes={notes}
         categories={categories}
         onToggle={onToggle}
         onDelete={onDelete}

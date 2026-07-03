@@ -19,6 +19,7 @@
 | F05 | [05-pwa-install.md](05-pwa-install.md) | PWA 설치 (선택) | 5 | 개발중 |
 | D00 | [07-design.md](07-design.md) | 디자인 원칙 · UI 단순화 | 상시 | 개발중 |
 | F07 | [08-calendar-view.md](08-calendar-view.md) | 달력 뷰 (월간) | 2 (확장) | 개발중 |
+| F08 | [09-notices.md](09-notices.md) | 공지 (알아둘 것) | 6 | 개발중 |
 
 > 새 기능을 추가할 때는 [00-template.md](00-template.md)를 복사해서 새 문서를 만들고,
 > 위 표에 한 줄 추가하세요.

@@ -16,7 +16,13 @@ import {
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_CHIPS = 3; // 한 칸에 보여줄 최대 칩 수 (R5)
 
-export default function CalendarView({ tasks, categories, onToggle, onDelete }) {
+export default function CalendarView({
+  tasks,
+  notes = [], // 날짜 있는 공지도 달력에 표시 (F08 R6)
+  categories,
+  onToggle,
+  onDelete,
+}) {
   const today = todayStr();
   const [todayY, todayM] = today.split("-").map(Number);
 
@@ -44,6 +50,8 @@ export default function CalendarView({ tasks, categories, onToggle, onDelete }) 
 
   const cells = buildMonthCells(year, month);
   const selectedTasks = selected ? tasksOnDate(tasks, selected) : [];
+  const notesOn = (dateStr) => notes.filter((n) => n.date === dateStr);
+  const selectedNotes = selected ? notesOn(selected) : [];
 
   return (
     <div className="calendar">
@@ -79,8 +87,11 @@ export default function CalendarView({ tasks, categories, onToggle, onDelete }) 
             return <div key={i} className="cal-cell empty" />;
           }
           const ds = dateStrOf(year, month, day);
+          const dayNotes = notesOn(ds); // 공지 먼저, 그다음 할 일
           const list = tasksOnDate(tasks, ds);
-          const shown = list.slice(0, MAX_CHIPS);
+          const shownNotes = dayNotes.slice(0, MAX_CHIPS);
+          const shown = list.slice(0, Math.max(0, MAX_CHIPS - shownNotes.length));
+          const hidden = dayNotes.length + list.length - shownNotes.length - shown.length;
           return (
             <button
               key={i}
@@ -92,6 +103,11 @@ export default function CalendarView({ tasks, categories, onToggle, onDelete }) 
               onClick={() => setSelected(ds === selected ? null : ds)}
             >
               <span className="cal-day">{day}</span>
+              {shownNotes.map((n) => (
+                <span key={n.id} className="cal-chip notice">
+                  📢 {n.text}
+                </span>
+              ))}
               {shown.map((t) => (
                 <span
                   key={t.id}
@@ -100,9 +116,7 @@ export default function CalendarView({ tasks, categories, onToggle, onDelete }) 
                   {t.title}
                 </span>
               ))}
-              {list.length > MAX_CHIPS && (
-                <span className="cal-more">+{list.length - MAX_CHIPS}</span>
-              )}
+              {hidden > 0 && <span className="cal-more">+{hidden}</span>}
             </button>
           );
         })}
@@ -115,8 +129,16 @@ export default function CalendarView({ tasks, categories, onToggle, onDelete }) 
             {selected}{" "}
             <span className="group-count">{selectedTasks.length}</span>
           </h2>
+          {/* 그날의 공지 (있으면 목록 위에) */}
+          {selectedNotes.map((n) => (
+            <p key={n.id} className="cal-note-line">
+              📢 {n.text}
+            </p>
+          ))}
           {selectedTasks.length === 0 ? (
-            <p className="hint">이 날짜의 할 일이 없어요.</p>
+            selectedNotes.length === 0 && (
+              <p className="hint">이 날짜의 할 일이 없어요.</p>
+            )
           ) : (
             <ul className="task-list">
               {selectedTasks.map((task) => (
