@@ -120,6 +120,34 @@ h1 {
   margin-bottom: -2px;
 }
 
+/* 카테고리 필터 칩 (카테고리 뷰 상단) */
+.cat-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 4px;
+}
+.chip {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fff;
+  color: #555;
+}
+.chip:hover {
+  background: #f0f0f0;
+}
+.chip.active {
+  background: #4a7dff;
+  border-color: #4a7dff;
+  color: #fff;
+}
+.chip-count {
+  opacity: 0.7;
+  font-size: 0.72rem;
+}
+
 /* 그룹 제목 (날짜/우선순위/카테고리 뷰) */
 .group-title {
   font-size: 0.95rem;

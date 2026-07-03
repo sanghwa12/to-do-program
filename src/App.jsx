@@ -20,6 +20,7 @@ export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
   const [undo, setUndo] = useState(null); // 방금 삭제한 할 일 (되돌리기용)
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
+  const [catFilter, setCatFilter] = useState(null); // 카테고리 필터 (null=전체)
 
   // DB의 할 일 목록을 실시간 구독 — DB가 바뀌면 화면도 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -90,6 +91,8 @@ export default function App() {
           tasks={tasks}
           categories={categories}
           onDelete={handleDelete}
+          catFilter={catFilter}
+          setCatFilter={setCatFilter}
         />
       )}
 
@@ -124,7 +127,7 @@ export default function App() {
 // ------------------------------------------------------------
 // 선택된 탭에 맞게 할 일을 정리해서 보여주는 부분
 // ------------------------------------------------------------
-function TaskView({ tab, tasks, categories, onDelete }) {
+function TaskView({ tab, tasks, categories, onDelete, catFilter, setCatFilter }) {
   // [전체] 최신순 그대로
   if (tab === "전체") {
     return (
@@ -161,13 +164,89 @@ function TaskView({ tab, tasks, categories, onDelete }) {
     );
   }
 
-  // [날짜 / 우선순위 / 카테고리] 그룹으로 묶어서 표시
+  // [카테고리] 상단 필터(칩)로 특정 카테고리만 골라 보기 (F03 R4b)
+  if (tab === "카테고리") {
+    const names = [...new Set(tasks.map((t) => t.category).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, "ko")
+    );
+    const uncatCount = tasks.filter((t) => !t.category).length;
+    const countOf = (n) => tasks.filter((t) => t.category === n).length;
+
+    const chips = (
+      <div className="cat-filter">
+        <button
+          className={"chip" + (catFilter === null ? " active" : "")}
+          onClick={() => setCatFilter(null)}
+        >
+          전체
+        </button>
+        {names.map((n) => (
+          <button
+            key={n}
+            className={"chip" + (catFilter === n ? " active" : "")}
+            onClick={() => setCatFilter(n)}
+          >
+            #{n} <span className="chip-count">{countOf(n)}</span>
+          </button>
+        ))}
+        {uncatCount > 0 && (
+          <button
+            className={"chip" + (catFilter === "__none__" ? " active" : "")}
+            onClick={() => setCatFilter("__none__")}
+          >
+            미지정 <span className="chip-count">{uncatCount}</span>
+          </button>
+        )}
+      </div>
+    );
+
+    // 특정 카테고리를 골랐으면 그것만 목록으로
+    if (catFilter !== null) {
+      const list =
+        catFilter === "__none__"
+          ? tasks.filter((t) => !t.category)
+          : tasks.filter((t) => t.category === catFilter);
+      return (
+        <div>
+          {chips}
+          <TaskList
+            tasks={list}
+            categories={categories}
+            onDelete={onDelete}
+            emptyHint="이 카테고리에 할 일이 없어요."
+          />
+        </div>
+      );
+    }
+
+    // "전체"면 카테고리별로 묶어서
+    const catGroups = groupByCategory(tasks);
+    return (
+      <div>
+        {chips}
+        {catGroups.map(
+          (group) =>
+            group.tasks.length > 0 && (
+              <section key={group.title}>
+                <h2 className="group-title">
+                  {group.title}{" "}
+                  <span className="group-count">{group.tasks.length}</span>
+                </h2>
+                <TaskList
+                  tasks={group.tasks}
+                  categories={categories}
+                  onDelete={onDelete}
+                />
+              </section>
+            )
+        )}
+      </div>
+    );
+  }
+
+  // [날짜 / 우선순위] 그룹으로 묶어서 표시
   const groups =
-    tab === "날짜"
-      ? groupByDate(tasks)
-      : tab === "우선순위"
-        ? groupByPriority(tasks)
-        : groupByCategory(tasks);
+    tab === "날짜" ? groupByDate(tasks) : groupByPriority(tasks);
 
   if (groups.every((g) => g.tasks.length === 0)) {
     return <p className="hint">할 일이 없어요. 위에 입력하고 Enter를 누르세요!</p>;
