@@ -34,6 +34,20 @@ export async function addTask(title, extra = {}) {
   await db.tasks.add(task);
 }
 
+/** 여러 할 일을 한 번에 추가 (가져오기용). 초안 배열을 받아 저장하고 개수를 반환 */
+export async function addManyTasks(drafts) {
+  const base = Date.now();
+  const tasks = drafts.map((d, i) => ({
+    id: crypto.randomUUID(),
+    done: false,
+    ...d, // 초안의 title·done·dueDate·category 등
+    // 파일에 적힌 순서를 유지하려고 생성 시각을 1ms씩 늘려줌
+    createdAt: new Date(base + i).toISOString(),
+  }));
+  await db.tasks.bulkAdd(tasks);
+  return tasks.length;
+}
+
 /** 완료 여부 뒤집기 — 체크박스를 누를 때 사용 */
 export async function toggleDone(task) {
   await db.tasks.update(task.id, { done: !task.done });

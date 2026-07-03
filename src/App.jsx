@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
+import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
@@ -39,6 +40,9 @@ export default function App() {
       </header>
 
       <QuickInput />
+
+      {/* F02 R12: 여러 줄 붙여넣기로 한 번에 가져오기 */}
+      <ImportBox />
 
       {/* 정리 뷰 탭 */}
       <nav className="tabs">

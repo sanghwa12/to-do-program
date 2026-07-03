@@ -123,3 +123,65 @@ export function parseQuickInput(text) {
 
   return plain; // 날짜 표기 없음
 }
+
+// ============================================================
+// 여러 줄 가져오기 (F02 R12)
+// ------------------------------------------------------------
+// 한 줄 → 할 일 하나로 변환. 날짜(R9~R11), #태그→카테고리,
+// "- [ ]"/"- [x]" 체크박스, (높음/중간/낮음) 우선순위를 인식.
+// 주석·섹션 제목(# 로 시작)과 빈 줄은 건너뜀(null 반환).
+// ============================================================
+const PR_WORD = { 높음: "high", 중간: "med", 낮음: "low" };
+
+export function parseImportLine(line) {
+  let t = line.trim();
+  if (t === "" || t.startsWith("#")) return null; // 빈 줄·주석·섹션 제목
+
+  // 앞머리 체크박스/불릿: "- [ ]", "- [x]", "-", "*"
+  let done = false;
+  const box = t.match(/^[-*]\s*\[([ xX])\]\s*/);
+  if (box) {
+    done = box[1].toLowerCase() === "x";
+    t = t.slice(box[0].length);
+  } else {
+    t = t.replace(/^[-*]\s+/, "");
+  }
+
+  t = t.replace(/📅/g, " "); // 내보내기 형식의 달력 이모지 제거
+
+  // 우선순위 (높음/중간/낮음)
+  let priority;
+  const pr = t.match(/\((높음|중간|낮음)\)/);
+  if (pr) {
+    priority = PR_WORD[pr[1]];
+    t = t.replace(pr[0], " ");
+  }
+
+  // 카테고리 #태그 (첫 번째를 사용, 표기는 모두 제거)
+  let category;
+  const tag = t.match(/#(\S+)/);
+  if (tag) {
+    category = tag[1];
+    t = t.replace(/#\S+/g, " ");
+  }
+
+  // "당일" 글자 제거 → 문장 끝 날짜가 당일로 인식되게 (내보내기 왕복 호환)
+  t = t.replace(/\s*당일\s*/g, " ").replace(/\s+/g, " ").trim();
+  if (t === "") return null;
+
+  const parsed = parseQuickInput(t); // 제목 + 날짜 인식
+  const draft = { title: parsed.title, done };
+  if (parsed.dueDate) {
+    draft.dueDate = parsed.dueDate;
+    draft.dateKind = parsed.dateKind;
+  }
+  if (parsed.startDate) draft.startDate = parsed.startDate;
+  if (priority) draft.priority = priority;
+  if (category) draft.category = category;
+  return draft;
+}
+
+/** 여러 줄 텍스트 → 할 일 초안 배열 (건너뛴 줄 제외) */
+export function parseImport(text) {
+  return text.split(/\r?\n/).map(parseImportLine).filter(Boolean);
+}
