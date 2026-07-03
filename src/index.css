@@ -162,6 +162,55 @@ h1 {
   margin-bottom: -2px;
 }
 
+/* 메모판 (F03 R2c) — 스티커 메모 은유의 연한 노랑 (D00 색 예외로 문서화됨) */
+.sticky-board {
+  margin-top: 20px;
+  background: #fdf6d8;
+  border: 1px solid #f0e6b8;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.sticky-title {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+  color: #6b5d1f;
+}
+.sticky-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* 폭에 따라 자동으로 여러 단.
+     판 내부 폭이 최대 498px라 13em(208px)이어야 2단이 됨 (15em이면 2px 모자라 영원히 1단) */
+  columns: 13em;
+  column-gap: 20px;
+}
+.sticky-item {
+  break-inside: avoid;
+  padding: 2px 0;
+}
+.sticky-item label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  cursor: pointer;
+}
+.sticky-item input[type="checkbox"] {
+  flex-shrink: 0;
+  transform: translateY(1px);
+}
+.sticky-text {
+  font-size: 0.85rem;
+  color: #4a4226;
+}
+.sticky-text.hi {
+  font-weight: bold;
+}
+.sticky-hint {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: #a89b5e;
+}
+
 /* 달력 뷰 (F07) — 색은 기존 파랑·회색만 사용 (D00) */
 .cal-nav {
   display: flex;

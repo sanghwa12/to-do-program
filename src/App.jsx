@@ -17,6 +17,7 @@ import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
 import CalendarView from "./components/CalendarView.jsx";
+import StickyBoard from "./components/StickyBoard.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
@@ -268,13 +269,20 @@ function TaskView({
             : t.dueDate <= today)
       )
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate)); // 밀린 것부터 위로
+
+    // 날짜 미정 + 미완료 → 아래 메모판에 항상 보여줌 (F03 R2c)
+    const undated = tasks.filter((t) => !t.done && !t.dueDate);
+
     return (
-      <TaskList
-        tasks={list}
-        categories={categories}
-        onDelete={onDelete}
-        emptyHint="오늘 할 일이 없어요. 다른 탭에서 할 일에 날짜를 붙여보세요."
-      />
+      <div>
+        <TaskList
+          tasks={list}
+          categories={categories}
+          onDelete={onDelete}
+          emptyHint="오늘 마감인 할 일이 없어요."
+        />
+        {undated.length > 0 && <StickyBoard tasks={undated} />}
+      </div>
     );
   }
 
