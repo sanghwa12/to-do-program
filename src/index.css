@@ -341,6 +341,10 @@ button.delete {
   background: none;
   text-decoration: underline;
 }
+.toast-close {
+  color: #bbb !important;
+  font-weight: normal !important;
+}
 
 /* 편집 모드 */
 .edit-form {

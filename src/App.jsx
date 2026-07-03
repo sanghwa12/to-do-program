@@ -32,12 +32,10 @@ export default function App() {
     ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
   ];
 
-  // 삭제한 항목(들)을 기억해 두고 "되돌리기" 알림을 6초간 띄움 (1개도 배열로)
+  // 삭제한 항목(들)을 기억해 두고 "되돌리기" 알림을 띄움 (1개도 배열로)
+  // 시간 제한 없음 — 되돌리기 또는 닫기(✕)를 누를 때까지 계속 떠 있음
   function showUndo(deletedTasks, label) {
-    const entry = { tasks: deletedTasks, label };
-    setUndo(entry);
-    // 6초 뒤 자동으로 닫기 (그 사이 새 삭제가 있었으면 그건 건드리지 않음)
-    setTimeout(() => setUndo((cur) => (cur === entry ? null : cur)), 6000);
+    setUndo({ tasks: deletedTasks, label });
   }
 
   // 한 개 삭제
@@ -108,11 +106,18 @@ export default function App() {
         />
       )}
 
-      {/* 되돌리기 알림 (삭제 직후 잠깐 뜸) */}
+      {/* 되돌리기 알림 (되돌리기 또는 닫기를 누를 때까지 계속 떠 있음) */}
       {undo && (
         <div className="toast">
           <span>{undo.label} 삭제됨</span>
           <button onClick={handleUndo}>되돌리기</button>
+          <button
+            className="toast-close"
+            onClick={() => setUndo(null)}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -120,7 +125,7 @@ export default function App() {
       <div className="danger-zone">
         {confirmClear ? (
           <span className="danger-confirm">
-            정말 전부 삭제할까요? (되돌리기 6초 가능 · 걱정되면 "내보내기"로 백업)
+            정말 전부 삭제할까요? (되돌리기 가능 · 걱정되면 "내보내기"로 백업)
             <button className="delete" onClick={handleClearAll}>
               전부 삭제
             </button>
