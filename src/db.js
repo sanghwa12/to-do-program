@@ -6,6 +6,7 @@
 // Dexie는 그 냉장고를 쉬운 문법으로 쓰게 해주는 도우미입니다.
 // ============================================================
 import Dexie from "dexie";
+import { nextOccurrence } from "./date.js";
 
 // 데이터베이스(냉장고)를 만들고 이름을 붙입니다.
 export const db = new Dexie("todoDB");
@@ -62,6 +63,38 @@ export async function toggleDone(task) {
 /** 완료 표시 풀기 (실행취소용) — 잘못 체크한 것을 미완료로 되돌림 */
 export async function uncheckTasks(ids) {
   await db.tasks.where("id").anyOf(ids).modify({ done: false });
+}
+
+// ------------------------------------------------------------
+// 반복 할 일 완료 (F09 R3): 완료 기록을 남기고 다음 회차로
+// ------------------------------------------------------------
+
+/** 반복 할 일 체크: 완료 기록 생성 + 원본 날짜를 다음 회차로.
+ *  실행취소에 필요한 정보를 돌려줌 */
+export async function completeRepeatingTask(task) {
+  const next = nextOccurrence(task.dueDate, task.repeat);
+  // 완료 기록: 반복 없는 일반 완료 할 일로 사본을 남김
+  const record = {
+    ...task,
+    id: crypto.randomUUID(),
+    done: true,
+    repeat: undefined,
+    createdAt: new Date().toISOString(),
+  };
+  await db.tasks.add(record);
+  await db.tasks.update(task.id, { dueDate: next });
+  return { recordId: record.id, prevDue: task.dueDate, nextDue: next };
+}
+
+/** 반복 완료 실행취소: 기록 삭제 + 원본 날짜 원복 (F09 R4)
+ *  단, 완료 이후 사용자가 날짜를 직접 바꿨다면(현재 날짜 ≠ 우리가 넘긴 다음 회차)
+ *  그 수정을 존중해 날짜는 건드리지 않는다 — 실행취소가 나중 수정을 덮어쓰지 않게 */
+export async function undoCompleteRepeating(recordId, taskId, prevDue, expectedDue) {
+  await db.tasks.delete(recordId);
+  const current = await db.tasks.get(taskId);
+  if (current && current.dueDate === expectedDue) {
+    await db.tasks.update(taskId, { dueDate: prevDue });
+  }
 }
 
 /** 할 일 수정 — 바꿀 내용만 골라서 전달 (예: { title: "새 제목", memo: "메모" }) */

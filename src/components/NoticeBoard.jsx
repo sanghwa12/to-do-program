@@ -32,8 +32,8 @@ export default function NoticeBoard({ notes, onDelete, open, onToggleOpen }) {
 
   // 입력에서 날짜 인식 (할 일과 같은 인식기 재사용, R2)
   // 알아둘 것의 날짜는 "그 일이 있는 날"이라 지난 날짜도 그대로 둠 (연도 올림 없음)
-  // 기간 표기면 시작일 사용
-  const parsed = parseQuickInput(text, { allowPast: true });
+  // 기간 표기면 시작일 사용. 반복("매주" 등)은 할 일 전용이라 여기선 인식 끔
+  const parsed = parseQuickInput(text, { allowPast: true, repeatable: false });
   const noteDate = parsed.startDate || parsed.dueDate;
 
   async function handleAdd(e) {

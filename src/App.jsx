@@ -4,7 +4,7 @@
 // - 정리 뷰 탭 (F03): 오늘 / 전체 / 날짜 / 우선순위 / 카테고리
 //   "계획을 세우는 건 앱, 사용자는 붓기만 한다"
 // ============================================================
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   db,
@@ -16,6 +16,8 @@ import {
   emptyTrash,
   deleteNote,
   restoreNotes,
+  completeRepeatingTask,
+  undoCompleteRepeating,
 } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
@@ -75,10 +77,31 @@ export default function App() {
 
   // 완료 체크: 미완료→완료로 바꿀 때만 실행취소 알림 (R5a)
   // (오늘 탭·메모판에선 체크 즉시 사라지므로, 잘못 눌러도 여기서 복구)
+  // 처리 중인 항목의 재클릭은 무시 — 반복 할 일 연타 시 완료 기록이 중복 생기는 것 방지
+  const togglingRef = useRef(new Set());
   async function handleToggle(task) {
-    await toggleDone(task);
-    if (!task.done) {
-      showUndo("done", [task.id], `"${task.title}"`);
+    if (togglingRef.current.has(task.id)) return;
+    togglingRef.current.add(task.id);
+    try {
+      // 반복 할 일 (F09): 완료 기록을 남기고 다음 회차로
+      if (!task.done && task.repeat && task.dueDate) {
+        const r = await completeRepeatingTask(task);
+        setUndo({
+          type: "repeat",
+          recordId: r.recordId,
+          taskId: task.id,
+          prevDue: r.prevDue,
+          nextDue: r.nextDue,
+          label: `"${task.title}"`,
+        });
+        return;
+      }
+      await toggleDone(task);
+      if (!task.done) {
+        showUndo("done", [task.id], `"${task.title}"`);
+      }
+    } finally {
+      togglingRef.current.delete(task.id);
     }
   }
 
@@ -114,6 +137,13 @@ export default function App() {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
       else if (undo.type === "note") await restoreNotes(undo.notes);
+      else if (undo.type === "repeat")
+        await undoCompleteRepeating(
+          undo.recordId,
+          undo.taskId,
+          undo.prevDue,
+          undo.nextDue
+        );
     }
     setUndo(null);
   }
@@ -257,7 +287,9 @@ export default function App() {
               ? "휴지통으로 이동"
               : undo.type === "note"
                 ? "삭제됨"
-                : "완료됨"}
+                : undo.type === "repeat"
+                  ? `완료 · 다음 ${undo.nextDue}`
+                  : "완료됨"}
           </span>
           <button onClick={handleUndo}>실행취소</button>
           <button

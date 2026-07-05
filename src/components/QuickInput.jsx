@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { addTask } from "../db.js";
 import { parseQuickInput } from "../parse.js";
+import { REPEAT_LABEL } from "../labels.js";
 
 export default function QuickInput() {
   const [text, setText] = useState("");
@@ -25,6 +26,9 @@ export default function QuickInput() {
 
   // 인식된 날짜 종류에 따른 미리보기 문구 (F02 R10)
   function previewText(p) {
+    if (p.repeat) {
+      return `"${p.title}" — 🔁 ${REPEAT_LABEL[p.repeat]} 반복 · 첫 날짜 ${p.dueDate}로 저장됩니다`;
+    }
     if (p.dateKind === "range")
       return `"${p.title}" — 📅 ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
     if (p.dateKind === "day")

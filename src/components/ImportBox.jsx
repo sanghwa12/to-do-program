@@ -15,11 +15,14 @@ export default function ImportBox({ open, onClose }) {
 
   async function handleImport() {
     if (drafts.length === 0) return;
-    // 같은 제목이 이미 목록(휴지통 제외)에 있으면 건너뜀
-    // — 같은 파일을 두 번 가져와서 전부 중복되는 사고 방지 (R12)
+    // 같은 "제목+완료상태"가 이미 목록(휴지통 제외)에 있으면 건너뜀
+    // — 같은 파일 이중 가져오기 사고 방지 (R12).
+    // 완료상태까지 비교하는 이유: 반복 할 일은 같은 제목의 완료 기록이 정상적으로
+    // 여러 개 생기므로, 제목만 비교하면 활성 할 일 복원까지 막혀버림 (F09)
     const existing = await db.tasks.filter((t) => !t.deletedAt).toArray();
-    const titles = new Set(existing.map((t) => t.title));
-    const fresh = drafts.filter((d) => !titles.has(d.title));
+    const keyOf = (t) => (t.done ? "1|" : "0|") + t.title;
+    const titles = new Set(existing.map(keyOf));
+    const fresh = drafts.filter((d) => !titles.has(keyOf(d)));
     const skipped = drafts.length - fresh.length;
     if (fresh.length > 0) await addManyTasks(fresh);
     alert(

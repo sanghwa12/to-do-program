@@ -24,16 +24,31 @@ function validMD(month, day) {
   return month >= 1 && month <= 12 && day >= 1 && day <= 31;
 }
 
+/** 그 해 그 달에 실제로 있는 날짜인지 (2/30, 평년 2/29, 4/31 같은 것 거르기) */
+function dayExists(year, month, day) {
+  return day <= new Date(year, month, 0).getDate();
+}
+
+/** "YYYY-MM-DD"를 1년 뒤로 (2/29 → 2/28처럼 없는 날짜는 말일로) */
+function plusOneYear(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const last = new Date(y + 1, m, 0).getDate();
+  return fmt(y + 1, m, Math.min(d, last));
+}
+
 /** (연도?, 월, 일) → "YYYY-MM-DD". 연도 생략 시 올해.
  *  지난 날짜면 내년으로 올림 — 단 allowPast면 그대로 둠
- *  (할 일 마감은 미래를 뜻하지만, 공지의 날짜는 "그 일이 있는 날"이라 과거일 수도 있음) */
+ *  (할 일 마감은 미래를 뜻하지만, 공지의 날짜는 "그 일이 있는 날"이라 과거일 수도 있음)
+ *  존재하지 않는 날짜(평년 2/29 등)는 무시(null). */
 function resolveYMD(yearStr, monthStr, dayStr, allowPast = false) {
   const month = Number(monthStr);
   const day = Number(dayStr);
   if (!validMD(month, day)) return null; // 엉터리 날짜
   const year = yearStr ? Number(yearStr) : new Date().getFullYear();
+  if (!dayExists(year, month, day)) return null; // 그 해에 없는 날짜
   let result = fmt(year, month, day);
   if (!yearStr && !allowPast && result < todayStr()) {
+    if (!dayExists(year + 1, month, day)) return null; // 내년에도 없으면 무시
     result = fmt(year + 1, month, day); // 예: 12월에 "1/5" → 내년 1월 5일
   }
   return result;
@@ -74,24 +89,100 @@ function stripTitle(text, matched) {
   return text.replace(matched, " ").replace(/\s+/g, " ").trim();
 }
 
+// ------------------------------------------------------------
+// 반복 표기 인식 (F09 R2): 매일 / 매주 (요일) / 매달·매월 (N일) / 매년 (M/D)
+// "구매일지"의 '매일' 같은 오인을 막기 위해 앞뒤가 공백(또는 문장 끝)일 때만 인식
+// ------------------------------------------------------------
+const REPEAT_PATTERNS = [
+  { re: /(?:^|\s)매주\s*([일월화수목금토])요일(?=\s|$)/, kind: "weekly", type: "weekday" },
+  { re: /(?:^|\s)(?:매달|매월)\s*(\d{1,2})일(?=\s|$)/, kind: "monthly", type: "dom" },
+  { re: /(?:^|\s)매년\s*(\d{1,2})[/\-.](\d{1,2})(?=\s|$)/, kind: "yearly", type: "md" },
+  { re: /(?:^|\s)매일(?=\s|$)/, kind: "daily", type: "plain" },
+  { re: /(?:^|\s)매주(?=\s|$)/, kind: "weekly", type: "plain" },
+  { re: /(?:^|\s)(?:매달|매월)(?=\s|$)/, kind: "monthly", type: "plain" },
+  { re: /(?:^|\s)매년(?=\s|$)/, kind: "yearly", type: "plain" },
+];
+
+/** 반복 표기를 찾아 { repeat, anchor(기준일), rest(표기 뺀 텍스트) } 반환. 없으면 null */
+function detectRepeat(text) {
+  const today = todayStr();
+  for (const p of REPEAT_PATTERNS) {
+    const m = text.match(p.re);
+    if (!m) continue;
+    let anchor = today; // 기본 기준일: 오늘
+    if (p.type === "weekday") {
+      anchor = resolveWord(m[1] + "요일"); // 다가오는 그 요일 (오늘 포함)
+    } else if (p.type === "dom") {
+      // 매달 N일: 이번 달 N일이 아직 안 지났으면 이번 달, 지났으면 다음 달 (말일 처리)
+      const day = Number(m[1]);
+      // 무효한 값(매달 40일)이면 반복 인식 자체를 취소 —
+      // 조용히 '매달(오늘 기준)'으로 강등되지 않게
+      if (day < 1 || day > 31) return null;
+      const now = new Date(today + "T00:00:00");
+      let y = now.getFullYear();
+      let mo = now.getMonth() + 1;
+      let candidate = fmt(y, mo, Math.min(day, new Date(y, mo, 0).getDate()));
+      if (candidate < today) {
+        if (mo === 12) { y += 1; mo = 1; } else { mo += 1; }
+        candidate = fmt(y, mo, Math.min(day, new Date(y, mo, 0).getDate()));
+      }
+      anchor = candidate;
+    } else if (p.type === "md") {
+      // 매년 M/D: 올해가 아직 안 지났으면 올해, 지났으면 내년
+      const a = resolveYMD(undefined, m[1], m[2], false);
+      if (!a) return null; // 무효한 날짜(매년 2/30)면 반복 인식 취소
+      anchor = a;
+    }
+    return { repeat: p.kind, anchor, rest: text.replace(m[0], " ") };
+  }
+  return null;
+}
+
 /**
- * 입력 텍스트를 { title, dueDate?, startDate?, dateKind? }로 분해.
+ * 입력 텍스트를 { title, dueDate?, startDate?, dateKind?, repeat? }로 분해.
  * 날짜 표기가 없거나 이상하면 전체를 제목으로 그대로 반환.
  * opts.allowPast: 지난 날짜를 내년으로 올리지 않음 (공지처럼 "있었던 날"도 유효할 때)
+ * opts.repeatable: 반복 표기(매주 등) 인식 여부 (기본 켜짐 — 공지 입력에선 끔)
  */
-export function parseQuickInput(text, { allowPast = false } = {}) {
+export function parseQuickInput(text, { allowPast = false, repeatable = true } = {}) {
+  // 반복 표기 먼저 확인 (F09) — 찾으면 표기를 뺀 나머지로 날짜·제목을 계속 해석
+  if (repeatable) {
+    const rep = detectRepeat(text);
+    if (rep) {
+      const inner = parseQuickInput(rep.rest, { allowPast, repeatable: false });
+      if (inner.title === "") return { title: text.trim() }; // 제목이 없으면 인식 취소
+      if (inner.dateKind === "range") {
+        // 기간엔 반복 미지원 (R1) — '매주' 표기를 조용히 지우지 않고
+        // 원문 그대로 기간으로 해석 (표기가 제목에 남아 사용자가 알 수 있게)
+        return parseQuickInput(text, { allowPast, repeatable: false });
+      }
+      return {
+        // 반복 표기를 뺀 자리의 이중 공백 정리
+        title: inner.title.replace(/\s+/g, " ").trim(),
+        // 표기에 날짜가 따로 있으면 그 날짜, 없으면 반복 표기의 기준일
+        dueDate: inner.dueDate || rep.anchor,
+        dateKind: inner.dueDate ? inner.dateKind : "day",
+        repeat: rep.repeat,
+      };
+    }
+  }
+
   const plain = { title: text.trim() };
 
   // 1) 기간: 11/11~11/23 (마감 ~보다 먼저 검사해야 함 — "~11/23" 부분만 잡히지 않게)
   let m = text.match(RANGE_RE);
   if (m) {
-    const start = resolveYMD(m[1], m[2], m[3], allowPast);
-    let end = resolveYMD(m[4], m[5], m[6], allowPast);
+    // 시작·끝 모두 일단 올해 그대로 해석 — "진행 중인 기간"(시작은 지났고 끝은 남음)을
+    // 입력하는 흔한 경우를 내년으로 밀어버리지 않기 위해
+    let start = resolveYMD(m[1], m[2], m[3], true);
+    let end = resolveYMD(m[4], m[5], m[6], true);
     if (start && end) {
       // 연도 생략한 기간이 해를 넘는 경우 (예: 12/28~1/3) → 끝을 다음 해로
-      if (end < start) {
-        const [y, mo, d] = end.split("-").map(Number);
-        end = fmt(y + 1, mo, d);
+      if (end < start) end = plusOneYear(end);
+      // 기간이 통째로 지난 경우에만 내년으로 (공지 입력(allowPast)은 지난 기간도 그대로)
+      if (!allowPast && end < todayStr()) {
+        start = plusOneYear(start);
+        end = plusOneYear(end);
       }
       const title = stripTitle(text, m[0]);
       if (title) return { title, startDate: start, dueDate: end, dateKind: "range" };
@@ -154,7 +245,10 @@ export function parseImportLine(line) {
   // (알아둘 것을 가져오기로 복원하는 방법은 미결정 — 최소한 할 일 오염은 방지)
   if (t.startsWith("📢") || t.startsWith("📎")) return null;
 
-  t = t.replace(/📅/g, " "); // 내보내기 형식의 달력 이모지 제거
+  // 내보내기 형식의 이모지 제거. 반복 인식은 🔁 표기가 "실제로 있던 줄"에만 적용 —
+  // 제목에 우연히 '매일/매주' 단어가 든 일반 할 일이 반복으로 둔갑하지 않게 (R7)
+  const hadRepeatMark = t.includes("🔁");
+  t = t.replace(/📅/g, " ").replace(/🔁/g, " ");
 
   // 우선순위 (높음/중간/낮음)
   let priority;
@@ -176,13 +270,14 @@ export function parseImportLine(line) {
   t = t.replace(/\s*당일\s*/g, " ").replace(/\s+/g, " ").trim();
   if (t === "") return null;
 
-  const parsed = parseQuickInput(t); // 제목 + 날짜 인식
+  const parsed = parseQuickInput(t, { repeatable: hadRepeatMark }); // 제목+날짜(+반복) 인식
   const draft = { title: parsed.title, done };
   if (parsed.dueDate) {
     draft.dueDate = parsed.dueDate;
     draft.dateKind = parsed.dateKind;
   }
   if (parsed.startDate) draft.startDate = parsed.startDate;
+  if (parsed.repeat) draft.repeat = parsed.repeat;
   if (priority) draft.priority = priority;
   if (category) draft.category = category;
   return draft;
