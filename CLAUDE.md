@@ -40,7 +40,9 @@ type Task = {
   startDate?: string;                  // 기간의 시작일 (dateKind가 "range"일 때만)
   dateKind?: "due" | "day" | "range";  // 날짜의 의미: ~까지 마감 | 그날 당일 | 기간
   priority?: "low" | "med" | "high";   // 우선순위 (선택)
-  repeat?: "daily" | "weekly" | "monthly" | "yearly"; // 반복 주기 (선택, 날짜 필수)
+  repeat?: "daily" | "weekly" | "monthly" | "yearly" | "monthlyNth"; // 반복 주기 (선택)
+  repeatNth?: 1 | 2 | 3 | 4 | "last";  // monthlyNth일 때: 몇째 주 (매월 N번째 요일)
+  repeatWeekday?: number;              // monthlyNth일 때: 요일 (0=일 ~ 6=토)
   category?: string;                   // 카테고리 (예: "업무", "개인") (선택)
   done: boolean;                       // 완료 여부
   createdAt: string;                   // 생성 시각 (ISO 8601, 자동)

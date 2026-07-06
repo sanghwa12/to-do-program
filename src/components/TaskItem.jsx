@@ -5,8 +5,8 @@
 // ------------------------------------------------------------
 import { useState, useRef } from "react";
 import { db, updateTask } from "../db.js";
-import { todayStr, daysLate } from "../date.js";
-import { PRIORITY_LABEL, REPEAT_LABEL } from "../labels.js";
+import { todayStr, daysLate, nextNthWeekday } from "../date.js";
+import { PRIORITY_LABEL, repeatLabelOf } from "../labels.js";
 
 // 우선순위 점 클릭 시 순환 순서: 없음 → 높음 → 중간 → 낮음 → 없음
 // (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
@@ -21,6 +21,8 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
   const [dateKind, setDateKind] = useState(task.dateKind || "due"); // 날짜의 의미
   const [startDate, setStartDate] = useState(task.startDate || ""); // 기간의 시작
   const [repeat, setRepeat] = useState(task.repeat || ""); // 반복 주기 (F09)
+  const [repeatNth, setRepeatNth] = useState(task.repeatNth ?? 1); // 매월 N번째 (R8)
+  const [repeatWeekday, setRepeatWeekday] = useState(task.repeatWeekday ?? 1); // 그 요일
   const [priority, setPriority] = useState(task.priority || "");
   const [category, setCategory] = useState(task.category || "");
 
@@ -30,7 +32,7 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     const newTitle = title.trim();
     if (newTitle === "") return; // 제목을 비워서 저장하는 건 막음
     // 날짜 종류 정리: 날짜가 없으면 종류도 없음. "기간"인데 시작일이 없으면 "마감"으로.
-    const kind = !dueDate ? undefined : dateKind === "range" && !startDate ? "due" : dateKind;
+    let kind = !dueDate ? undefined : dateKind === "range" && !startDate ? "due" : dateKind;
     // 기간의 시작일이 끝일보다 늦으면 앞뒤를 자동으로 바꿔줌
     // (역전된 기간은 달력 등에서 안 보이게 되므로 저장 시점에 바로잡음)
     let saveStart = kind === "range" ? startDate : undefined;
@@ -38,14 +40,30 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     if (kind === "range" && saveStart > saveDue) {
       [saveStart, saveDue] = [saveDue, saveStart];
     }
+    // 반복 정리 (F09 R1·R6·R8)
+    let saveRepeat;
+    let saveNth;
+    let saveWeekday;
+    if (repeat === "monthlyNth" && kind !== "range") {
+      // 매월 N번째 요일: 날짜는 규칙으로 자동 계산 (다가오는 해당 날짜)
+      saveRepeat = "monthlyNth";
+      saveNth = repeatNth === "last" ? "last" : Number(repeatNth);
+      saveWeekday = Number(repeatWeekday);
+      saveDue = nextNthWeekday(saveNth, saveWeekday, todayStr());
+      kind = "day";
+      saveStart = undefined;
+    } else if (saveDue && kind !== "range" && repeat) {
+      saveRepeat = repeat;
+    }
     await updateTask(task.id, {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: saveDue,
       dateKind: kind,
       startDate: saveStart,
-      // 반복은 날짜가 있고 기간이 아닐 때만 유효 (F09 R1·R6)
-      repeat: saveDue && kind !== "range" && repeat ? repeat : undefined,
+      repeat: saveRepeat,
+      repeatNth: saveNth,
+      repeatWeekday: saveWeekday,
       priority: priority || undefined,
       category: category.trim() || undefined,
     });
@@ -60,6 +78,8 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     setDateKind(task.dateKind || "due");
     setStartDate(task.startDate || "");
     setRepeat(task.repeat || "");
+    setRepeatNth(task.repeatNth ?? 1);
+    setRepeatWeekday(task.repeatWeekday ?? 1);
     setPriority(task.priority || "");
     setCategory(task.category || "");
   }
@@ -128,8 +148,8 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
                 />
               </label>
             )}
-            {/* 반복 주기 (F09) — 날짜가 있고 기간이 아닐 때만 */}
-            {dueDate && dateKind !== "range" && (
+            {/* 반복 주기 (F09) — 기간이 아닐 때. "매월 N번째 요일"은 날짜 없이도 선택 가능(자동 계산) */}
+            {!(dueDate && dateKind === "range") && (
               <label>
                 반복
                 <select
@@ -141,8 +161,42 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
                   <option value="weekly">매주</option>
                   <option value="monthly">매달</option>
                   <option value="yearly">매년</option>
+                  <option value="monthlyNth">매월 N번째 요일</option>
                 </select>
               </label>
+            )}
+            {/* 매월 N번째 요일 상세 (R8) — 날짜는 규칙으로 자동 계산됨 */}
+            {repeat === "monthlyNth" && dateKind !== "range" && (
+              <>
+                <label>
+                  몇째 주
+                  <select
+                    value={String(repeatNth)}
+                    onChange={(e) => setRepeatNth(e.target.value)}
+                  >
+                    <option value="1">첫째</option>
+                    <option value="2">둘째</option>
+                    <option value="3">셋째</option>
+                    <option value="4">넷째</option>
+                    <option value="last">마지막</option>
+                  </select>
+                </label>
+                <label>
+                  요일
+                  <select
+                    value={String(repeatWeekday)}
+                    onChange={(e) => setRepeatWeekday(e.target.value)}
+                  >
+                    <option value="0">일요일</option>
+                    <option value="1">월요일</option>
+                    <option value="2">화요일</option>
+                    <option value="3">수요일</option>
+                    <option value="4">목요일</option>
+                    <option value="5">금요일</option>
+                    <option value="6">토요일</option>
+                  </select>
+                </label>
+              </>
             )}
             <label>
               우선순위
@@ -257,7 +311,7 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
           )}
           {/* 반복 주기 (F09 R5) */}
           {task.repeat && (
-            <span className="badge">🔁 {REPEAT_LABEL[task.repeat]}</span>
+            <span className="badge">🔁 {repeatLabelOf(task)}</span>
           )}
           {/* 우선순위는 제목 앞 점(●)으로 표시 — 글자 뱃지는 제거 (R13, D00) */}
           {task.category && <span className="badge cat">#{task.category}</span>}

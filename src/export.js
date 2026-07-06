@@ -8,7 +8,7 @@
 // ============================================================
 import { db } from "./db.js";
 import { todayStr } from "./date.js";
-import { PRIORITY_LABEL, REPEAT_LABEL } from "./labels.js";
+import { PRIORITY_LABEL, repeatLabelOf } from "./labels.js";
 
 /** 할 일 하나를 마크다운 한 줄로 변환 */
 function taskToLine(task) {
@@ -19,7 +19,7 @@ function taskToLine(task) {
     line += ` 📅 ${task.startDate} ~ ${task.dueDate}`;
   else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
   else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
-  if (task.repeat) line += ` 🔁 ${REPEAT_LABEL[task.repeat]}`;
+  if (task.repeat) line += ` 🔁 ${repeatLabelOf(task)}`;
   if (task.priority) line += ` (${PRIORITY_LABEL[task.priority]})`;
   if (task.category) line += ` #${task.category}`;
   // 메모는 들여쓴 다음 줄로 (줄바꿈이 있으면 " / "로 이어붙임)

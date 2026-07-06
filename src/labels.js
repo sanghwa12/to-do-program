@@ -10,3 +10,16 @@ export const REPEAT_LABEL = {
   monthly: "매달",
   yearly: "매년",
 };
+
+// 매월 N번째 요일 규칙의 표시용 이름 (F09 R8)
+export const NTH_LABEL = { 1: "첫째", 2: "둘째", 3: "셋째", 4: "넷째", last: "마지막" };
+export const WEEKDAY_LABEL = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** 할 일의 반복 규칙을 사람이 읽는 문구로 (예: "매주", "매월 첫째 월요일") */
+export function repeatLabelOf(t) {
+  if (!t.repeat) return "";
+  if (t.repeat === "monthlyNth") {
+    return `매월 ${NTH_LABEL[t.repeatNth] ?? ""} ${WEEKDAY_LABEL[t.repeatWeekday] ?? ""}요일`;
+  }
+  return REPEAT_LABEL[t.repeat];
+}

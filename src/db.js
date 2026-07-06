@@ -72,13 +72,18 @@ export async function uncheckTasks(ids) {
 /** 반복 할 일 체크: 완료 기록 생성 + 원본 날짜를 다음 회차로.
  *  실행취소에 필요한 정보를 돌려줌 */
 export async function completeRepeatingTask(task) {
-  const next = nextOccurrence(task.dueDate, task.repeat);
+  const next = nextOccurrence(task.dueDate, task.repeat, {
+    nth: task.repeatNth,
+    weekday: task.repeatWeekday,
+  });
   // 완료 기록: 반복 없는 일반 완료 할 일로 사본을 남김
   const record = {
     ...task,
     id: crypto.randomUUID(),
     done: true,
     repeat: undefined,
+    repeatNth: undefined,
+    repeatWeekday: undefined,
     createdAt: new Date().toISOString(),
   };
   await db.tasks.add(record);

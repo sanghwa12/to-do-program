@@ -7,7 +7,7 @@
 //   기간(range): "학부실험 조교 11/11~11/23"             → 그 기간 동안
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // ============================================================
-import { todayStr } from "./date.js";
+import { todayStr, nextNthWeekday } from "./date.js";
 
 /** 연·월·일 숫자를 "YYYY-MM-DD" 문자열로 */
 function fmt(year, month, day) {
@@ -93,7 +93,15 @@ function stripTitle(text, matched) {
 // 반복 표기 인식 (F09 R2): 매일 / 매주 (요일) / 매달·매월 (N일) / 매년 (M/D)
 // "구매일지"의 '매일' 같은 오인을 막기 위해 앞뒤가 공백(또는 문장 끝)일 때만 인식
 // ------------------------------------------------------------
+const NTH_NUM = { 첫째: 1, 둘째: 2, 셋째: 3, 넷째: 4, 마지막: "last" };
+
 const REPEAT_PATTERNS = [
+  // 매월 첫째(주) 월요일 / 매달 마지막 금요일 — "주"는 생략 가능 (R8)
+  {
+    re: /(?:^|\s)(?:매월|매달)\s*(첫째|둘째|셋째|넷째|마지막)\s*주?\s*([일월화수목금토])요일(?=\s|$)/,
+    kind: "monthlyNth",
+    type: "nthWeekday",
+  },
   { re: /(?:^|\s)매주\s*([일월화수목금토])요일(?=\s|$)/, kind: "weekly", type: "weekday" },
   { re: /(?:^|\s)(?:매달|매월)\s*(\d{1,2})일(?=\s|$)/, kind: "monthly", type: "dom" },
   { re: /(?:^|\s)매년\s*(\d{1,2})[/\-.](\d{1,2})(?=\s|$)/, kind: "yearly", type: "md" },
@@ -110,6 +118,18 @@ function detectRepeat(text) {
     const m = text.match(p.re);
     if (!m) continue;
     let anchor = today; // 기본 기준일: 오늘
+    if (p.type === "nthWeekday") {
+      // 매월 N번째 X요일: 다가오는 해당 날짜가 첫 회차 (R8)
+      const nth = NTH_NUM[m[1]];
+      const weekday = WEEKDAY_NUM[m[2]];
+      return {
+        repeat: p.kind,
+        nth,
+        weekday,
+        anchor: nextNthWeekday(nth, weekday, today),
+        rest: text.replace(m[0], " "),
+      };
+    }
     if (p.type === "weekday") {
       anchor = resolveWord(m[1] + "요일"); // 다가오는 그 요일 (오늘 포함)
     } else if (p.type === "dom") {
@@ -156,9 +176,20 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
         // 원문 그대로 기간으로 해석 (표기가 제목에 남아 사용자가 알 수 있게)
         return parseQuickInput(text, { allowPast, repeatable: false });
       }
+      const title = inner.title.replace(/\s+/g, " ").trim(); // 표기 뺀 자리 공백 정리
+      if (rep.repeat === "monthlyNth") {
+        // 매월 N번째 요일: 날짜는 항상 규칙으로 계산 (직접 쓴 날짜는 무시)
+        return {
+          title,
+          dueDate: rep.anchor,
+          dateKind: "day",
+          repeat: rep.repeat,
+          repeatNth: rep.nth,
+          repeatWeekday: rep.weekday,
+        };
+      }
       return {
-        // 반복 표기를 뺀 자리의 이중 공백 정리
-        title: inner.title.replace(/\s+/g, " ").trim(),
+        title,
         // 표기에 날짜가 따로 있으면 그 날짜, 없으면 반복 표기의 기준일
         dueDate: inner.dueDate || rep.anchor,
         dateKind: inner.dueDate ? inner.dateKind : "day",
@@ -278,6 +309,8 @@ export function parseImportLine(line) {
   }
   if (parsed.startDate) draft.startDate = parsed.startDate;
   if (parsed.repeat) draft.repeat = parsed.repeat;
+  if (parsed.repeatNth !== undefined) draft.repeatNth = parsed.repeatNth;
+  if (parsed.repeatWeekday !== undefined) draft.repeatWeekday = parsed.repeatWeekday;
   if (priority) draft.priority = priority;
   if (category) draft.category = category;
   return draft;
