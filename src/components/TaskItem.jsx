@@ -5,8 +5,19 @@
 // ------------------------------------------------------------
 import { useState, useRef } from "react";
 import { db, updateTask } from "../db.js";
-import { todayStr, daysLate, nextNthWeekday } from "../date.js";
-import { PRIORITY_LABEL, repeatLabelOf } from "../labels.js";
+import {
+  todayStr,
+  daysLate,
+  nextNthWeekday,
+  nextWeekdayDate,
+  nextMonthDay,
+} from "../date.js";
+import { PRIORITY_LABEL, WEEKDAY_LABEL, repeatLabelOf } from "../labels.js";
+
+/** "YYYY-MM-DD"의 요일 (0=일~6=토) */
+function weekdayOf(dateStr) {
+  return new Date(dateStr + "T00:00:00").getDay();
+}
 
 // 우선순위 점 클릭 시 순환 순서: 없음 → 높음 → 중간 → 낮음 → 없음
 // (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
@@ -22,7 +33,14 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
   const [startDate, setStartDate] = useState(task.startDate || ""); // 기간의 시작
   const [repeat, setRepeat] = useState(task.repeat || ""); // 반복 주기 (F09)
   const [repeatNth, setRepeatNth] = useState(task.repeatNth ?? 1); // 매월 N번째 (R8)
-  const [repeatWeekday, setRepeatWeekday] = useState(task.repeatWeekday ?? 1); // 그 요일
+  // 요일 (매주·매월N번째 공용): 저장된 값 → 없으면 현재 날짜의 요일 → 없으면 월요일
+  const [repeatWeekday, setRepeatWeekday] = useState(
+    task.repeatWeekday ?? (task.dueDate ? weekdayOf(task.dueDate) : 1)
+  );
+  // 매달 며칠 (R9): 현재 날짜의 일 → 없으면 오늘의 일
+  const [monthDay, setMonthDay] = useState(
+    task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
+  );
   const [priority, setPriority] = useState(task.priority || "");
   const [category, setCategory] = useState(task.category || "");
 
@@ -40,20 +58,44 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     if (kind === "range" && saveStart > saveDue) {
       [saveStart, saveDue] = [saveDue, saveStart];
     }
-    // 반복 정리 (F09 R1·R6·R8)
+    // 반복 정리 (F09 R1·R6·R8·R9) — 규칙에 맞게 날짜 자동 계산
     let saveRepeat;
     let saveNth;
     let saveWeekday;
-    if (repeat === "monthlyNth" && kind !== "range") {
-      // 매월 N번째 요일: 날짜는 규칙으로 자동 계산 (다가오는 해당 날짜)
-      saveRepeat = "monthlyNth";
-      saveNth = repeatNth === "last" ? "last" : Number(repeatNth);
-      saveWeekday = Number(repeatWeekday);
-      saveDue = nextNthWeekday(saveNth, saveWeekday, todayStr());
-      kind = "day";
-      saveStart = undefined;
-    } else if (saveDue && kind !== "range" && repeat) {
+    if (repeat && kind !== "range") {
       saveRepeat = repeat;
+      if (repeat === "monthlyNth") {
+        // 매월 N번째 요일: 날짜는 항상 규칙으로 계산
+        saveNth = repeatNth === "last" ? "last" : Number(repeatNth);
+        saveWeekday = Number(repeatWeekday);
+        saveDue = nextNthWeekday(saveNth, saveWeekday, todayStr());
+        kind = "day";
+        saveStart = undefined;
+      } else if (repeat === "weekly") {
+        // 매주 X요일: 날짜가 이미 그 요일이면 유지, 아니면 다가오는 그 요일로
+        const wd = Number(repeatWeekday);
+        if (!saveDue || weekdayOf(saveDue) !== wd) {
+          saveDue = nextWeekdayDate(wd, todayStr());
+        }
+      } else if (repeat === "monthly") {
+        // 매달 N일: 날짜가 이미 그 일(말일 클램프 포함)이면 유지, 아니면 다가오는 그 일로
+        const dom = Number(monthDay);
+        const matches =
+          saveDue &&
+          Number(saveDue.slice(8, 10)) ===
+            Math.min(
+              dom,
+              new Date(
+                Number(saveDue.slice(0, 4)),
+                Number(saveDue.slice(5, 7)),
+                0
+              ).getDate()
+            );
+        if (!matches) saveDue = nextMonthDay(dom, todayStr());
+      } else if (!saveDue) {
+        saveDue = todayStr(); // 매일·매년인데 날짜가 없으면 오늘부터
+      }
+      if (!kind) kind = "day"; // 자동 계산된 날짜는 "당일" 성격
     }
     await updateTask(task.id, {
       title: newTitle,
@@ -79,7 +121,12 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     setStartDate(task.startDate || "");
     setRepeat(task.repeat || "");
     setRepeatNth(task.repeatNth ?? 1);
-    setRepeatWeekday(task.repeatWeekday ?? 1);
+    setRepeatWeekday(
+      task.repeatWeekday ?? (task.dueDate ? weekdayOf(task.dueDate) : 1)
+    );
+    setMonthDay(
+      task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
+    );
     setPriority(task.priority || "");
     setCategory(task.category || "");
   }
@@ -167,36 +214,52 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
             )}
             {/* 매월 N번째 요일 상세 (R8) — 날짜는 규칙으로 자동 계산됨 */}
             {repeat === "monthlyNth" && dateKind !== "range" && (
-              <>
-                <label>
-                  몇째 주
-                  <select
-                    value={String(repeatNth)}
-                    onChange={(e) => setRepeatNth(e.target.value)}
-                  >
-                    <option value="1">첫째</option>
-                    <option value="2">둘째</option>
-                    <option value="3">셋째</option>
-                    <option value="4">넷째</option>
-                    <option value="last">마지막</option>
-                  </select>
-                </label>
+              <label>
+                몇째 주
+                <select
+                  value={String(repeatNth)}
+                  onChange={(e) => setRepeatNth(e.target.value)}
+                >
+                  <option value="1">첫째</option>
+                  <option value="2">둘째</option>
+                  <option value="3">셋째</option>
+                  <option value="4">넷째</option>
+                  <option value="last">마지막</option>
+                </select>
+              </label>
+            )}
+            {/* 요일 선택 — 매주·매월 N번째 공용 (R8·R9) */}
+            {(repeat === "weekly" || repeat === "monthlyNth") &&
+              dateKind !== "range" && (
                 <label>
                   요일
                   <select
                     value={String(repeatWeekday)}
                     onChange={(e) => setRepeatWeekday(e.target.value)}
                   >
-                    <option value="0">일요일</option>
-                    <option value="1">월요일</option>
-                    <option value="2">화요일</option>
-                    <option value="3">수요일</option>
-                    <option value="4">목요일</option>
-                    <option value="5">금요일</option>
-                    <option value="6">토요일</option>
+                    {WEEKDAY_LABEL.map((w, i) => (
+                      <option key={i} value={String(i)}>
+                        {w}요일
+                      </option>
+                    ))}
                   </select>
                 </label>
-              </>
+              )}
+            {/* 매달 며칠 (R9) — 없는 달엔 말일로 */}
+            {repeat === "monthly" && dateKind !== "range" && (
+              <label>
+                며칠
+                <select
+                  value={String(monthDay)}
+                  onChange={(e) => setMonthDay(e.target.value)}
+                >
+                  {Array.from({ length: 31 }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1)}>
+                      {i + 1}일
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
             <label>
               우선순위

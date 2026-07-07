@@ -44,6 +44,30 @@ export function nthWeekdayOfMonth(year, month, nth, weekday) {
   return ymd(year, month, 1 + ((weekday - firstW + 7) % 7) + (nth - 1) * 7);
 }
 
+/** minStr(포함) 이후 첫 해당 요일 (0=일~6=토) — 매주 규칙의 날짜 계산용 (R9) */
+export function nextWeekdayDate(weekday, minStr) {
+  const d = new Date(minStr + "T00:00:00");
+  const diff = (weekday - d.getDay() + 7) % 7;
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  return ymd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
+/** minStr(포함) 이후 첫 "매월 N일" (그 달에 없으면 말일) — 매달 규칙의 날짜 계산용 (R9) */
+export function nextMonthDay(day, minStr) {
+  let [y, m] = minStr.split("-").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const lastDay = new Date(y, m, 0).getDate();
+    const candidate = ymd(y, m, Math.min(day, lastDay));
+    if (candidate >= minStr) return candidate;
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return minStr; // 안전망
+}
+
 /** minStr(포함) 이후 첫 "N번째 X요일" — 규칙 저장 시 첫 날짜 계산용 */
 export function nextNthWeekday(nth, weekday, minStr) {
   let [y, m] = minStr.split("-").map(Number);
