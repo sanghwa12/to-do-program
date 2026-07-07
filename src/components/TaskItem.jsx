@@ -43,6 +43,10 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
   );
   const [priority, setPriority] = useState(task.priority || "");
   const [category, setCategory] = useState(task.category || "");
+  // 우선순위 점 클릭 줄세우기용 (R13).
+  // ⚠️ 훅은 항상 같은 순서로 전부 호출돼야 하므로 반드시 여기(early return 위)에 —
+  //    편집 모드의 return보다 아래에 두면 수정 버튼 클릭 시 앱 전체가 하얗게 죽는다 (실제 사고)
+  const clickQueue = useRef(Promise.resolve());
 
   // 편집 내용 저장
   async function handleSave(e) {
@@ -324,7 +328,6 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
   // 우선순위 점 클릭 → 다음 단계로 순환 (R13)
   // 연타해도 한 클릭 = 한 단계가 되도록, 클릭들을 줄 세워 차례로 처리하고
   // 매번 저장소의 최신 값을 읽어 다음 단계를 계산함
-  const clickQueue = useRef(Promise.resolve());
   function cyclePriority() {
     clickQueue.current = clickQueue.current.then(async () => {
       const current = (await db.tasks.get(task.id))?.priority;
