@@ -44,6 +44,24 @@ export function nthWeekdayOfMonth(year, month, nth, weekday) {
   return ymd(year, month, 1 + ((weekday - firstW + 7) % 7) + (nth - 1) * 7);
 }
 
+/** ISO 시각 문자열(createdAt 등) → 이 컴퓨터 시간대의 "YYYY-MM-DD" */
+export function dateOnly(isoString) {
+  const d = new Date(isoString);
+  return ymd(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+/** minStr(포함) 이후 첫 "매년 M/D" (평년 2/29는 2/28로) — 매년 규칙의 첫 날짜용 (R10) */
+export function nextYearlyDate(dateStr, minStr) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  let y = Number(minStr.slice(0, 4));
+  for (;;) {
+    const lastDay = new Date(y, m, 0).getDate();
+    const candidate = ymd(y, m, Math.min(d, lastDay));
+    if (candidate >= minStr) return candidate;
+    y += 1;
+  }
+}
+
 /** 그 날짜가 그 달의 "몇째 무슨 요일"인지 (R10 프리셋 문구용)
  *  다섯 번째면 "마지막"으로 취급. 반환: { nth: 1~4|"last", weekday: 0~6 } */
 export function nthOfDate(dateStr) {

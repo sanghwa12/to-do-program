@@ -13,6 +13,8 @@ import {
   nextMonthDay,
   nthOfDate,
   nextBusinessDay,
+  nextYearlyDate,
+  dateOnly,
 } from "../date.js";
 import {
   PRIORITY_LABEL,
@@ -92,16 +94,32 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     let saveWeekday;
     if (kind !== "range") {
       if (presetChoice && presetChoice !== "custom") {
-        // 프리셋 (R10): 할 일의 날짜가 그대로 규칙의 기준
-        const base = saveDue || todayStr();
+        // 프리셋 (R10): 규칙은 할 일의 날짜(없으면 등록날짜)에서 뽑고,
+        // 날짜가 없던 할 일은 "다가오는 회차"를 첫 날짜로 (지난 날짜로 저장 방지)
+        const base = saveDue || dateOnly(task.createdAt);
+        const today = todayStr();
         saveRepeat = presetChoice;
         if (presetChoice === "monthlyNth") {
           const info = nthOfDate(base);
           saveNth = info.nth;
           saveWeekday = info.weekday;
         }
-        // 주중 매일인데 기준일이 주말이면 다음 월요일부터
-        saveDue = presetChoice === "weekdays" ? nextBusinessDay(base) : base;
+        if (saveDue) {
+          // 날짜가 있으면 그대로 (주중 매일인데 주말이면 다음 월요일로만 보정)
+          if (presetChoice === "weekdays") saveDue = nextBusinessDay(saveDue);
+        } else if (presetChoice === "daily") {
+          saveDue = today;
+        } else if (presetChoice === "weekdays") {
+          saveDue = nextBusinessDay(today);
+        } else if (presetChoice === "weekly") {
+          saveDue = nextWeekdayDate(weekdayOf(base), today);
+        } else if (presetChoice === "monthly") {
+          saveDue = nextMonthDay(Number(base.slice(8, 10)), today);
+        } else if (presetChoice === "monthlyNth") {
+          saveDue = nextNthWeekday(saveNth, saveWeekday, today);
+        } else if (presetChoice === "yearly") {
+          saveDue = nextYearlyDate(base, today);
+        }
         if (!kind) kind = "day";
       } else if (presetChoice === "custom" && repeat) {
         // 사용자화 (R8·R9): 상세 드롭다운의 규칙대로 날짜 자동 계산
@@ -189,8 +207,9 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
 
   // ----- 편집 모드 화면 -----
   if (editing) {
-    // 반복 프리셋 문구는 현재 날짜(없으면 오늘) 기준으로 계산 (R10)
-    const base = dueDate || todayStr();
+    // 반복 프리셋 문구는 할 일의 날짜, 없으면 "등록날짜" 기준으로 계산 (R10)
+    // — 수정 화면을 언제 열어도 같은 선택지가 나오게
+    const base = dueDate || dateOnly(task.createdAt);
     const baseWd = weekdayOf(base);
     const baseMonth = Number(base.slice(5, 7));
     const baseDay = Number(base.slice(8, 10));
