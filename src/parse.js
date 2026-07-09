@@ -7,7 +7,7 @@
 //   기간(range): "학부실험 조교 11/11~11/23"             → 그 기간 동안
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // ============================================================
-import { todayStr, nextNthWeekday } from "./date.js";
+import { todayStr, nextNthWeekday, nextBusinessDay } from "./date.js";
 
 /** 연·월·일 숫자를 "YYYY-MM-DD" 문자열로 */
 function fmt(year, month, day) {
@@ -105,6 +105,8 @@ const REPEAT_PATTERNS = [
   { re: /(?:^|\s)매주\s*([일월화수목금토])요일(?=\s|$)/, kind: "weekly", type: "weekday" },
   { re: /(?:^|\s)(?:매달|매월)\s*(\d{1,2})일(?=\s|$)/, kind: "monthly", type: "dom" },
   { re: /(?:^|\s)매년\s*(\d{1,2})[/\-.](\d{1,2})(?=\s|$)/, kind: "yearly", type: "md" },
+  // "주중 매일"이 아래 "매일"에 먼저 잡히지 않게 이 순서 유지 (R10)
+  { re: /(?:^|\s)(?:주중|평일)(?:\s*매일)?(?=\s|$)/, kind: "weekdays", type: "business" },
   { re: /(?:^|\s)매일(?=\s|$)/, kind: "daily", type: "plain" },
   { re: /(?:^|\s)매주(?=\s|$)/, kind: "weekly", type: "plain" },
   { re: /(?:^|\s)(?:매달|매월)(?=\s|$)/, kind: "monthly", type: "plain" },
@@ -118,6 +120,9 @@ function detectRepeat(text) {
     const m = text.match(p.re);
     if (!m) continue;
     let anchor = today; // 기본 기준일: 오늘
+    if (p.type === "business") {
+      anchor = nextBusinessDay(today); // 오늘이 주말이면 다음 월요일부터
+    }
     if (p.type === "nthWeekday") {
       // 매월 N번째 X요일: 다가오는 해당 날짜가 첫 회차 (R8)
       const nth = NTH_NUM[m[1]];

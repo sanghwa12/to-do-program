@@ -44,6 +44,24 @@ export function nthWeekdayOfMonth(year, month, nth, weekday) {
   return ymd(year, month, 1 + ((weekday - firstW + 7) % 7) + (nth - 1) * 7);
 }
 
+/** 그 날짜가 그 달의 "몇째 무슨 요일"인지 (R10 프리셋 문구용)
+ *  다섯 번째면 "마지막"으로 취급. 반환: { nth: 1~4|"last", weekday: 0~6 } */
+export function nthOfDate(dateStr) {
+  const [, , d] = dateStr.split("-").map(Number);
+  const weekday = new Date(dateStr + "T00:00:00").getDay();
+  const nth = Math.ceil(d / 7);
+  return { nth: nth >= 5 ? "last" : nth, weekday };
+}
+
+/** minStr(포함) 이후 첫 평일 (토·일이면 다음 월요일) — 주중 매일 규칙용 (R10) */
+export function nextBusinessDay(minStr) {
+  let cur = minStr;
+  while ([0, 6].includes(new Date(cur + "T00:00:00").getDay())) {
+    cur = advanceOnce(cur, "daily");
+  }
+  return cur;
+}
+
 /** minStr(포함) 이후 첫 해당 요일 (0=일~6=토) — 매주 규칙의 날짜 계산용 (R9) */
 export function nextWeekdayDate(weekday, minStr) {
   const d = new Date(minStr + "T00:00:00");
@@ -97,6 +115,17 @@ export function nextOccurrence(dateStr, repeat, extra = {}) {
       extra.weekday ?? 1,
       advanceOnce(base, "daily")
     );
+  }
+  if (repeat === "weekdays") {
+    // 주중 매일: 하루씩 더하되 토·일은 건너뜀 (R10)
+    let next = advanceOnce(dateStr, "daily");
+    while (
+      next <= today ||
+      [0, 6].includes(new Date(next + "T00:00:00").getDay())
+    ) {
+      next = advanceOnce(next, "daily");
+    }
+    return next;
   }
   if (repeat === "daily" || repeat === "weekly") {
     let next = advanceOnce(dateStr, repeat);
