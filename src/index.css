@@ -53,11 +53,47 @@ h1 {
   margin-top: 32px;
 }
 
+/* 입력줄: 텍스트 + 📅 버튼 (R14) */
+.quick-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.quick-row .quick-input {
+  flex: 1;
+}
+.date-toggle {
+  flex-shrink: 0;
+  padding: 0 12px;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+.date-toggle.active {
+  border-color: #4a7dff;
+  background: #eef3ff;
+}
+.quick-date-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.quick-date-row input[type="date"] {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
 /* 입력창 아래 날짜 인식 미리보기 */
 .parse-hint {
   margin: 6px 2px 0;
   font-size: 0.8rem;
   color: #4a7dff;
+}
+.parse-hint.muted {
+  color: #999; /* 날짜 없는 할 일로 저장될 때 (R14 구분 표시) */
 }
 
 /* 상단 ⋯ 메뉴 (D00: 액션 정리) */
