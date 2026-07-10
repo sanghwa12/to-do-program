@@ -378,6 +378,84 @@ h1 {
   color: #a89b5e;
 }
 
+/* 하루 기록 (F04) */
+.day-list {
+  list-style: none;
+  margin: 4px 0 6px;
+  padding: 0;
+}
+.day-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px;
+  font-size: 0.9rem;
+}
+.day-line label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.day-line .day-text {
+  flex: 1;
+}
+.day-line.done .day-text {
+  text-decoration: line-through;
+  color: #aaa;
+}
+.day-line.auto .day-text {
+  color: #555;
+}
+.day-time {
+  font-size: 0.75rem;
+  color: #aaa;
+  flex-shrink: 0;
+}
+.day-delete {
+  border: none;
+  background: none;
+  color: #ccc;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.day-line:hover .day-delete,
+.day-line:focus-within .day-delete {
+  opacity: 1;
+  color: #c00;
+}
+.day-input {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+.day-input:focus {
+  outline: none;
+  border-color: #4a7dff;
+}
+.day-input.note {
+  margin-top: 6px;
+}
+.day-summary {
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #444;
+}
+.hint.small {
+  margin: 4px 0;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
 /* 달력 뷰 (F07) — 색은 기존 파랑·회색만 사용 (D00) */
 .cal-nav {
   display: flex;

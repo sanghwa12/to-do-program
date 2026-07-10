@@ -21,7 +21,8 @@
 ## 요구사항 (검증 항목)
 - [ ] R1. `Task` 데이터 구조가 CLAUDE.md의 데이터 모델과 일치한다.
       필드: `id, title, memo?, dueDate?, startDate?, dateKind?, priority?, category?,
-      repeat?, repeatNth?, repeatWeekday?, done, createdAt, deletedAt?`
+      repeat?, repeatNth?, repeatWeekday?, done, completedAt?, createdAt, deletedAt?`
+      (completedAt: 완료 체크한 시각, 해제 시 제거 — 하루 기록(F04)용, 2026-07-09 추가)
       (dateKind: "due" 마감 | "day" 당일 | "range" 기간 — 2026-07-02 추가)
       (deletedAt: 휴지통에 버린 시각. 있으면 휴지통, 없으면 목록 — 2026-07-03 추가)
       (repeat/repeatNth/repeatWeekday: 반복 규칙, F09 — 2026-07-07 목록 갱신)

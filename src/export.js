@@ -47,6 +47,26 @@ export async function exportBackup() {
     "",
   ];
 
+  // 하루 기록 (F04 R7) — 줄마다 📓 표기 (가져오기에서 건너뜀)
+  const dayLogs = await db.dayLogs.orderBy("date").toArray();
+  const nonEmptyLogs = dayLogs.filter(
+    (l) => l.plans.length > 0 || l.extras.length > 0 || l.note
+  );
+  if (nonEmptyLogs.length > 0) {
+    lines.push(`## 하루 기록 (${nonEmptyLogs.length}일)`);
+    for (const l of nonEmptyLogs) {
+      lines.push(`### ${l.date}`);
+      for (const p of l.plans) {
+        lines.push(`- 📓 [${p.done ? "x" : " "}] ${p.text}`);
+      }
+      for (const x of l.extras) {
+        lines.push(`- 📓 (계획 외) ${x.text}`);
+      }
+      if (l.note) lines.push(`- 📓 메모: ${l.note}`);
+    }
+    lines.push("");
+  }
+
   // 알아둘 것 (F08 R7) — 백업에서 빠지지 않게
   // 일정 공지는 📢, 참고 정보는 📎 (가져오기는 두 줄 다 건너뜀)
   if (notes.length > 0) {

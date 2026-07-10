@@ -15,7 +15,7 @@
 | F02 | [02-quick-capture.md](02-quick-capture.md) | 빠른 입력 + 기본 목록 (쏟아붓기) | 1 | 구현완료 |
 | F03 | [03-organize-views.md](03-organize-views.md) | 정리 뷰 (오늘·날짜·우선순위·카테고리) | 2 | 개발중 |
 | F06 | [06-export-backup.md](06-export-backup.md) | 파일 내보내기 (백업·Obsidian 호환) | 3 | 개발중 |
-| F04 | [04-review-digest.md](04-review-digest.md) | 정리본(리뷰) 화면 — 형태 미정 | 4 | 스텁 |
+| F04 | [04-review-digest.md](04-review-digest.md) | 하루 기록 (계획 vs 실제) | 4 | 개발중 |
 | F05 | [05-pwa-install.md](05-pwa-install.md) | PWA 설치 (선택) | 5 | 개발중 |
 | D00 | [07-design.md](07-design.md) | 디자인 원칙 · UI 단순화 | 상시 | 개발중 |
 | F07 | [08-calendar-view.md](08-calendar-view.md) | 달력 뷰 (월간) | 2 (확장) | 개발중 |

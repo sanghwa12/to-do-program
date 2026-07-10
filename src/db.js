@@ -24,6 +24,11 @@ db.version(2).stores({
   notes: "id, date, createdAt",
 });
 
+// version 3: "하루 기록" 보관함 추가 (F04) — 날짜당 1개, date가 키
+db.version(3).stores({
+  dayLogs: "date",
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -55,14 +60,23 @@ export async function addManyTasks(drafts) {
   return tasks.length;
 }
 
-/** 완료 여부 뒤집기 — 체크박스를 누를 때 사용 */
+/** 완료 여부 뒤집기 — 체크박스를 누를 때 사용.
+ *  완료하면 완료 시각(completedAt)을 기록 — "하루 기록"의 자동 수집용 (F04 R1·R6) */
 export async function toggleDone(task) {
-  await db.tasks.update(task.id, { done: !task.done });
+  await db.tasks.update(
+    task.id,
+    task.done
+      ? { done: false, completedAt: undefined } // 해제하면 시각도 제거
+      : { done: true, completedAt: new Date().toISOString() }
+  );
 }
 
 /** 완료 표시 풀기 (실행취소용) — 잘못 체크한 것을 미완료로 되돌림 */
 export async function uncheckTasks(ids) {
-  await db.tasks.where("id").anyOf(ids).modify({ done: false });
+  await db.tasks
+    .where("id")
+    .anyOf(ids)
+    .modify({ done: false, completedAt: undefined });
 }
 
 // ------------------------------------------------------------
@@ -81,6 +95,7 @@ export async function completeRepeatingTask(task) {
     ...task,
     id: crypto.randomUUID(),
     done: true,
+    completedAt: new Date().toISOString(), // 하루 기록 자동 수집용 (F04)
     repeat: undefined,
     repeatNth: undefined,
     repeatWeekday: undefined,
@@ -162,4 +177,58 @@ export async function deleteNote(id) {
 /** 삭제한 공지 되살리기 — 실행취소용 */
 export async function restoreNotes(notes) {
   await db.notes.bulkAdd(notes);
+}
+
+// ------------------------------------------------------------
+// 하루 기록 (F04) — 날짜당 1개의 문서: { date, plans, extras, note }
+// ------------------------------------------------------------
+
+/** 그 날짜의 기록을 가져오고, 없으면 빈 기록을 만들어 반환 (저장은 안 함) */
+async function getDayLog(date) {
+  return (await db.dayLogs.get(date)) ?? { date, plans: [], extras: [], note: "" };
+}
+
+/** 오늘의 계획에 한 줄 추가 (자유 작성, R3) */
+export async function addPlanLine(date, text) {
+  const log = await getDayLog(date);
+  log.plans.push({ id: crypto.randomUUID(), text, done: false });
+  await db.dayLogs.put(log);
+}
+
+/** 계획 줄의 달성 체크 토글 (할 일과 독립, R3) */
+export async function togglePlanLine(date, id) {
+  const log = await getDayLog(date);
+  const line = log.plans.find((p) => p.id === id);
+  if (line) {
+    line.done = !line.done;
+    await db.dayLogs.put(log);
+  }
+}
+
+/** 계획 줄 삭제 */
+export async function deletePlanLine(date, id) {
+  const log = await getDayLog(date);
+  log.plans = log.plans.filter((p) => p.id !== id);
+  await db.dayLogs.put(log);
+}
+
+/** "계획 외에 한 일" 한 줄 추가 (R4) */
+export async function addExtraLine(date, text) {
+  const log = await getDayLog(date);
+  log.extras.push({ id: crypto.randomUUID(), text });
+  await db.dayLogs.put(log);
+}
+
+/** 계획 외 줄 삭제 */
+export async function deleteExtraLine(date, id) {
+  const log = await getDayLog(date);
+  log.extras = log.extras.filter((x) => x.id !== id);
+  await db.dayLogs.put(log);
+}
+
+/** 회고 메모 저장 (R5) */
+export async function setDayNote(date, note) {
+  const log = await getDayLog(date);
+  log.note = note.trim();
+  await db.dayLogs.put(log);
 }

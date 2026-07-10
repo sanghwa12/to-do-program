@@ -25,12 +25,13 @@ import TaskItem from "./components/TaskItem.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import StickyBoard from "./components/StickyBoard.jsx";
 import NoticeBoard from "./components/NoticeBoard.jsx";
+import DayView from "./components/DayView.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab } from "./sort.js";
 
-const TABS = ["오늘", "달력", "전체", "날짜", "우선순위", "카테고리"];
+const TABS = ["오늘", "하루", "달력", "전체", "날짜", "우선순위", "카테고리"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -319,6 +320,11 @@ function TaskView({
   catFilter,
   setCatFilter,
 }) {
+  // [하루] 계획 vs 실제 — 매일의 기록 (F04)
+  if (tab === "하루") {
+    return <DayView tasks={tasks} />;
+  }
+
   // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)
   if (tab === "달력") {
     return (
