@@ -26,6 +26,7 @@ import CalendarView from "./components/CalendarView.jsx";
 import StickyBoard from "./components/StickyBoard.jsx";
 import NoticeBoard from "./components/NoticeBoard.jsx";
 import DayView from "./components/DayView.jsx";
+import HelpView from "./components/HelpView.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
@@ -39,6 +40,7 @@ export default function App() {
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
   const [catFilter, setCatFilter] = useState(null); // 카테고리 필터 (null=전체)
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
+  const [showHelp, setShowHelp] = useState(false); // 도움말 화면 보는 중? (F10)
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
   const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
   const [noticeOpen, setNoticeOpen] = useState(true); // 공지판 펼침? (탭 오가도 유지, R3)
@@ -154,7 +156,7 @@ export default function App() {
       <header className="top">
         <h1>할 일</h1>
         {/* 자주 안 쓰는 액션은 ⋯ 메뉴 하나로 모음 (D00: 액션 정리) */}
-        {!showTrash && (
+        {!showTrash && !showHelp && (
           <div className="menu-wrap">
             <button
               className="menu-btn"
@@ -196,6 +198,14 @@ export default function App() {
                     {trash && trash.length > 0 ? ` (${trash.length})` : ""}
                   </button>
                   <button
+                    onClick={() => {
+                      setShowHelp(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    ❓ 도움말
+                  </button>
+                  <button
                     className="danger"
                     onClick={() => {
                       setConfirmClear(true);
@@ -211,7 +221,9 @@ export default function App() {
         )}
       </header>
 
-      {showTrash ? (
+      {showHelp ? (
+        <HelpView onBack={() => setShowHelp(false)} />
+      ) : showTrash ? (
         <TrashView
           trash={trash}
           onBack={() => setShowTrash(false)}

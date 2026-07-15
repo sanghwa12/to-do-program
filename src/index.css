@@ -786,6 +786,41 @@ button.delete {
   color: #c00;
 }
 
+/* 도움말 (F10) */
+.help-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.help-section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 8px;
+}
+.help-section p {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0 0 6px;
+}
+.help-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.help-section li {
+  font-size: 0.85rem;
+  color: #444;
+  margin-bottom: 5px;
+  line-height: 1.5;
+}
+.help-section code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.8rem;
+  color: #1a5fb4;
+}
+
 /* 휴지통 화면 */
 .trash-head {
   display: flex;
