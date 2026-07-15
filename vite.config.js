@@ -4,6 +4,12 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // 주소를 항상 http://localhost:5173 으로 고정
+  // (자동 시작과 중복 실행 시 5174로 밀려 즐겨찾기가 깨지는 것 방지)
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
   plugins: [
     react(), // React 코드를 이해할 수 있게 해주는 플러그인
 
