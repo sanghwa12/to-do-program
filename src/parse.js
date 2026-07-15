@@ -277,9 +277,15 @@ export function parseImportLine(line) {
     t = t.replace(/^[-*]\s+/, "");
   }
 
-  // 백업 파일의 "알아둘 것"(📢 일정 공지 / 📎 참고)·"하루 기록"(📓) 줄은
+  // 백업 파일의 "알아둘 것"(📢/📎)·"하루 기록"(📓)·"메모"(📝) 줄은
   // 할 일로 만들지 않고 건너뜀 (복원 방법은 미결정 — 최소한 할 일 오염은 방지)
-  if (t.startsWith("📢") || t.startsWith("📎") || t.startsWith("📓")) return null;
+  if (
+    t.startsWith("📢") ||
+    t.startsWith("📎") ||
+    t.startsWith("📓") ||
+    t.startsWith("📝")
+  )
+    return null;
 
   // 내보내기 형식의 이모지 제거. 반복 인식은 🔁 표기가 "실제로 있던 줄"에만 적용 —
   // 제목에 우연히 '매일/매주' 단어가 든 일반 할 일이 반복으로 둔갑하지 않게 (R7)

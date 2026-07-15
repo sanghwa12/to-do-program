@@ -786,6 +786,73 @@ button.delete {
   color: #c00;
 }
 
+/* 메모장 (F11) */
+.memo-new {
+  margin: 14px 0 10px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+.memo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.memo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  font: inherit;
+}
+.memo-card:hover {
+  background: #f6f8ff;
+}
+.memo-title {
+  font-weight: bold;
+  font-size: 0.92rem;
+}
+.memo-preview {
+  font-size: 0.8rem;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.memo-date {
+  font-size: 0.72rem;
+  color: #bbb;
+}
+.memo-editor {
+  margin-top: 14px;
+}
+.memo-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  resize: vertical;
+}
+.memo-textarea:focus {
+  outline: none;
+  border-color: #4a7dff;
+}
+.memo-delete {
+  margin-right: auto; /* 삭제는 왼쪽, 저장/취소는 오른쪽 */
+}
+
 /* 도움말 (F10) */
 .help-section {
   background: #fff;

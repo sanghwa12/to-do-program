@@ -67,6 +67,19 @@ export async function exportBackup() {
     lines.push("");
   }
 
+  // 메모장 (F11 R5) — 모든 줄에 📝 표기 (가져오기에서 건너뜀)
+  const memos = await db.memos.orderBy("updatedAt").reverse().toArray();
+  if (memos.length > 0) {
+    lines.push(`## 메모 (${memos.length}개)`);
+    for (const m of memos) {
+      lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
+      for (const ln of m.text.split("\n")) {
+        lines.push(`📝 ${ln}`);
+      }
+      lines.push("");
+    }
+  }
+
   // 알아둘 것 (F08 R7) — 백업에서 빠지지 않게
   // 일정 공지는 📢, 참고 정보는 📎 (가져오기는 두 줄 다 건너뜀)
   if (notes.length > 0) {

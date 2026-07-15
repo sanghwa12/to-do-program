@@ -16,6 +16,8 @@ import {
   emptyTrash,
   deleteNote,
   restoreNotes,
+  deleteMemo,
+  restoreMemos,
   completeRepeatingTask,
   undoCompleteRepeating,
 } from "./db.js";
@@ -27,12 +29,13 @@ import StickyBoard from "./components/StickyBoard.jsx";
 import NoticeBoard from "./components/NoticeBoard.jsx";
 import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
+import MemoView from "./components/MemoView.jsx";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab } from "./sort.js";
 
-const TABS = ["오늘", "하루", "달력", "전체", "날짜", "우선순위", "카테고리"];
+const TABS = ["오늘", "하루", "달력", "전체", "날짜", "우선순위", "카테고리", "메모"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -134,12 +137,20 @@ export default function App() {
     setUndo({ type: "note", notes: [note], label: `"${note.text}" 공지` });
   }
 
+  // 메모 삭제 (F11 R4 — 같은 방식)
+  async function handleDeleteMemo(memo) {
+    await deleteMemo(memo.id);
+    const title = memo.text.split("\n")[0].slice(0, 20);
+    setUndo({ type: "memo", memos: [memo], label: `"${title}" 메모` });
+  }
+
   // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
     if (undo) {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
       else if (undo.type === "note") await restoreNotes(undo.notes);
+      else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "repeat")
         await undoCompleteRepeating(
           undo.recordId,
@@ -283,6 +294,7 @@ export default function App() {
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteCategory={handleDeleteCategory}
+              onDeleteMemo={handleDeleteMemo}
               catFilter={catFilter}
               setCatFilter={setCatFilter}
             />
@@ -298,7 +310,7 @@ export default function App() {
             {undo.label}{" "}
             {undo.type === "trash"
               ? "휴지통으로 이동"
-              : undo.type === "note"
+              : undo.type === "note" || undo.type === "memo"
                 ? "삭제됨"
                 : undo.type === "repeat"
                   ? `완료 · 다음 ${undo.nextDue}`
@@ -329,12 +341,18 @@ function TaskView({
   onToggle,
   onDelete,
   onDeleteCategory,
+  onDeleteMemo,
   catFilter,
   setCatFilter,
 }) {
   // [하루] 계획 vs 실제 — 매일의 기록 (F04)
   if (tab === "하루") {
     return <DayView tasks={tasks} />;
+  }
+
+  // [메모] 여러 줄 자유 글 (F11)
+  if (tab === "메모") {
+    return <MemoView onDelete={onDeleteMemo} />;
   }
 
   // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)

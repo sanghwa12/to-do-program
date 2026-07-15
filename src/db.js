@@ -29,6 +29,11 @@ db.version(3).stores({
   dayLogs: "date",
 });
 
+// version 4: "메모장" 보관함 추가 (F11) — 여러 줄 자유 글
+db.version(4).stores({
+  memos: "id, updatedAt, createdAt",
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -231,4 +236,31 @@ export async function setDayNote(date, note) {
   const log = await getDayLog(date);
   log.note = note.trim();
   await db.dayLogs.put(log);
+}
+
+// ------------------------------------------------------------
+// 메모장 (F11) — 여러 줄 자유 글
+// ------------------------------------------------------------
+
+/** 새 메모 저장. 만든 메모의 id를 반환 */
+export async function addMemo(text) {
+  const now = new Date().toISOString();
+  const memo = { id: crypto.randomUUID(), text, createdAt: now, updatedAt: now };
+  await db.memos.add(memo);
+  return memo.id;
+}
+
+/** 메모 내용 수정 — 수정 시각 갱신 (목록 정렬 기준) */
+export async function updateMemo(id, text) {
+  await db.memos.update(id, { text, updatedAt: new Date().toISOString() });
+}
+
+/** 메모 삭제 (실행취소는 restoreMemos로) */
+export async function deleteMemo(id) {
+  await db.memos.delete(id);
+}
+
+/** 삭제한 메모 되살리기 — 실행취소용 */
+export async function restoreMemos(memos) {
+  await db.memos.bulkAdd(memos);
 }

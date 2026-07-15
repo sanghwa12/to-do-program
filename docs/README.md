@@ -22,6 +22,7 @@
 | F08 | [09-notices.md](09-notices.md) | 알아둘 것 (일정 공지 + 참고) | 6 | 개발중 |
 | F09 | [10-recurring.md](10-recurring.md) | 반복 할 일 (매일~매년) | 7 | 개발중 |
 | F10 | [11-help.md](11-help.md) | 도움말 (앱 내 매뉴얼) | 상시 | 개발중 |
+| F11 | [12-memos.md](12-memos.md) | 메모장 (자유 글) | 8 | 개발중 |
 
 > 새 기능을 추가할 때는 [00-template.md](00-template.md)를 복사해서 새 문서를 만들고,
 > 위 표에 한 줄 추가하세요.
