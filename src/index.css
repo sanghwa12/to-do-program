@@ -328,6 +328,9 @@ h1 {
   font-size: 0.85rem;
   color: #555;
 }
+.today-notice {
+  margin-top: 14px; /* 오늘 탭 맨 위의 "오늘 공지" 한 줄 (F08 R3b) */
+}
 
 /* 메모판 (F03 R2c) — 스티커 메모 은유의 연한 노랑 (D00 색 예외로 문서화됨) */
 .sticky-board {

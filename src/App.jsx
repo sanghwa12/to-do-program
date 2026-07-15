@@ -35,7 +35,8 @@ import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab } from "./sort.js";
 
-const TABS = ["오늘", "하루", "달력", "전체", "날짜", "우선순위", "카테고리", "메모"];
+// "날짜" 탭은 달력이 대체(2026-07-15 제거), "알아둘 것"+"메모"는 "정보" 탭으로 통합
+const TABS = ["오늘", "하루", "달력", "전체", "우선순위", "카테고리", "정보"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -273,16 +274,6 @@ export default function App() {
             ))}
           </nav>
 
-          {/* 공지판 (F08): 오늘 탭 맨 위 — 행정 도우미의 게시판 */}
-          {tab === "오늘" && notes && (
-            <NoticeBoard
-              notes={notes}
-              onDelete={handleDeleteNote}
-              open={noticeOpen}
-              onToggleOpen={() => setNoticeOpen((o) => !o)}
-            />
-          )}
-
           {tasks === undefined ? (
             <p className="hint">불러오는 중...</p>
           ) : (
@@ -295,6 +286,9 @@ export default function App() {
               onDelete={handleDelete}
               onDeleteCategory={handleDeleteCategory}
               onDeleteMemo={handleDeleteMemo}
+              onDeleteNote={handleDeleteNote}
+              noticeOpen={noticeOpen}
+              onToggleNoticeOpen={() => setNoticeOpen((o) => !o)}
               catFilter={catFilter}
               setCatFilter={setCatFilter}
             />
@@ -342,6 +336,9 @@ function TaskView({
   onDelete,
   onDeleteCategory,
   onDeleteMemo,
+  onDeleteNote,
+  noticeOpen,
+  onToggleNoticeOpen,
   catFilter,
   setCatFilter,
 }) {
@@ -350,9 +347,19 @@ function TaskView({
     return <DayView tasks={tasks} />;
   }
 
-  // [메모] 여러 줄 자유 글 (F11)
-  if (tab === "메모") {
-    return <MemoView onDelete={onDeleteMemo} />;
+  // [정보] 알아둘 것(위) + 메모(아래) (F08·F11 — 2026-07-15 통합)
+  if (tab === "정보") {
+    return (
+      <div>
+        <NoticeBoard
+          notes={notes}
+          onDelete={onDeleteNote}
+          open={noticeOpen}
+          onToggleOpen={onToggleNoticeOpen}
+        />
+        <MemoView onDelete={onDeleteMemo} />
+      </div>
+    );
   }
 
   // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)
@@ -399,8 +406,16 @@ function TaskView({
     // 날짜 미정 + 미완료 → 아래 메모판에 항상 보여줌 (F03 R2c)
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
 
+    // 오늘 날짜인 공지만 한 줄로 (놓침 방지, F08 R3b — 판 전체는 "정보" 탭에)
+    const todaysNotices = notes.filter((n) => n.date === today);
+
     return (
       <div>
+        {todaysNotices.map((n) => (
+          <p key={n.id} className="cal-note-line today-notice">
+            📢 오늘: {n.text}
+          </p>
+        ))}
         <TaskList
           tasks={list}
           categories={categories}
@@ -506,9 +521,8 @@ function TaskView({
     );
   }
 
-  // [날짜 / 우선순위] 그룹으로 묶어서 표시
-  const groups =
-    tab === "날짜" ? groupByDate(tasks) : groupByPriority(tasks);
+  // [우선순위] 그룹으로 묶어서 표시 ("날짜" 탭은 달력이 대체 — 2026-07-15 제거)
+  const groups = groupByPriority(tasks);
 
   if (groups.every((g) => g.tasks.length === 0)) {
     return <p className="hint">할 일이 없어요. 위에 입력하고 Enter를 누르세요!</p>;
@@ -669,19 +683,6 @@ function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
 // ------------------------------------------------------------
 // 그룹핑 함수들 — 할 일 배열을 [{ title, tasks }] 모양으로 묶는다
 // ------------------------------------------------------------
-
-/** 날짜별로 묶기: 빠른 날짜부터, 날짜 없는 건 맨 뒤 "날짜 미정" (F03 R5) */
-function groupByDate(tasks) {
-  const dated = tasks.filter((t) => t.dueDate);
-  const undated = tasks.filter((t) => !t.dueDate);
-  const dates = [...new Set(dated.map((t) => t.dueDate))].sort();
-  const groups = dates.map((date) => ({
-    title: date === todayStr() ? `${date} (오늘)` : date,
-    tasks: dated.filter((t) => t.dueDate === date),
-  }));
-  groups.push({ title: "날짜 미정", tasks: undated });
-  return groups;
-}
 
 /** 우선순위별로 묶기: 높음 → 중간 → 낮음 → 미지정 (F03 R3) */
 function groupByPriority(tasks) {
