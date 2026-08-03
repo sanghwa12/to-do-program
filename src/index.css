@@ -371,6 +371,13 @@ h1 {
 .sticky-text {
   font-size: 0.85rem;
   color: #4a4226;
+  flex: 1;
+  min-width: 0;
+}
+.sticky-date {
+  font-size: 0.68rem;
+  color: #b3a76a; /* 등록일 — 판 배경에 묻히는 연한 색 */
+  flex-shrink: 0;
 }
 .sticky-text.hi {
   font-weight: bold;

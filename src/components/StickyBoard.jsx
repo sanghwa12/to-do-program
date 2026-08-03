@@ -7,6 +7,12 @@
 // 우선순위 정렬 순서: 높음 → 중간 → 낮음 → 미지정
 const ORDER = { high: 0, med: 1, low: 2 };
 
+/** 등록 시각 → "M/D" 짧은 날짜 (좁은 칸에 맞게) */
+function shortDate(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 export default function StickyBoard({ tasks, onToggle }) {
   const sorted = [...tasks].sort(
     (a, b) => (ORDER[a.priority] ?? 3) - (ORDER[b.priority] ?? 3)
@@ -37,6 +43,8 @@ export default function StickyBoard({ tasks, onToggle }) {
               >
                 {t.title}
               </span>
+              {/* 언제 남긴 메모인지 (등록일) */}
+              <span className="sticky-date">{shortDate(t.createdAt)}</span>
             </label>
           </li>
         ))}
