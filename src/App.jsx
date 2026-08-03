@@ -31,18 +31,17 @@ import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import { todayStr } from "./date.js";
-import { PRIORITY_LABEL } from "./labels.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab } from "./sort.js";
 
-// "날짜" 탭은 달력이 대체(2026-07-15 제거), "알아둘 것"+"메모"는 "정보" 탭으로 통합
-const TABS = ["오늘", "하루", "달력", "전체", "우선순위", "카테고리", "정보"];
+// 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
+// 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
+const TABS = ["오늘", "하루", "달력", "전체", "정보"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
   const [undo, setUndo] = useState(null); // 방금 휴지통에 넣은 것 (실행취소용)
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
-  const [catFilter, setCatFilter] = useState(null); // 카테고리 필터 (null=전체)
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
   const [showHelp, setShowHelp] = useState(false); // 도움말 화면 보는 중? (F10)
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
@@ -116,12 +115,6 @@ export default function App() {
   async function handleDelete(task) {
     await trashTasks([task.id]);
     showUndo("trash", [task.id], `"${task.title}"`);
-  }
-
-  // 카테고리별 → 휴지통
-  async function handleDeleteCategory(list, label) {
-    await trashTasks(list.map((t) => t.id));
-    showUndo("trash", list.map((t) => t.id), label);
   }
 
   // 전체 → 휴지통
@@ -284,13 +277,10 @@ export default function App() {
               categories={categories}
               onToggle={handleToggle}
               onDelete={handleDelete}
-              onDeleteCategory={handleDeleteCategory}
               onDeleteMemo={handleDeleteMemo}
               onDeleteNote={handleDeleteNote}
               noticeOpen={noticeOpen}
               onToggleNoticeOpen={() => setNoticeOpen((o) => !o)}
-              catFilter={catFilter}
-              setCatFilter={setCatFilter}
             />
           )}
 
@@ -334,13 +324,10 @@ function TaskView({
   categories,
   onToggle,
   onDelete,
-  onDeleteCategory,
   onDeleteMemo,
   onDeleteNote,
   noticeOpen,
   onToggleNoticeOpen,
-  catFilter,
-  setCatFilter,
 }) {
   // [하루] 계획 vs 실제 — 매일의 기록 (F04)
   if (tab === "하루") {
@@ -430,125 +417,7 @@ function TaskView({
     );
   }
 
-  // [카테고리] 상단 필터(칩)로 특정 카테고리만 골라 보기 (F03 R4b)
-  if (tab === "카테고리") {
-    const names = [...new Set(tasks.map((t) => t.category).filter(Boolean))].sort(
-      (a, b) => a.localeCompare(b, "ko")
-    );
-    const uncatCount = tasks.filter((t) => !t.category).length;
-    const countOf = (n) => tasks.filter((t) => t.category === n).length;
-
-    const chips = (
-      <div className="cat-filter">
-        <button
-          className={"chip" + (catFilter === null ? " active" : "")}
-          onClick={() => setCatFilter(null)}
-        >
-          전체
-        </button>
-        {names.map((n) => (
-          <button
-            key={n}
-            className={"chip" + (catFilter === n ? " active" : "")}
-            onClick={() => setCatFilter(n)}
-          >
-            #{n} <span className="chip-count">{countOf(n)}</span>
-          </button>
-        ))}
-        {uncatCount > 0 && (
-          <button
-            className={"chip" + (catFilter === "__none__" ? " active" : "")}
-            onClick={() => setCatFilter("__none__")}
-          >
-            미지정 <span className="chip-count">{uncatCount}</span>
-          </button>
-        )}
-      </div>
-    );
-
-    // 특정 카테고리를 골랐으면 그것만 목록으로 + 카테고리 통째 삭제 버튼
-    if (catFilter !== null) {
-      const isUncat = catFilter === "__none__";
-      const list = isUncat
-        ? tasks.filter((t) => !t.category)
-        : tasks.filter((t) => t.category === catFilter);
-      const label = isUncat ? "미지정" : `#${catFilter}`;
-      return (
-        <div>
-          {chips}
-          {list.length > 0 && (
-            <DeleteCategoryButton
-              key={catFilter}
-              count={list.length}
-              label={label}
-              onConfirm={() => onDeleteCategory(list, `${label} ${list.length}개`)}
-            />
-          )}
-          <TaskList
-            tasks={list}
-            categories={categories}
-            onToggle={onToggle}
-            onDelete={onDelete}
-            emptyHint="이 카테고리에 할 일이 없어요."
-          />
-        </div>
-      );
-    }
-
-    // "전체"면 카테고리별로 묶어서
-    const catGroups = groupByCategory(tasks);
-    return (
-      <div>
-        {chips}
-        {catGroups.map(
-          (group) =>
-            group.tasks.length > 0 && (
-              <section key={group.title}>
-                <h2 className="group-title">
-                  {group.title}{" "}
-                  <span className="group-count">{group.tasks.length}</span>
-                </h2>
-                <TaskList
-                  tasks={group.tasks}
-                  categories={categories}
-                  onToggle={onToggle}
-                  onDelete={onDelete}
-                />
-              </section>
-            )
-        )}
-      </div>
-    );
-  }
-
-  // [우선순위] 그룹으로 묶어서 표시 ("날짜" 탭은 달력이 대체 — 2026-07-15 제거)
-  const groups = groupByPriority(tasks);
-
-  if (groups.every((g) => g.tasks.length === 0)) {
-    return <p className="hint">할 일이 없어요. 위에 입력하고 Enter를 누르세요!</p>;
-  }
-
-  return (
-    <div>
-      {groups.map(
-        (group) =>
-          group.tasks.length > 0 && (
-            <section key={group.title}>
-              <h2 className="group-title">
-                {group.title}{" "}
-                <span className="group-count">{group.tasks.length}</span>
-              </h2>
-              <TaskList
-                tasks={group.tasks}
-                categories={categories}
-                onToggle={onToggle}
-                onDelete={onDelete}
-              />
-            </section>
-          )
-      )}
-    </div>
-  );
+  return null; // TABS에 없는 탭은 없음
 }
 
 // ------------------------------------------------------------
@@ -635,31 +504,6 @@ function EmptyTrashButton({ count, onEmpty }) {
   );
 }
 
-/** 카테고리 통째 삭제 버튼 (누르면 그 자리에서 한 번 더 확인) */
-function DeleteCategoryButton({ count, label, onConfirm }) {
-  const [confirm, setConfirm] = useState(false);
-  if (!confirm) {
-    return (
-      <div className="cat-delete">
-        <button className="reset-btn" onClick={() => setConfirm(true)}>
-          {label} {count}개 모두 삭제
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="cat-delete">
-      <span className="danger-confirm">
-        {label} {count}개를 삭제할까요? (되돌리기 가능)
-        <button className="delete" onClick={onConfirm}>
-          삭제
-        </button>
-        <button onClick={() => setConfirm(false)}>취소</button>
-      </span>
-    </div>
-  );
-}
-
 /** 할 일 목록 하나를 그리는 공통 부품 */
 function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
   if (tasks.length === 0) {
@@ -684,32 +528,3 @@ function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
 // 그룹핑 함수들 — 할 일 배열을 [{ title, tasks }] 모양으로 묶는다
 // ------------------------------------------------------------
 
-/** 우선순위별로 묶기: 높음 → 중간 → 낮음 → 미지정 (F03 R3) */
-function groupByPriority(tasks) {
-  const order = ["high", "med", "low"];
-  const groups = order.map((p) => ({
-    title: PRIORITY_LABEL[p],
-    tasks: tasks.filter((t) => t.priority === p),
-  }));
-  groups.push({
-    title: "미지정",
-    tasks: tasks.filter((t) => !t.priority),
-  });
-  return groups;
-}
-
-/** 카테고리별로 묶기: 이름순, 카테고리 없는 건 맨 뒤 "미지정" (F03 R4) */
-function groupByCategory(tasks) {
-  const names = [
-    ...new Set(tasks.map((t) => t.category).filter(Boolean)),
-  ].sort((a, b) => a.localeCompare(b, "ko"));
-  const groups = names.map((name) => ({
-    title: `#${name}`,
-    tasks: tasks.filter((t) => t.category === name),
-  }));
-  groups.push({
-    title: "미지정",
-    tasks: tasks.filter((t) => !t.category),
-  });
-  return groups;
-}

@@ -78,10 +78,6 @@ export default function HelpView({ onBack }) {
             아래
           </li>
           <li>
-            <b>카테고리</b>: 칩(#업무 등)으로 골라 보기 · "N개 모두 삭제"도
-            여기서
-          </li>
-          <li>
             <b>정보</b>: 위 📌알아둘 것(일정 공지·참고) + 아래 📝 메모(여러 줄
             자유 글)
           </li>
