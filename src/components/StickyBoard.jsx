@@ -15,7 +15,7 @@ export default function StickyBoard({ tasks, onToggle }) {
   return (
     <section className="sticky-board">
       <h2 className="sticky-title">
-        📌 날짜 없는 할 일 <span className="group-count">{tasks.length}</span>
+        📌 메모 <span className="group-count">{tasks.length}</span>
       </h2>
       <ul className="sticky-list">
         {sorted.map((t) => (

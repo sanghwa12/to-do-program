@@ -135,7 +135,7 @@ export default function App() {
   async function handleDeleteMemo(memo) {
     await deleteMemo(memo.id);
     const title = memo.text.split("\n")[0].slice(0, 20);
-    setUndo({ type: "memo", memos: [memo], label: `"${title}" 메모` });
+    setUndo({ type: "memo", memos: [memo], label: `"${title}" 노트` });
   }
 
   // 실행취소: 방금 한 동작을 되돌림

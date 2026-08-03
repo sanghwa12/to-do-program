@@ -96,7 +96,7 @@ export default function QuickInput() {
           <p className="parse-hint">{previewText(effective)}</p>
         ) : (
           <p className="parse-hint muted">
-            "{effective.title}" — 날짜 없는 할 일로 저장됩니다 (📅로 날짜 붙이기)
+            "{effective.title}" — 메모(날짜 없음)로 저장됩니다 (📅로 날짜 붙이기)
           </p>
         ))}
     </form>

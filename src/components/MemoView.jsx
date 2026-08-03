@@ -32,12 +32,12 @@ export default function MemoView({ onDelete }) {
   return (
     <div className="memo-view">
       <button className="memo-new" onClick={() => setOpenId("new")}>
-        + 새 메모
+        + 새 노트
       </button>
       {memos === undefined ? (
         <p className="hint">불러오는 중...</p>
       ) : memos.length === 0 ? (
-        <p className="hint">메모가 없어요. "+ 새 메모"로 시작하세요.</p>
+        <p className="hint">메모가 없어요. "+ 새 노트"로 시작하세요.</p>
       ) : (
         <ul className="memo-list">
           {memos.map((m) => {
@@ -46,7 +46,7 @@ export default function MemoView({ onDelete }) {
             return (
               <li key={m.id}>
                 <button className="memo-card" onClick={() => setOpenId(m.id)}>
-                  <span className="memo-title">{first || "(빈 메모)"}</span>
+                  <span className="memo-title">{first || "(빈 노트)"}</span>
                   {preview && <span className="memo-preview">{preview}</span>}
                   <span className="memo-date">{dateOnly(m.updatedAt)}</span>
                 </button>
