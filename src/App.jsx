@@ -14,8 +14,6 @@ import {
   restoreTasks,
   permanentDeleteTasks,
   emptyTrash,
-  deleteNote,
-  restoreNotes,
   deleteMemo,
   restoreMemos,
   completeRepeatingTask,
@@ -26,7 +24,6 @@ import ImportBox from "./components/ImportBox.jsx";
 import TaskItem from "./components/TaskItem.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import StickyBoard from "./components/StickyBoard.jsx";
-import NoticeBoard from "./components/NoticeBoard.jsx";
 import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
 import MemoView from "./components/MemoView.jsx";
@@ -46,7 +43,6 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false); // 도움말 화면 보는 중? (F10)
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
   const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
-  const [noticeOpen, setNoticeOpen] = useState(true); // 공지판 펼침? (탭 오가도 유지, R3)
 
   // 목록: 휴지통에 없는 할 일만 (deletedAt 없는 것). DB가 바뀌면 자동 갱신
   const tasks = useLiveQuery(() =>
@@ -67,8 +63,8 @@ export default function App() {
       )
   );
 
-  // 공지 (알아둘 것, F08)
-  const notes = useLiveQuery(() => db.notes.toArray());
+  // 노트 (F11 통합) — 날짜 있는 것은 일정 성격 (달력·오늘 한 줄에도 사용)
+  const memos = useLiveQuery(() => db.memos.toArray());
 
   // 이미 써 본 카테고리 목록 (편집 화면의 자동완성 후보로 씀)
   const categories = [
@@ -125,12 +121,6 @@ export default function App() {
     showUndo("trash", all.map((t) => t.id), `전체 ${all.length}개`);
   }
 
-  // 공지 삭제 (실행취소를 위해 지운 공지 자체를 기억해 둠)
-  async function handleDeleteNote(note) {
-    await deleteNote(note.id);
-    setUndo({ type: "note", notes: [note], label: `"${note.text}" 공지` });
-  }
-
   // 메모 삭제 (F11 R4 — 같은 방식)
   async function handleDeleteMemo(memo) {
     await deleteMemo(memo.id);
@@ -143,7 +133,6 @@ export default function App() {
     if (undo) {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
-      else if (undo.type === "note") await restoreNotes(undo.notes);
       else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "repeat")
         await undoCompleteRepeating(
@@ -273,14 +262,11 @@ export default function App() {
             <TaskView
               tab={tab}
               tasks={tasks}
-              notes={notes ?? []}
+              memos={memos ?? []}
               categories={categories}
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
-              onDeleteNote={handleDeleteNote}
-              noticeOpen={noticeOpen}
-              onToggleNoticeOpen={() => setNoticeOpen((o) => !o)}
             />
           )}
 
@@ -294,7 +280,7 @@ export default function App() {
             {undo.label}{" "}
             {undo.type === "trash"
               ? "휴지통으로 이동"
-              : undo.type === "note" || undo.type === "memo"
+              : undo.type === "memo"
                 ? "삭제됨"
                 : undo.type === "repeat"
                   ? `완료 · 다음 ${undo.nextDue}`
@@ -320,33 +306,20 @@ export default function App() {
 function TaskView({
   tab,
   tasks,
-  notes,
+  memos,
   categories,
   onToggle,
   onDelete,
   onDeleteMemo,
-  onDeleteNote,
-  noticeOpen,
-  onToggleNoticeOpen,
 }) {
   // [하루] 계획 vs 실제 — 매일의 기록 (F04)
   if (tab === "하루") {
     return <DayView tasks={tasks} />;
   }
 
-  // [정보] 알아둘 것(위) + 메모(아래) (F08·F11 — 2026-07-15 통합)
+  // [정보] 통합 노트 — 일정(날짜 있음) + 기록 (F11, 2026-08-03 통합)
   if (tab === "정보") {
-    return (
-      <div>
-        <NoticeBoard
-          notes={notes}
-          onDelete={onDeleteNote}
-          open={noticeOpen}
-          onToggleOpen={onToggleNoticeOpen}
-        />
-        <MemoView onDelete={onDeleteMemo} />
-      </div>
-    );
+    return <MemoView memos={memos} onDelete={onDeleteMemo} />;
   }
 
   // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)
@@ -354,7 +327,9 @@ function TaskView({
     return (
       <CalendarView
         tasks={tasks}
-        notes={notes}
+        notes={memos
+          .filter((m) => m.date)
+          .map((m) => ({ ...m, text: m.text.split("\n")[0] }))}
         categories={categories}
         onToggle={onToggle}
         onDelete={onDelete}
@@ -393,8 +368,10 @@ function TaskView({
     // 날짜 미정 + 미완료 → 아래 메모판에 항상 보여줌 (F03 R2c)
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
 
-    // 오늘 날짜인 공지만 한 줄로 (놓침 방지, F08 R3b — 판 전체는 "정보" 탭에)
-    const todaysNotices = notes.filter((n) => n.date === today);
+    // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 "정보" 탭에, F11 R5)
+    const todaysNotices = memos
+      .filter((m) => m.date === today)
+      .map((m) => ({ ...m, text: m.text.split("\n")[0] }));
 
     return (
       <div>

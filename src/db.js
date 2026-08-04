@@ -34,6 +34,32 @@ db.version(4).stores({
   memos: "id, updatedAt, createdAt",
 });
 
+// version 5 (2026-08-03 통합, F11): 노트에 date 속성 추가 +
+// "알아둘 것(notes)"의 항목을 노트로 자동 이사 (제목+설명 → 첫 줄+둘째 줄)
+db.version(5)
+  .stores({
+    memos: "id, date, updatedAt, createdAt",
+  })
+  .upgrade(async (tx) => {
+    const oldNotes = await tx.table("notes").toArray();
+    if (oldNotes.length > 0) {
+      const moved = oldNotes.map((n) => ({
+        id: n.id, // 같은 id 유지 (이중 이사 방지)
+        text: n.memo ? `${n.text}\n${n.memo}` : n.text,
+        date: n.date ?? undefined,
+        createdAt: n.createdAt,
+        updatedAt: n.createdAt,
+      }));
+      await tx.table("memos").bulkPut(moved);
+      await tx.table("notes").clear();
+    }
+  });
+
+// version 6: 빈 notes 테이블 제거 (이사 완료 후 정리)
+db.version(6).stores({
+  notes: null,
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -156,35 +182,6 @@ export async function emptyTrash() {
 }
 
 // ------------------------------------------------------------
-// 공지 (알아둘 것) — F08. 완료 개념이 없는 정보 메모.
-// ------------------------------------------------------------
-
-/** 공지 추가 — 내용(text)과 선택적 날짜("그 일이 있는 날") */
-export async function addNote(text, date) {
-  await db.notes.add({
-    id: crypto.randomUUID(),
-    text,
-    date: date || undefined,
-    createdAt: new Date().toISOString(),
-  });
-}
-
-/** 공지 수정 */
-export async function updateNote(id, changes) {
-  await db.notes.update(id, changes);
-}
-
-/** 공지 삭제 (실행취소는 restoreNotes로) */
-export async function deleteNote(id) {
-  await db.notes.delete(id);
-}
-
-/** 삭제한 공지 되살리기 — 실행취소용 */
-export async function restoreNotes(notes) {
-  await db.notes.bulkAdd(notes);
-}
-
-// ------------------------------------------------------------
 // 하루 기록 (F04) — 날짜당 1개의 문서: { date, plans, extras, note }
 // ------------------------------------------------------------
 
@@ -239,20 +236,30 @@ export async function setDayNote(date, note) {
 }
 
 // ------------------------------------------------------------
-// 메모장 (F11) — 여러 줄 자유 글
+// 노트 (F11 통합) — 자유 글 + 선택적 날짜(일정 성격)
 // ------------------------------------------------------------
 
-/** 새 메모 저장. 만든 메모의 id를 반환 */
-export async function addMemo(text) {
+/** 새 노트 저장 (date는 선택 — 있으면 일정 성격). 만든 노트의 id를 반환 */
+export async function addMemo(text, date) {
   const now = new Date().toISOString();
-  const memo = { id: crypto.randomUUID(), text, createdAt: now, updatedAt: now };
+  const memo = {
+    id: crypto.randomUUID(),
+    text,
+    date: date || undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
   await db.memos.add(memo);
   return memo.id;
 }
 
-/** 메모 내용 수정 — 수정 시각 갱신 (목록 정렬 기준) */
-export async function updateMemo(id, text) {
-  await db.memos.update(id, { text, updatedAt: new Date().toISOString() });
+/** 노트 수정 (내용·날짜) — 수정 시각 갱신 (목록 정렬 기준) */
+export async function updateMemo(id, text, date) {
+  await db.memos.update(id, {
+    text,
+    date: date || undefined,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 /** 메모 삭제 (실행취소는 restoreMemos로) */

@@ -29,9 +29,8 @@ function taskToLine(task) {
 
 /** 전체 할 일을 .md 파일로 만들어 다운로드 */
 export async function exportBackup() {
-  // 저장된 할 일·공지를 읽기만 함 (변경 ❌) — 만든 순서대로
+  // 저장된 데이터를 읽기만 함 (변경 ❌) — 만든 순서대로
   const tasks = await db.tasks.orderBy("createdAt").toArray();
-  const notes = await db.notes.orderBy("createdAt").toArray();
   const today = todayStr();
   const todo = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
@@ -67,31 +66,24 @@ export async function exportBackup() {
     lines.push("");
   }
 
-  // 메모장 (F11 R5) — 모든 줄에 📝 표기 (가져오기에서 건너뜀)
+  // 노트 (F11 통합 R7) — 날짜 있으면 📢 줄 + 나머지 📝, 없으면 📝 블록
+  // (📢·📝 줄은 가져오기에서 건너뜀 — 할 일 오염 방지)
   const memos = await db.memos.orderBy("updatedAt").reverse().toArray();
   if (memos.length > 0) {
     lines.push(`## 노트 (${memos.length}개)`);
     for (const m of memos) {
-      lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
-      for (const ln of m.text.split("\n")) {
+      const [first, ...rest] = m.text.split("\n");
+      if (m.date) {
+        lines.push(`- 📢 ${first} 📅 ${m.date}`);
+      } else {
+        lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
+        lines.push(`📝 ${first}`);
+      }
+      for (const ln of rest) {
         lines.push(`📝 ${ln}`);
       }
       lines.push("");
     }
-  }
-
-  // 알아둘 것 (F08 R7) — 백업에서 빠지지 않게
-  // 일정 공지는 📢, 참고 정보는 📎 (가져오기는 두 줄 다 건너뜀)
-  if (notes.length > 0) {
-    lines.push(`## 알아둘 것 (${notes.length}개)`);
-    for (const n of notes) {
-      const icon = n.date ? "📢" : "📎";
-      let line = `- ${icon} ${n.text}`;
-      if (n.date) line += ` 📅 ${n.date}`;
-      if (n.memo) line += ` — ${n.memo}`;
-      lines.push(line);
-    }
-    lines.push("");
   }
 
   // 브라우저의 파일 다운로드 기능만 사용 (외부 전송 없음)
