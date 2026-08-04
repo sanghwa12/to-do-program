@@ -215,17 +215,27 @@ export async function deletePlanLine(date, id) {
 }
 
 /** 못한 계획 줄을 다른 날짜의 계획으로 미루기 (F04 R8)
- *  — 옮겨간 줄은 그날에서 미완료 상태로 시작 */
+ *  원본은 지우지 않고 "미룸(movedTo)" 표시로 남김 — 그날의 계획 총 개수 보존.
+ *  (지우면 미루기로 달성률을 조작하는 거짓 기록이 됨) */
 export async function movePlanLine(fromDate, id, toDate) {
   if (fromDate === toDate) return;
   const from = await getDayLog(fromDate);
   const line = from.plans.find((p) => p.id === id);
-  if (!line) return;
-  from.plans = from.plans.filter((p) => p.id !== id);
+  if (!line || line.movedTo) return;
+  line.movedTo = toDate; // 원본에 "→ 어디로" 기록
   const to = await getDayLog(toDate);
-  to.plans.push({ ...line, done: false });
+  to.plans.push({ id: crypto.randomUUID(), text: line.text, done: false });
   await db.dayLogs.put(from);
   await db.dayLogs.put(to);
+}
+
+/** 계획 줄을 "언젠가(메모)"로 미룸 표시 (F04 R8 — 할 일 추가는 화면 쪽에서) */
+export async function markPlanMovedToMemo(date, id) {
+  const log = await getDayLog(date);
+  const line = log.plans.find((p) => p.id === id);
+  if (!line || line.movedTo) return;
+  line.movedTo = "memo";
+  await db.dayLogs.put(log);
 }
 
 /** "계획 외에 한 일" 한 줄 추가 (R4) */

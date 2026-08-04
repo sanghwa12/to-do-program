@@ -56,7 +56,10 @@ export async function exportBackup() {
     for (const l of nonEmptyLogs) {
       lines.push(`### ${l.date}`);
       for (const p of l.plans) {
-        lines.push(`- 📓 [${p.done ? "x" : " "}] ${p.text}`);
+        const moved = p.movedTo
+          ? ` (→ ${p.movedTo === "memo" ? "메모" : p.movedTo}로 미룸)`
+          : "";
+        lines.push(`- 📓 [${p.done ? "x" : " "}] ${p.text}${moved}`);
       }
       for (const x of l.extras) {
         lines.push(`- 📓 (계획 외) ${x.text}`);

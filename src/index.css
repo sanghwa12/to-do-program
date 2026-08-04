@@ -360,6 +360,25 @@ h1 {
   color: #c00;
 }
 
+/* 미룬 계획 줄 (R8) — 기록은 남되 흐리게 */
+.day-line.moved {
+  opacity: 0.5;
+}
+.day-moved-mark {
+  color: #999;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+.day-moved-badge {
+  font-size: 0.72rem;
+  color: #888;
+  background: #f0f0f0;
+  border-radius: 10px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
 /* 계획 미루기 버튼들 (F04 R8) — 마우스 올릴 때만 */
 .day-actions {
   display: flex;

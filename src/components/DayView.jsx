@@ -12,6 +12,7 @@ import {
   togglePlanLine,
   deletePlanLine,
   movePlanLine,
+  markPlanMovedToMemo,
   addExtraLine,
   deleteExtraLine,
   setDayNote,
@@ -44,6 +45,9 @@ export default function DayView({ tasks }) {
     .sort((a, b) => (a.completedAt || "").localeCompare(b.completedAt || ""));
 
   const achieved = plans.filter((p) => p.done).length;
+  const movedCount = plans.filter((p) => p.movedTo).length;
+  // 미루기 가능한 것 = 미완료이면서 아직 안 미룬 것
+  const deferrable = plans.filter((p) => !p.done && !p.movedTo);
   const weekday = WEEKDAY_LABEL[new Date(date + "T00:00:00").getDay()];
 
   async function handleAddPlan(e) {
@@ -89,18 +93,18 @@ export default function DayView({ tasks }) {
           <PlanLine key={p.id} date={date} line={p} today={today} />
         ))}
       </ul>
-      {/* 미완료 일괄 미루기 (R8) */}
-      {plans.filter((p) => !p.done).length > 1 && (
+      {/* 미완료 일괄 미루기 (R8) — 이미 미룬 것은 제외 */}
+      {deferrable.length > 1 && (
         <button
           className="link-btn"
           onClick={async () => {
             const next = shiftDate(date, 1);
-            for (const p of plans.filter((x) => !x.done)) {
+            for (const p of deferrable) {
               await movePlanLine(date, p.id, next);
             }
           }}
         >
-          미완료 {plans.filter((p) => !p.done).length}개 모두{" "}
+          미완료 {deferrable.length}개 모두{" "}
           {date === today ? "내일로" : "다음날로"} →
         </button>
       )}
@@ -157,9 +161,10 @@ export default function DayView({ tasks }) {
         />
       </form>
 
-      {/* 비교 요약 + 회고 (R5) */}
+      {/* 비교 요약 + 회고 (R5) — 미룬 것도 총 개수에 포함 (기록 보존, R8) */}
       <div className="day-summary">
-        계획 {plans.length}개 중 <b>{achieved}개 달성</b> · 완료한 할 일{" "}
+        계획 {plans.length}개 중 <b>{achieved}개 달성</b>
+        {movedCount > 0 && <> · {movedCount}개 미룸</>} · 완료한 할 일{" "}
         {doneTasks.length}건 · 계획 외 {extras.length}건
       </div>
       <NoteLine
@@ -172,14 +177,35 @@ export default function DayView({ tasks }) {
 }
 
 // 계획 한 줄 (R8): 체크·삭제 + 미완료면 미루기 (내일로/날짜…/메모로)
+// 미룬 줄은 지우지 않고 "→ 어디로" 표시로 남음 (총 개수 보존)
 function PlanLine({ date, line, today }) {
   const [showDatePick, setShowDatePick] = useState(false);
   const nextLabel = date === today ? "내일로" : "다음날로";
 
-  // "언젠가 할 일"로: 날짜 없는 할 일로 전환 → 노란 📌 메모판에 남음
+  // "언젠가 할 일"로: 날짜 없는 할 일 생성 → 노란 📌 메모판. 원본엔 미룸 표시
   async function toMemo() {
     await addTask(line.text);
-    await deletePlanLine(date, line.id);
+    await markPlanMovedToMemo(date, line.id);
+  }
+
+  // 이미 미룬 줄: 흐리게 + 행선지만 표시 (체크·미루기 없음, 삭제만 가능)
+  if (line.movedTo) {
+    return (
+      <li className="day-line moved">
+        <span className="day-moved-mark">→</span>
+        <span className="day-text">{line.text}</span>
+        <span className="day-moved-badge">
+          {line.movedTo === "memo" ? "메모로 미룸" : `${line.movedTo}로 미룸`}
+        </span>
+        <button
+          className="day-delete"
+          onClick={() => deletePlanLine(date, line.id)}
+          aria-label="계획 줄 삭제"
+        >
+          ✕
+        </button>
+      </li>
+    );
   }
 
   return (
