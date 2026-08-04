@@ -11,9 +11,11 @@ import {
   addPlanLine,
   togglePlanLine,
   deletePlanLine,
+  movePlanLine,
   addExtraLine,
   deleteExtraLine,
   setDayNote,
+  addTask,
 } from "../db.js";
 import { todayStr, dateOnly } from "../date.js";
 import { WEEKDAY_LABEL } from "../labels.js";
@@ -84,25 +86,24 @@ export default function DayView({ tasks }) {
       </h2>
       <ul className="day-list">
         {plans.map((p) => (
-          <li key={p.id} className={"day-line" + (p.done ? " done" : "")}>
-            <label>
-              <input
-                type="checkbox"
-                checked={p.done}
-                onChange={() => togglePlanLine(date, p.id)}
-              />
-              <span className="day-text">{p.text}</span>
-            </label>
-            <button
-              className="day-delete"
-              onClick={() => deletePlanLine(date, p.id)}
-              aria-label="계획 줄 삭제"
-            >
-              ✕
-            </button>
-          </li>
+          <PlanLine key={p.id} date={date} line={p} today={today} />
         ))}
       </ul>
+      {/* 미완료 일괄 미루기 (R8) */}
+      {plans.filter((p) => !p.done).length > 1 && (
+        <button
+          className="link-btn"
+          onClick={async () => {
+            const next = shiftDate(date, 1);
+            for (const p of plans.filter((x) => !x.done)) {
+              await movePlanLine(date, p.id, next);
+            }
+          }}
+        >
+          미완료 {plans.filter((p) => !p.done).length}개 모두{" "}
+          {date === today ? "내일로" : "다음날로"} →
+        </button>
+      )}
       <form onSubmit={handleAddPlan}>
         <input
           className="day-input"
@@ -167,6 +168,67 @@ export default function DayView({ tasks }) {
         initial={log?.note ?? ""}
       />
     </div>
+  );
+}
+
+// 계획 한 줄 (R8): 체크·삭제 + 미완료면 미루기 (내일로/날짜…/메모로)
+function PlanLine({ date, line, today }) {
+  const [showDatePick, setShowDatePick] = useState(false);
+  const nextLabel = date === today ? "내일로" : "다음날로";
+
+  // "언젠가 할 일"로: 날짜 없는 할 일로 전환 → 노란 📌 메모판에 남음
+  async function toMemo() {
+    await addTask(line.text);
+    await deletePlanLine(date, line.id);
+  }
+
+  return (
+    <li className={"day-line" + (line.done ? " done" : "")}>
+      <label>
+        <input
+          type="checkbox"
+          checked={line.done}
+          onChange={() => togglePlanLine(date, line.id)}
+        />
+        <span className="day-text">{line.text}</span>
+      </label>
+      {!line.done && (
+        <span className="day-actions">
+          <button
+            onClick={() => movePlanLine(date, line.id, shiftDate(date, 1))}
+            title="다음 날 계획으로 보내기"
+          >
+            {nextLabel}
+          </button>
+          <button
+            onClick={() => setShowDatePick((s) => !s)}
+            title="원하는 날짜로 미루기"
+          >
+            날짜…
+          </button>
+          <button onClick={toMemo} title="날짜 없는 할 일(📌 메모)로 남겨두기">
+            메모로
+          </button>
+        </span>
+      )}
+      <button
+        className="day-delete"
+        onClick={() => deletePlanLine(date, line.id)}
+        aria-label="계획 줄 삭제"
+      >
+        ✕
+      </button>
+      {showDatePick && (
+        <input
+          type="date"
+          className="day-datepick"
+          onChange={(e) => {
+            if (e.target.value) movePlanLine(date, line.id, e.target.value);
+          }}
+          autoFocus
+        />
+      )}
+    </li>
   );
 }
 

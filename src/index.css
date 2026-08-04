@@ -321,6 +321,7 @@ h1 {
   gap: 8px;
   padding: 3px 2px;
   font-size: 0.9rem;
+  flex-wrap: wrap; /* 날짜 선택기가 다음 줄로 떨어지게 (R8) */
 }
 .day-line label {
   display: flex;
@@ -357,6 +358,34 @@ h1 {
 .day-line:focus-within .day-delete {
   opacity: 1;
   color: #c00;
+}
+
+/* 계획 미루기 버튼들 (F04 R8) — 마우스 올릴 때만 */
+.day-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.day-line:hover .day-actions,
+.day-line:focus-within .day-actions {
+  opacity: 1;
+}
+.day-actions button {
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #555;
+}
+.day-datepick {
+  margin-left: 26px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.8rem;
 }
 .day-input {
   width: 100%;

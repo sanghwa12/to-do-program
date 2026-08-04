@@ -214,6 +214,20 @@ export async function deletePlanLine(date, id) {
   await db.dayLogs.put(log);
 }
 
+/** 못한 계획 줄을 다른 날짜의 계획으로 미루기 (F04 R8)
+ *  — 옮겨간 줄은 그날에서 미완료 상태로 시작 */
+export async function movePlanLine(fromDate, id, toDate) {
+  if (fromDate === toDate) return;
+  const from = await getDayLog(fromDate);
+  const line = from.plans.find((p) => p.id === id);
+  if (!line) return;
+  from.plans = from.plans.filter((p) => p.id !== id);
+  const to = await getDayLog(toDate);
+  to.plans.push({ ...line, done: false });
+  await db.dayLogs.put(from);
+  await db.dayLogs.put(to);
+}
+
 /** "계획 외에 한 일" 한 줄 추가 (R4) */
 export async function addExtraLine(date, text) {
   const log = await getDayLog(date);
