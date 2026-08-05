@@ -66,11 +66,6 @@ export default function App() {
   // 노트 (F11 통합) — 날짜 있는 것은 일정 성격 (달력·오늘 한 줄에도 사용)
   const memos = useLiveQuery(() => db.memos.toArray());
 
-  // 이미 써 본 카테고리 목록 (편집 화면의 자동완성 후보로 씀)
-  const categories = [
-    ...new Set((tasks ?? []).map((t) => t.category).filter(Boolean)),
-  ];
-
   // 방금 한 동작을 기억해 "실행취소" 알림을 띄움
   // type: "trash"(휴지통으로 감) | "done"(완료로 체크됨)
   function showUndo(type, ids, label) {
@@ -263,7 +258,6 @@ export default function App() {
               tab={tab}
               tasks={tasks}
               memos={memos ?? []}
-              categories={categories}
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
@@ -307,7 +301,6 @@ function TaskView({
   tab,
   tasks,
   memos,
-  categories,
   onToggle,
   onDelete,
   onDeleteMemo,
@@ -330,7 +323,6 @@ function TaskView({
         notes={memos
           .filter((m) => m.date)
           .map((m) => ({ ...m, text: m.text.split("\n")[0] }))}
-        categories={categories}
         onToggle={onToggle}
         onDelete={onDelete}
       />
@@ -342,7 +334,6 @@ function TaskView({
     return (
       <TaskList
         tasks={sortForAllTab(tasks)}
-        categories={categories}
         onToggle={onToggle}
         onDelete={onDelete}
         emptyHint="할 일이 없어요. 위에 입력하고 Enter를 누르세요!"
@@ -382,7 +373,6 @@ function TaskView({
         ))}
         <TaskList
           tasks={list}
-          categories={categories}
           onToggle={onToggle}
           onDelete={onDelete}
           emptyHint="오늘 마감인 할 일이 없어요."
@@ -420,7 +410,6 @@ function TrashView({ trash, onBack, onRestore, onPurge, onEmpty }) {
           {items.map((t) => (
             <li key={t.id} className="task-item trashed">
               <span className="task-title">{t.title}</span>
-              {t.category && <span className="badge cat">#{t.category}</span>}
               <div className="task-buttons">
                 <button onClick={() => onRestore(t)}>복원</button>
                 <PurgeButton onConfirm={() => onPurge([t.id])} />
@@ -482,7 +471,7 @@ function EmptyTrashButton({ count, onEmpty }) {
 }
 
 /** 할 일 목록 하나를 그리는 공통 부품 */
-function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
+function TaskList({ tasks, onToggle, onDelete, emptyHint }) {
   if (tasks.length === 0) {
     return emptyHint ? <p className="hint">{emptyHint}</p> : null;
   }
@@ -492,7 +481,6 @@ function TaskList({ tasks, categories, onToggle, onDelete, emptyHint }) {
         <TaskItem
           key={task.id}
           task={task}
-          categories={categories}
           onToggle={onToggle}
           onDelete={onDelete}
         />

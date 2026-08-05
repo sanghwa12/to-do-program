@@ -48,7 +48,7 @@ function presetFromTask(t) {
 // (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
 const NEXT_PRIORITY = { high: "med", med: "low", low: undefined };
 
-export default function TaskItem({ task, categories, onToggle, onDelete }) {
+export default function TaskItem({ task, onToggle, onDelete }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
   const [title, setTitle] = useState(task.title);
@@ -68,7 +68,6 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
     task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
   );
   const [priority, setPriority] = useState(task.priority || "");
-  const [category, setCategory] = useState(task.category || "");
   // 우선순위 점 클릭 줄세우기용 (R13).
   // ⚠️ 훅은 항상 같은 순서로 전부 호출돼야 하므로 반드시 여기(early return 위)에 —
   //    편집 모드의 return보다 아래에 두면 수정 버튼 클릭 시 앱 전체가 하얗게 죽는다 (실제 사고)
@@ -167,7 +166,7 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
       repeatNth: saveNth,
       repeatWeekday: saveWeekday,
       priority: priority || undefined,
-      category: category.trim() || undefined,
+      // 카테고리는 UI 정리(2026-08-05) — update에서 제외해 저장된 값은 보존
     });
     setEditing(false);
   }
@@ -189,7 +188,6 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
       task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
     );
     setPriority(task.priority || "");
-    setCategory(task.category || "");
   }
 
   // 편집 시작 — 반드시 최신 값으로 폼을 채우고 시작
@@ -371,22 +369,6 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
                 <option value="low">낮음</option>
               </select>
             </label>
-            <label>
-              카테고리
-              <input
-                type="text"
-                placeholder="예: 업무"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                list="category-suggestions"
-              />
-              {/* 이미 써 본 카테고리를 자동완성 후보로 보여줌 */}
-              <datalist id="category-suggestions">
-                {categories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </label>
           </div>
           <div className="edit-buttons">
             <button type="submit">저장</button>
@@ -456,7 +438,7 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
       {task.memo && <p className="task-memo">{task.memo}</p>}
 
       {/* 날짜·카테고리 뱃지 (있는 것만 표시) */}
-      {(task.dueDate || task.category) && (
+      {task.dueDate && (
         <div className="task-badges">
           {task.dueDate && (
             <span
@@ -473,8 +455,7 @@ export default function TaskItem({ task, categories, onToggle, onDelete }) {
           {task.repeat && (
             <span className="badge">🔁 {repeatLabelOf(task)}</span>
           )}
-          {/* 우선순위는 제목 앞 점(●)으로 표시 — 글자 뱃지는 제거 (R13, D00) */}
-          {task.category && <span className="badge cat">#{task.category}</span>}
+          {/* 우선순위는 제목 앞 점(●)으로 표시 (R13). 카테고리 뱃지는 정리됨(2026-08-05) */}
         </div>
       )}
 

@@ -109,8 +109,7 @@ export default function HelpView({ onBack }) {
           </li>
           <li>
             <b>가져오기</b>: 여러 줄 붙여넣기 — 줄마다 할 일이 되고,{" "}
-            <code>- [x]</code>는 완료로, <code>#태그</code>는 카테고리로. 이미
-            있는 항목은 건너뜀
+            <code>- [x]</code>는 완료로. 이미 있는 항목은 건너뜀
           </li>
           <li>
             데이터는 <b>이 컴퓨터의 브라우저 안</b>(IndexedDB)에만 저장돼요 —

@@ -18,8 +18,7 @@ const MAX_CHIPS = 3; // 한 칸에 보여줄 최대 칩 수 (R5)
 
 export default function CalendarView({
   tasks,
-  notes = [], // 날짜 있는 공지도 달력에 표시 (F08 R6)
-  categories,
+  notes = [], // 날짜 있는 일정도 달력에 표시
   onToggle,
   onDelete,
 }) {
@@ -145,7 +144,6 @@ export default function CalendarView({
                 <TaskItem
                   key={task.id}
                   task={task}
-                  categories={categories}
                   onToggle={onToggle}
                   onDelete={onDelete}
                 />

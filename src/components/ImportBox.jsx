@@ -42,8 +42,8 @@ export default function ImportBox({ open, onClose }) {
         className="import-textarea"
         placeholder={
           "여러 줄을 붙여넣으세요. 줄마다 할 일이 됩니다.\n" +
-          "예) 도서 반납 ~7/2 #개인\n" +
-          "- [x] 등록금 납부 #학사   (완료로 넣기)"
+          "예) 도서 반납 ~7/2\n" +
+          "- [x] 등록금 납부   (완료로 넣기)"
         }
         value={text}
         onChange={(e) => setText(e.target.value)}
