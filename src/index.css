@@ -252,6 +252,11 @@ h1 {
 .today-notice {
   margin-top: 14px; /* 오늘 탭 맨 위의 "오늘 공지" 한 줄 (F08 R3b) */
 }
+.today-tasks-title {
+  margin-top: 24px; /* 하루 기록 블록과 오늘 할 일 목록 사이 구분 (2026-08-05 통합) */
+  padding-top: 14px;
+  border-top: 1px solid #e0e0e0;
+}
 
 /* 메모판 (F03 R2c) — 스티커 메모 은유의 연한 노랑 (D00 색 예외로 문서화됨) */
 .sticky-board {

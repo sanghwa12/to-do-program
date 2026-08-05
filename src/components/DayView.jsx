@@ -68,6 +68,8 @@ export default function DayView({ tasks }) {
 
   return (
     <div className="day-view">
+      {/* 오늘 탭에 포함된 블록 (2026-08-05 통합) — ◀▶로 지난 날 기록 열람 */}
+      <h2 className="group-title">📓 하루 기록</h2>
       {/* 날짜 이동 */}
       <div className="cal-nav">
         <button onClick={() => setDate(shiftDate(date, -1))} aria-label="어제">

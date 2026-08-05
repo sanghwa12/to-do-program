@@ -33,7 +33,8 @@ import { sortForAllTab } from "./sort.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
-const TABS = ["오늘", "하루", "달력", "전체", "정보"];
+// 오늘+하루 통합, 메모판 독립 (2026-08-05 사용자 결정)
+const TABS = ["오늘", "메모", "달력", "전체", "정보"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -305,9 +306,17 @@ function TaskView({
   onDelete,
   onDeleteMemo,
 }) {
-  // [하루] 계획 vs 실제 — 매일의 기록 (F04)
-  if (tab === "하루") {
-    return <DayView tasks={tasks} />;
+  // [메모] 날짜 없는 할 일들의 노란 판 — 독립 탭 (2026-08-05)
+  if (tab === "메모") {
+    const undated = tasks.filter((t) => !t.done && !t.dueDate);
+    if (undated.length === 0) {
+      return (
+        <p className="hint">
+          메모가 없어요. 입력창에 날짜 없이 쓰고 Enter를 누르세요.
+        </p>
+      );
+    }
+    return <StickyBoard tasks={undated} onToggle={onToggle} />;
   }
 
   // [정보] 통합 노트 — 일정(날짜 있음) + 기록 (F11, 2026-08-03 통합)
@@ -341,8 +350,7 @@ function TaskView({
     );
   }
 
-  // [오늘] 날짜가 오늘이거나 이미 지난(밀린) 미완료 할 일 (F03 R2)
-  // 기간(range)은 시작일이 됐으면 표시 (진행 중인 일이니까)
+  // [오늘] 하루의 조종석 (2026-08-05 통합): 공지 → 하루 기록(계획/실제/회고) → 오늘 할 일
   if (tab === "오늘") {
     const today = todayStr();
     const list = tasks
@@ -356,9 +364,6 @@ function TaskView({
       )
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate)); // 밀린 것부터 위로
 
-    // 날짜 미정 + 미완료 → 아래 메모판에 항상 보여줌 (F03 R2c)
-    const undated = tasks.filter((t) => !t.done && !t.dueDate);
-
     // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 "정보" 탭에, F11 R5)
     const todaysNotices = memos
       .filter((m) => m.date === today)
@@ -371,15 +376,18 @@ function TaskView({
             📢 오늘: {n.text}
           </p>
         ))}
+        {/* 하루 기록 (F04) — 계획/실제/회고, ◀▶로 지난 날도 열람 */}
+        <DayView tasks={tasks} />
+        {/* 오늘 마감·밀린 할 일 */}
+        <h2 className="group-title today-tasks-title">
+          📋 오늘 할 일 <span className="group-count">{list.length}</span>
+        </h2>
         <TaskList
           tasks={list}
           onToggle={onToggle}
           onDelete={onDelete}
           emptyHint="오늘 마감인 할 일이 없어요."
         />
-        {undated.length > 0 && (
-          <StickyBoard tasks={undated} onToggle={onToggle} />
-        )}
       </div>
     );
   }
