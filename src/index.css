@@ -361,6 +361,26 @@ h1 {
 .day-line.auto .day-text {
   color: #555;
 }
+/* 글자 클릭 = 그 자리 수정 (2026-08-05) */
+.day-text.editable {
+  cursor: pointer;
+}
+.day-text.editable:hover {
+  text-decoration: underline dotted #bbb;
+}
+.day-edit {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border: 1px solid #4a7dff;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.day-plus {
+  color: #aaa;
+  flex-shrink: 0;
+}
 .day-time {
   font-size: 0.75rem;
   color: #aaa;

@@ -207,6 +207,24 @@ export async function togglePlanLine(date, id) {
   }
 }
 
+/** 계획 줄 내용 수정 (F04 R3 — 2026-08-05: 그 자리 편집) */
+export async function updatePlanLine(date, id, text) {
+  const log = await getDayLog(date);
+  const line = log.plans.find((p) => p.id === id);
+  if (!line) return;
+  line.text = text;
+  await db.dayLogs.put(log);
+}
+
+/** "계획 외에 한 일" 줄 내용 수정 (F04 R4) */
+export async function updateExtraLine(date, id, text) {
+  const log = await getDayLog(date);
+  const line = log.extras.find((x) => x.id === id);
+  if (!line) return;
+  line.text = text;
+  await db.dayLogs.put(log);
+}
+
 /** 계획 줄 삭제 */
 export async function deletePlanLine(date, id) {
   const log = await getDayLog(date);

@@ -11,10 +11,12 @@ import {
   addPlanLine,
   togglePlanLine,
   deletePlanLine,
+  updatePlanLine,
   movePlanLine,
   markPlanMovedToMemo,
   addExtraLine,
   deleteExtraLine,
+  updateExtraLine,
   setDayNote,
   addTask,
 } from "../db.js";
@@ -26,6 +28,55 @@ function shiftDate(dateStr, delta) {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + delta);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** 글자를 클릭하면 그 자리에서 고치는 입력칸 (메모판과 같은 방식, 2026-08-05)
+ *  Enter·칸 밖 클릭 = 저장, Esc = 취소 */
+function InlineEdit({ value, onSave, className }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  function save() {
+    const v = draft.trim();
+    if (v !== "" && v !== value) onSave(v);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        className="day-edit"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            save();
+          }
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        onBlur={save}
+        autoFocus
+      />
+    );
+  }
+
+  return (
+    <span
+      className={className}
+      onClick={(e) => {
+        e.preventDefault(); // label 안이어도 체크박스가 토글되지 않게
+        setDraft(value);
+        setEditing(true);
+      }}
+      title="클릭해서 수정"
+    >
+      {value}
+    </span>
+  );
 }
 
 export default function DayView({ tasks }) {
@@ -142,7 +193,12 @@ export default function DayView({ tasks }) {
         ))}
         {extras.map((x) => (
           <li key={x.id} className="day-line">
-            <span className="day-text">+ {x.text}</span>
+            <span className="day-plus">+</span>
+            <InlineEdit
+              value={x.text}
+              className="day-text editable"
+              onSave={(v) => updateExtraLine(date, x.id, v)}
+            />
             <button
               className="day-delete"
               onClick={() => deleteExtraLine(date, x.id)}
@@ -218,7 +274,12 @@ function PlanLine({ date, line, today }) {
           checked={line.done}
           onChange={() => togglePlanLine(date, line.id)}
         />
-        <span className="day-text">{line.text}</span>
+        {/* 글자 클릭 = 그 자리 수정 (2026-08-05) */}
+        <InlineEdit
+          value={line.text}
+          className="day-text editable"
+          onSave={(v) => updatePlanLine(date, line.id, v)}
+        />
       </label>
       {!line.done && (
         <span className="day-actions">
