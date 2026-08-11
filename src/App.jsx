@@ -28,6 +28,7 @@ import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import { todayStr } from "./date.js";
+import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab } from "./sort.js";
 
@@ -306,6 +307,10 @@ function TaskView({
   onDelete,
   onDeleteMemo,
 }) {
+  // 하루 기록에서 ◀▶로 보는 날짜 (F04 R9) — 오늘 탭의 할 일 목록도 이 날짜를 따라감
+  // ⚠️ 훅은 항상 같은 순서로 호출돼야 하므로 반드시 탭 분기(return)보다 위에!
+  const [dayDate, setDayDate] = useState(todayStr());
+
   // [메모] 날짜 없는 할 일들의 노란 판 — 독립 탭 (2026-08-05)
   if (tab === "메모") {
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
@@ -353,16 +358,23 @@ function TaskView({
   // [오늘] 하루의 조종석 (2026-08-05 통합): 공지 → 하루 기록(계획/실제/회고) → 오늘 할 일
   if (tab === "오늘") {
     const today = todayStr();
-    const list = tasks
-      .filter(
-        (t) =>
-          !t.done &&
-          t.dueDate &&
-          (t.dateKind === "range" && t.startDate
-            ? t.startDate <= today
-            : t.dueDate <= today)
-      )
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate)); // 밀린 것부터 위로
+    // 할 일 목록은 하루 기록의 ◀▶ 날짜를 따라감 (F04 R9):
+    // 오늘 = 오늘 마감 + 밀린 것 (미완료만) / 다른 날 = 그 날짜에 걸린 할 일 (달력과 같은 규칙)
+    const viewingToday = dayDate === today;
+    const list = viewingToday
+      ? tasks
+          .filter(
+            (t) =>
+              !t.done &&
+              t.dueDate &&
+              (t.dateKind === "range" && t.startDate
+                ? t.startDate <= today
+                : t.dueDate <= today)
+          )
+          .sort((a, b) => a.dueDate.localeCompare(b.dueDate)) // 밀린 것부터 위로
+      : tasksOnDate(tasks, dayDate);
+    // 다른 날 제목용 "M/D" (예: "8/9 할 일")
+    const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;
 
     // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 "정보" 탭에, F11 R5)
     const todaysNotices = memos
@@ -377,16 +389,21 @@ function TaskView({
           </p>
         ))}
         {/* 하루 기록 (F04) — 계획/실제/회고, ◀▶로 지난 날도 열람 */}
-        <DayView tasks={tasks} />
-        {/* 오늘 마감·밀린 할 일 */}
+        <DayView tasks={tasks} date={dayDate} onDateChange={setDayDate} />
+        {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
         <h2 className="group-title today-tasks-title">
-          📋 오늘 할 일 <span className="group-count">{list.length}</span>
+          📋 {viewingToday ? "오늘 할 일" : `${dayLabel} 할 일`}{" "}
+          <span className="group-count">{list.length}</span>
         </h2>
         <TaskList
           tasks={list}
           onToggle={onToggle}
           onDelete={onDelete}
-          emptyHint="오늘 마감인 할 일이 없어요."
+          emptyHint={
+            viewingToday
+              ? "오늘 마감인 할 일이 없어요."
+              : "이 날짜의 할 일이 없어요."
+          }
         />
       </div>
     );

@@ -79,9 +79,9 @@ function InlineEdit({ value, onSave, className }) {
   );
 }
 
-export default function DayView({ tasks }) {
+// date(보는 날짜)는 부모(오늘 탭)가 관리 — 아래 할 일 목록과 날짜를 공유하기 위해 (F04 R9)
+export default function DayView({ tasks, date, onDateChange }) {
   const today = todayStr();
-  const [date, setDate] = useState(today);
   const [planText, setPlanText] = useState("");
   const [extraText, setExtraText] = useState("");
 
@@ -123,16 +123,25 @@ export default function DayView({ tasks }) {
       <h2 className="group-title">📓 하루 기록</h2>
       {/* 날짜 이동 */}
       <div className="cal-nav">
-        <button onClick={() => setDate(shiftDate(date, -1))} aria-label="어제">
+        <button
+          onClick={() => onDateChange(shiftDate(date, -1))}
+          aria-label="어제"
+        >
           ◀
         </button>
         <span className="cal-month-label">
           {date} ({weekday})
         </span>
-        <button onClick={() => setDate(shiftDate(date, 1))} aria-label="다음날">
+        <button
+          onClick={() => onDateChange(shiftDate(date, 1))}
+          aria-label="다음날"
+        >
           ▶
         </button>
-        <button className="cal-today-btn" onClick={() => setDate(todayStr())}>
+        <button
+          className="cal-today-btn"
+          onClick={() => onDateChange(todayStr())}
+        >
           오늘
         </button>
       </div>
