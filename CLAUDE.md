@@ -43,7 +43,8 @@ type Task = {
   repeat?: "daily" | "weekdays" | "weekly" | "monthly" | "yearly" | "monthlyNth"; // 반복 주기 (weekdays=주중 매일)
   repeatNth?: 1 | 2 | 3 | 4 | "last";  // monthlyNth일 때: 몇째 주 (매월 N번째 요일)
   repeatWeekday?: number;              // monthlyNth일 때: 요일 (0=일 ~ 6=토)
-  category?: string;                   // 카테고리 (예: "업무", "개인") (선택)
+  category?: string;                   // 카테고리 (예: "업무", "개인") (선택 — UI는 정리됨, 데이터만 보존)
+  board?: string;                      // 메모판 스티커 이름 (날짜 없는 할 일용, 선택 — F03 R2d)
   done: boolean;                       // 완료 여부
   completedAt?: string;                // 완료 체크한 시각 (해제하면 제거 — 하루 기록용)
   createdAt: string;                   // 생성 시각 (ISO 8601, 자동)

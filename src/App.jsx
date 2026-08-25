@@ -68,6 +68,9 @@ export default function App() {
   // 노트 (F11 통합) — 날짜 있는 것은 일정 성격 (달력·오늘 한 줄에도 사용)
   const memos = useLiveQuery(() => db.memos.toArray());
 
+  // 메모판 스티커 목록 (F03 R2d)
+  const boards = useLiveQuery(() => db.boards.toArray());
+
   // 방금 한 동작을 기억해 "실행취소" 알림을 띄움
   // type: "trash"(휴지통으로 감) | "done"(완료로 체크됨)
   function showUndo(type, ids, label) {
@@ -260,6 +263,7 @@ export default function App() {
               tab={tab}
               tasks={tasks}
               memos={memos ?? []}
+              boards={boards ?? []}
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
@@ -303,6 +307,7 @@ function TaskView({
   tab,
   tasks,
   memos,
+  boards,
   onToggle,
   onDelete,
   onDeleteMemo,
@@ -312,16 +317,10 @@ function TaskView({
   const [dayDate, setDayDate] = useState(todayStr());
 
   // [메모] 날짜 없는 할 일들의 노란 판 — 독립 탭 (2026-08-05)
+  // 스티커 여러 장으로 나눌 수 있음 (F03 R2d) — 빈 상태 안내도 판 안에서
   if (tab === "메모") {
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
-    if (undated.length === 0) {
-      return (
-        <p className="hint">
-          메모가 없어요. 입력창에 날짜 없이 쓰고 Enter를 누르세요.
-        </p>
-      );
-    }
-    return <StickyBoard tasks={undated} onToggle={onToggle} />;
+    return <StickyBoard tasks={undated} boards={boards} onToggle={onToggle} />;
   }
 
   // [정보] 통합 노트 — 일정(날짜 있음) + 기록 (F11, 2026-08-03 통합)

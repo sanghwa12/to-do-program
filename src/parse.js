@@ -292,6 +292,14 @@ export function parseImportLine(line) {
   const hadRepeatMark = t.includes("🔁");
   t = t.replace(/📅/g, " ").replace(/🔁/g, " ");
 
+  // 메모판 스티커 소속 📌이름 (F03 R2d) — 내보내기가 줄 맨 끝에 붙이므로 끝까지 이름
+  let board;
+  const pin = t.match(/📌\s*(.+?)\s*$/);
+  if (pin) {
+    board = pin[1];
+    t = t.replace(pin[0], " ");
+  }
+
   // 우선순위 (높음/중간/낮음)
   let priority;
   const pr = t.match(/\((높음|중간|낮음)\)/);
@@ -324,6 +332,7 @@ export function parseImportLine(line) {
   if (parsed.repeatWeekday !== undefined) draft.repeatWeekday = parsed.repeatWeekday;
   if (priority) draft.priority = priority;
   if (category) draft.category = category;
+  if (board) draft.board = board;
   return draft;
 }
 

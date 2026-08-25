@@ -22,6 +22,8 @@ function taskToLine(task) {
   if (task.repeat) line += ` 🔁 ${repeatLabelOf(task)}`;
   if (task.priority) line += ` (${PRIORITY_LABEL[task.priority]})`;
   if (task.category) line += ` #${task.category}`;
+  // 메모판 스티커 소속 (F03 R2d) — 줄 맨 끝에 (가져오기가 📌 뒤 전체를 이름으로 읽음)
+  if (task.board) line += ` 📌${task.board}`;
   // 메모는 들여쓴 다음 줄로 (줄바꿈이 있으면 " / "로 이어붙임)
   if (task.memo) line += `\n    - 메모: ${task.memo.replace(/\n/g, " / ")}`;
   return line;

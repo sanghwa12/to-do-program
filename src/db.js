@@ -60,6 +60,12 @@ db.version(6).stores({
   notes: null,
 });
 
+// version 7 (2026-08-11, F03 R2d): 메모판 "스티커" 목록 보관함 — 이름이 키.
+// (메모가 어느 스티커에 속하는지는 task.board 필드 — 화면에서 거르므로 색인 불필요)
+db.version(7).stores({
+  boards: "name, createdAt",
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -88,6 +94,9 @@ export async function addManyTasks(drafts) {
     createdAt: new Date(base + i).toISOString(),
   }));
   await db.tasks.bulkAdd(tasks);
+  // 백업에 적힌 스티커(📌이름)가 아직 없으면 만들어 줌 (F03 R2d 왕복)
+  const boardNames = [...new Set(tasks.map((t) => t.board).filter(Boolean))];
+  for (const name of boardNames) await addBoard(name);
   return tasks.length;
 }
 
@@ -312,4 +321,46 @@ export async function deleteMemo(id) {
 /** 삭제한 메모 되살리기 — 실행취소용 */
 export async function restoreMemos(memos) {
   await db.memos.bulkAdd(memos);
+}
+
+// ------------------------------------------------------------
+// 메모판 스티커 (F03 R2d, 2026-08-11): 날짜 없는 할 일을 이름 붙인 스티커로 나누기
+// 스티커 = boards 테이블의 한 줄, 소속 = task.board (없으면 기본 "📌 메모")
+// ------------------------------------------------------------
+
+/** 스티커 만들기 — 같은 이름이 이미 있으면 아무것도 안 함 */
+export async function addBoard(name) {
+  const n = name.trim();
+  if (!n) return;
+  if (await db.boards.get(n)) return;
+  await db.boards.add({ name: n, createdAt: new Date().toISOString() });
+}
+
+/** 스티커 이름 바꾸기 — 안의 메모들도 새 이름으로 따라감 */
+export async function renameBoard(oldName, newName) {
+  const n = newName.trim();
+  if (!n || n === oldName) return;
+  if (await db.boards.get(n)) return; // 이미 있는 이름으로는 못 바꿈
+  await db.transaction("rw", db.boards, db.tasks, async () => {
+    const old = await db.boards.get(oldName);
+    await db.boards.delete(oldName);
+    await db.boards.add({
+      name: n,
+      createdAt: old?.createdAt ?? new Date().toISOString(), // 만든 순서 유지
+    });
+    await db.tasks.filter((t) => t.board === oldName).modify({ board: n });
+  });
+}
+
+/** 스티커 삭제 — 안에 있던 메모는 기본 스티커로 돌아감 (메모는 지워지지 않음) */
+export async function deleteBoard(name) {
+  await db.transaction("rw", db.boards, db.tasks, async () => {
+    await db.boards.delete(name);
+    await db.tasks.filter((t) => t.board === name).modify({ board: undefined });
+  });
+}
+
+/** 메모를 다른 스티커로 옮기기 (board가 비어 있으면 기본 스티커로) */
+export async function moveTaskToBoard(id, board) {
+  await db.tasks.update(id, { board: board || undefined });
 }
