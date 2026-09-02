@@ -320,7 +320,14 @@ function TaskView({
   // 스티커 여러 장으로 나눌 수 있음 (F03 R2d) — 빈 상태 안내도 판 안에서
   if (tab === "메모") {
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
-    return <StickyBoard tasks={undated} boards={boards} onToggle={onToggle} />;
+    return (
+      <StickyBoard
+        tasks={undated}
+        boards={boards}
+        onToggle={onToggle}
+        onDelete={onDelete}
+      />
+    );
   }
 
   // [정보] 통합 노트 — 일정(날짜 있음) + 기록 (F11, 2026-08-03 통합)

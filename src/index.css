@@ -12,7 +12,8 @@ body {
 }
 
 .app {
-  max-width: 560px;
+  /* 560px → 1100px (2026-08-11 사용자 결정): 모든 탭에서 화면 폭을 넓게 사용 */
+  max-width: 1100px;
   margin: 0 auto;
   padding: 24px 16px;
 }
@@ -282,6 +283,42 @@ h1 {
   outline: 2px dashed #c9b24a;
   background: #fbefbd;
 }
+/* 스티커 세로 열 3개 (R2e) — ⠿ 손잡이로 원하는 열·순서에 배치.
+   열은 가장 긴 열 높이만큼 늘어남(stretch) — 짧은 열 아래 빈 공간에도
+   스티커를 놓을 수 있게 (거기서 놓으면 그 열 맨 아래로) */
+.board-cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 760px) {
+  .board-cols {
+    grid-template-columns: 1fr; /* 좁은 창에선 열이 세로로 쌓임 */
+  }
+}
+.board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100px; /* 빈 열에도 스티커를 놓을 수 있게 */
+  border-radius: 8px;
+}
+/* 스티커를 끄는 동안: 놓을 수 있는 열을 점선으로 안내 */
+.board-col.ready {
+  outline: 1px dashed #d8c97a;
+  outline-offset: 2px;
+}
+.sticky-handle {
+  flex-shrink: 0;
+  color: #c9b24a;
+  cursor: grab;
+  font-size: 0.9rem;
+  user-select: none;
+}
+.sticky-handle:hover {
+  color: #8a7a2e;
+}
 .sticky-head {
   display: flex;
   align-items: baseline;
@@ -358,6 +395,23 @@ h1 {
 .sticky-item.dragging {
   opacity: 0.4;
 }
+/* 메모 줄 삭제 ✕ — 평소엔 숨어 있다가 줄에 마우스를 올리면 보임 */
+.sticky-del {
+  flex-shrink: 0;
+  visibility: hidden;
+  background: none;
+  border: none;
+  color: #b3a76a;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+.sticky-item:hover .sticky-del {
+  visibility: visible;
+}
+.sticky-del:hover {
+  color: #a33;
+}
 .sticky-item input[type="checkbox"] {
   flex-shrink: 0;
   transform: translateY(1px);
@@ -385,11 +439,6 @@ h1 {
   color: #4a4226;
   flex: 1;
   min-width: 0;
-}
-.sticky-date {
-  font-size: 0.68rem;
-  color: #b3a76a; /* 등록일 — 판 배경에 묻히는 연한 색 */
-  flex-shrink: 0;
 }
 .sticky-text.hi {
   font-weight: bold;

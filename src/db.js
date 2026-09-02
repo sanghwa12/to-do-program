@@ -347,6 +347,8 @@ export async function renameBoard(oldName, newName) {
     await db.boards.add({
       name: n,
       createdAt: old?.createdAt ?? new Date().toISOString(), // 만든 순서 유지
+      col: old?.col, // 배치된 자리도 유지 (R2e — 이름 바꿔도 스티커가 안 튀게)
+      ord: old?.ord,
     });
     await db.tasks.filter((t) => t.board === oldName).modify({ board: n });
   });
@@ -363,4 +365,19 @@ export async function deleteBoard(name) {
 /** 메모를 다른 스티커로 옮기기 (board가 비어 있으면 기본 스티커로) */
 export async function moveTaskToBoard(id, board) {
   await db.tasks.update(id, { board: board || undefined });
+}
+
+/** 스티커 배치 일괄 저장 (R2e) — cols는 열별 스티커 이름 배열. "" = 기본 📌 메모 스티커.
+ *  각 스티커에 몇 번째 열(col)·열 안 순서(ord)를 기록. 기본 스티커는 "" 이름의 행으로 보관 */
+export async function saveBoardLayout(cols) {
+  await db.transaction("rw", db.boards, async () => {
+    for (let c = 0; c < cols.length; c++) {
+      for (let j = 0; j < cols[c].length; j++) {
+        const name = cols[c][j];
+        const row = await db.boards.get(name);
+        if (row) await db.boards.update(name, { col: c, ord: j });
+        else await db.boards.put({ name, createdAt: "", col: c, ord: j });
+      }
+    }
+  });
 }
