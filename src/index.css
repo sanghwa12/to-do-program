@@ -395,6 +395,13 @@ h1 {
 .sticky-item.dragging {
   opacity: 0.4;
 }
+/* 노트 구역 (F11) — 메모 탭 하단, 노란 판과 구분되게 (2026-09-04 이사) */
+.memo-area {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #e3e3e3;
+}
+
 /* 메모 줄 삭제 ✕ — 평소엔 숨어 있다가 줄에 마우스를 올리면 보임 */
 .sticky-del {
   flex-shrink: 0;

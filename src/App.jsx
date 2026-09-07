@@ -35,7 +35,8 @@ import { sortForAllTab } from "./sort.js";
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
 // 오늘+하루 통합, 메모판 독립 (2026-08-05 사용자 결정)
-const TABS = ["오늘", "메모", "달력", "전체", "정보"];
+// 정보 탭 제거 (2026-09-04 사용자 결정): 노트는 메모 탭 하단 구역으로
+const TABS = ["오늘", "메모", "달력", "전체"];
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -321,18 +322,20 @@ function TaskView({
   if (tab === "메모") {
     const undated = tasks.filter((t) => !t.done && !t.dueDate);
     return (
-      <StickyBoard
-        tasks={undated}
-        boards={boards}
-        onToggle={onToggle}
-        onDelete={onDelete}
-      />
+      <div>
+        <StickyBoard
+          tasks={undated}
+          boards={boards}
+          onToggle={onToggle}
+          onDelete={onDelete}
+        />
+        {/* 노트 구역 (F11): 일정 + 기록 — 정보 탭에서 이사 옴 (2026-09-04) */}
+        <div className="memo-area">
+          <h2 className="group-title">🗂 노트 (체크 없는 기록·일정)</h2>
+          <MemoView memos={memos} onDelete={onDeleteMemo} />
+        </div>
+      </div>
     );
-  }
-
-  // [정보] 통합 노트 — 일정(날짜 있음) + 기록 (F11, 2026-08-03 통합)
-  if (tab === "정보") {
-    return <MemoView memos={memos} onDelete={onDeleteMemo} />;
   }
 
   // [달력] 월간 달력 위에서 날짜 있는 할 일 + 공지 보기 (F07·F08)
@@ -382,7 +385,7 @@ function TaskView({
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
     const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;
 
-    // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 "정보" 탭에, F11 R5)
+    // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 메모 탭 노트 구역에, F11 R5)
     const todaysNotices = memos
       .filter((m) => m.date === today)
       .map((m) => ({ ...m, text: m.text.split("\n")[0] }));
