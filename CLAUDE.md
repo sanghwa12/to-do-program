@@ -37,6 +37,7 @@ type Task = {
   title: string;                       // 할 일 내용 (필수)
   memo?: string;                       // 상세 메모 (선택)
   dueDate?: string;                    // 날짜, "YYYY-MM-DD" (마감일·당일·기간의 끝. 없으면 날짜 미정)
+  dueTime?: string;                    // 시간, "HH:MM" (선택 — 날짜 뒤에 14:00처럼 쓰면 저장, F02 R15)
   startDate?: string;                  // 기간의 시작일 (dateKind가 "range"일 때만)
   dateKind?: "due" | "day" | "range";  // 날짜의 의미: ~까지 마감 | 그날 당일 | 기간
   priority?: "low" | "med" | "high";   // 우선순위 (선택)

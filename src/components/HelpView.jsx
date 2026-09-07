@@ -23,6 +23,10 @@ export default function HelpView({ onBack }) {
             기간 · <code>~내일</code> <code>~모레</code> <code>~금요일</code>
           </li>
           <li>
+            <b>시간</b>: 날짜 바로 뒤에 <code>14:00</code> 또는{" "}
+            <code>14시</code> (예: <code>회의 9/7 14:00</code>) — 선택 사항
+          </li>
+          <li>
             <b>반복</b>: <code>매일</code> · <code>매주 월요일</code> ·{" "}
             <code>매달 25일</code> · <code>매년 7/21</code> ·{" "}
             <code>매월 첫째주 월요일</code> · <code>주중</code>(월~금)

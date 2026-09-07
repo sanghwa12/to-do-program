@@ -6,6 +6,7 @@
 import { useState } from "react";
 import TaskItem from "./TaskItem.jsx";
 import { todayStr } from "../date.js";
+import { byDueDateTime } from "../sort.js";
 import {
   buildMonthCells,
   tasksOnDate,
@@ -48,7 +49,9 @@ export default function CalendarView({
   }
 
   const cells = buildMonthCells(year, month);
-  const selectedTasks = selected ? tasksOnDate(tasks, selected) : [];
+  const selectedTasks = selected
+    ? tasksOnDate(tasks, selected).sort(byDueDateTime) // 시간 있는 것 먼저, 시간 순
+    : [];
   const notesOn = (dateStr) => notes.filter((n) => n.date === dateStr);
   const selectedNotes = selected ? notesOn(selected) : [];
 
@@ -87,7 +90,7 @@ export default function CalendarView({
           }
           const ds = dateStrOf(year, month, day);
           const dayNotes = notesOn(ds); // 공지 먼저, 그다음 할 일
-          const list = tasksOnDate(tasks, ds);
+          const list = tasksOnDate(tasks, ds).sort(byDueDateTime);
           const shownNotes = dayNotes.slice(0, MAX_CHIPS);
           const shown = list.slice(0, Math.max(0, MAX_CHIPS - shownNotes.length));
           const hidden = dayNotes.length + list.length - shownNotes.length - shown.length;
@@ -112,6 +115,7 @@ export default function CalendarView({
                   key={t.id}
                   className={"cal-chip" + (t.done ? " done" : "")}
                 >
+                  {t.dueTime ? `${t.dueTime} ` : ""}
                   {t.title}
                 </span>
               ))}

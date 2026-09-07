@@ -45,9 +45,10 @@ export default function QuickInput() {
     }
     if (p.dateKind === "range")
       return `"${p.title}" — 📅 ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
+    const time = p.dueTime ? ` ${p.dueTime}` : ""; // 시간이 있으면 같이 (R15)
     if (p.dateKind === "day")
-      return `"${p.title}" — 📅 ${p.dueDate} 당일 일정으로 저장됩니다`;
-    return `"${p.title}" — 📅 ${p.dueDate}까지 마감으로 저장됩니다`;
+      return `"${p.title}" — 📅 ${p.dueDate}${time} 당일 일정으로 저장됩니다`;
+    return `"${p.title}" — 📅 ${p.dueDate}${time}까지 마감으로 저장됩니다`;
   }
 
   return (

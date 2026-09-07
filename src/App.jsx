@@ -30,7 +30,7 @@ import MemoView from "./components/MemoView.jsx";
 import { todayStr } from "./date.js";
 import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
-import { sortForAllTab } from "./sort.js";
+import { sortForAllTab, byDueDateTime } from "./sort.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
@@ -380,7 +380,7 @@ function TaskView({
                 ? t.startDate <= today
                 : t.dueDate <= today)
           )
-          .sort((a, b) => a.dueDate.localeCompare(b.dueDate)) // 밀린 것부터 위로
+          .sort(byDueDateTime) // 밀린 것부터 위로, 같은 날은 시간 순
       : tasksOnDate(tasks, dayDate);
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
     const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;

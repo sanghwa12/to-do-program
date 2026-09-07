@@ -54,6 +54,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
   const [title, setTitle] = useState(task.title);
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
+  const [dueTime, setDueTime] = useState(task.dueTime || ""); // 시간 (선택, F02 R15)
   const [dateKind, setDateKind] = useState(task.dateKind || "due"); // 날짜의 의미
   const [startDate, setStartDate] = useState(task.startDate || ""); // 기간의 시작
   const [repeat, setRepeat] = useState(task.repeat || ""); // 반복 주기 (F09, 사용자화용)
@@ -160,6 +161,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: saveDue,
+      dueTime: kind && kind !== "range" && dueTime ? dueTime : undefined, // 기간엔 시간 없음
       dateKind: kind,
       startDate: saveStart,
       repeat: saveRepeat,
@@ -176,6 +178,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
     setTitle(task.title);
     setMemo(task.memo || "");
     setDueDate(task.dueDate || "");
+    setDueTime(task.dueTime || "");
     setDateKind(task.dateKind || "due");
     setStartDate(task.startDate || "");
     setRepeat(task.repeat || "");
@@ -249,6 +252,17 @@ export default function TaskItem({ task, onToggle, onDelete }) {
                   <option value="day">당일</option>
                   <option value="range">기간</option>
                 </select>
+              </label>
+            )}
+            {/* 시간 (선택, R15) — 기간이 아닐 때만 */}
+            {dueDate && dateKind !== "range" && (
+              <label>
+                시간
+                <input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                />
               </label>
             )}
             {dueDate && dateKind === "range" && (
@@ -397,8 +411,9 @@ export default function TaskItem({ task, onToggle, onDelete }) {
   function dateBadgeText() {
     if (task.dateKind === "range" && task.startDate)
       return `📅 ${task.startDate} ~ ${task.dueDate}`;
-    if (task.dateKind === "day") return `📅 ${task.dueDate} 당일`;
-    return `📅 ~${task.dueDate}`; // 마감 (예전 데이터도 마감으로 취급)
+    const time = task.dueTime ? ` ${task.dueTime}` : ""; // 시간이 있으면 뒤에 (R15)
+    if (task.dateKind === "day") return `📅 ${task.dueDate} 당일${time}`;
+    return `📅 ~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
   }
 
   // 우선순위 점 클릭 → 다음 단계로 순환 (R13)

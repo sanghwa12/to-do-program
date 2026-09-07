@@ -19,6 +19,8 @@ function taskToLine(task) {
     line += ` 📅 ${task.startDate} ~ ${task.dueDate}`;
   else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
   else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
+  // 시간 (R15) — 날짜 바로 뒤에 두면 가져오기가 그대로 읽음
+  if (task.dueTime && task.dateKind !== "range") line += ` ${task.dueTime}`;
   if (task.repeat) line += ` 🔁 ${repeatLabelOf(task)}`;
   if (task.priority) line += ` (${PRIORITY_LABEL[task.priority]})`;
   if (task.category) line += ` #${task.category}`;

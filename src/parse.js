@@ -75,14 +75,31 @@ function resolveWord(word) {
 
 // 날짜 조각 패턴: (연도-)월-일, 구분자는 / - . 허용
 const D = "(?:(\\d{4})[/\\-.])?(\\d{1,2})[/\\-.](\\d{1,2})";
+// 시간 조각 (F02 R15): 14:00 / 14시 / 14시 30분 — 날짜 바로 뒤에만 인식
+const T = "(?:(\\d{1,2}):(\\d{2})|(\\d{1,2})시(?:\\s*(\\d{1,2})분)?)";
 // 기간: 날짜~날짜 (어디에 있어도 인식)
 const RANGE_RE = new RegExp(`\\(?\\s*${D}\\s*~\\s*${D}\\s*\\)?`);
-// 마감(숫자): ~날짜 (어디에 있어도 인식)
-const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\s*\\)?`);
+// 마감(숫자): ~날짜 (+시간) (어디에 있어도 인식). 닫는 괄호는 날짜 뒤·시간 뒤 어디든
+const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\)?(?:\\s+${T})?\\s*\\)?`);
 // 마감(말): ~오늘, ~내일, ~모레, ~월요일 ... ~일요일
 const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)\s*\)?/;
-// 당일: 맨 날짜 — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
-const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?\\s*$`);
+// 당일: 맨 날짜 (+시간) — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
+// 닫는 괄호는 날짜 뒤·시간 뒤 어디든: "(9/7) 14:00", "(9/7 14:00)" 모두 인식
+const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?(?:\\s+${T})?\\s*\\)?\\s*$`);
+
+/** 시간 조각(정규식 그룹 4개) → "HH:MM". 없거나 말이 안 되면(25시 등) null */
+function resolveTime(h1, m1, h2, m2) {
+  let hour, minute;
+  if (h1 !== undefined) {
+    hour = Number(h1);
+    minute = Number(m1);
+  } else if (h2 !== undefined) {
+    hour = Number(h2);
+    minute = m2 !== undefined ? Number(m2) : 0;
+  } else return null;
+  if (hour > 23 || minute > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
 
 /** 인식된 표기를 제목에서 빼고 공백 정리 */
 function stripTitle(text, matched) {
@@ -198,6 +215,7 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
         // 표기에 날짜가 따로 있으면 그 날짜, 없으면 반복 표기의 기준일
         dueDate: inner.dueDate || rep.anchor,
         dateKind: inner.dueDate ? inner.dateKind : "day",
+        ...(inner.dueTime && { dueTime: inner.dueTime }), // 시간은 그대로 (R15)
         repeat: rep.repeat,
       };
     }
@@ -231,7 +249,9 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
     const due = resolveYMD(m[1], m[2], m[3], allowPast);
     if (due) {
       const title = stripTitle(text, m[0]);
-      if (title) return { title, dueDate: due, dateKind: "due" };
+      const time = resolveTime(m[4], m[5], m[6], m[7]); // 날짜 뒤 시간 (R15)
+      if (title)
+        return { title, dueDate: due, dateKind: "due", ...(time && { dueTime: time }) };
     }
   }
   m = text.match(DUE_WORD_RE);
@@ -247,7 +267,9 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
     const day = resolveYMD(m[1], m[2], m[3], allowPast);
     if (day) {
       const title = stripTitle(text, m[0]);
-      if (title) return { title, dueDate: day, dateKind: "day" };
+      const time = resolveTime(m[4], m[5], m[6], m[7]); // 날짜 뒤 시간 (R15)
+      if (title)
+        return { title, dueDate: day, dateKind: "day", ...(time && { dueTime: time }) };
     }
   }
 
@@ -325,6 +347,7 @@ export function parseImportLine(line) {
   if (parsed.dueDate) {
     draft.dueDate = parsed.dueDate;
     draft.dateKind = parsed.dateKind;
+    if (parsed.dueTime) draft.dueTime = parsed.dueTime;
   }
   if (parsed.startDate) draft.startDate = parsed.startDate;
   if (parsed.repeat) draft.repeat = parsed.repeat;

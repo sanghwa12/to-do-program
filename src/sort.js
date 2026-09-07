@@ -7,6 +7,12 @@
 
 const PRIORITY_RANK = { high: 0, med: 1, low: 2 }; // 없음은 3
 
+/** 날짜 빠른 순, 같은 날짜면 시간 순 (시간 없는 것은 뒤) — F02 R15 */
+export function byDueDateTime(a, b) {
+  if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+  return (a.dueTime || "~").localeCompare(b.dueTime || "~"); // "~"는 숫자보다 뒤
+}
+
 export function sortForAllTab(tasks) {
   return [...tasks].sort((a, b) => {
     // ① 미완료가 완료보다 위
@@ -15,8 +21,9 @@ export function sortForAllTab(tasks) {
     const aHas = !!a.dueDate;
     const bHas = !!b.dueDate;
     if (aHas !== bHas) return aHas ? -1 : 1;
-    if (aHas && bHas && a.dueDate !== b.dueDate) {
-      return a.dueDate.localeCompare(b.dueDate);
+    if (aHas && bHas) {
+      const d = byDueDateTime(a, b);
+      if (d !== 0) return d;
     }
     // ③ 우선순위 높은 순
     const ap = PRIORITY_RANK[a.priority] ?? 3;
