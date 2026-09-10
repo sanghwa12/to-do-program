@@ -66,6 +66,14 @@ db.version(7).stores({
   boards: "name, createdAt",
 });
 
+// version 8 (2026-09-10, F12): 구글 캘린더로 보내기 —
+// settings: 설정값 한 줄씩 { key, value } (clientId · calendarId · lastSyncAt · lastError)
+// gcalLinks: 앱 항목 ↔ 구글 이벤트 연결표 (localId가 키) — 보내기 단계(R3~)에서 사용
+db.version(8).stores({
+  settings: "key",
+  gcalLinks: "localId, eventId",
+});
+
 // ------------------------------------------------------------
 // 아래는 할 일을 다루는 함수들입니다. 화면(App.jsx)에서 가져다 씁니다.
 // ------------------------------------------------------------
@@ -380,4 +388,13 @@ export async function saveBoardLayout(cols) {
       }
     }
   });
+}
+
+// ------------------------------------------------------------
+// 설정값 (F12) — { key, value } 한 줄씩. 예: clientId
+// ------------------------------------------------------------
+
+/** 설정값 저장 (같은 key가 있으면 덮어씀) */
+export async function setSetting(key, value) {
+  await db.settings.put({ key, value });
 }

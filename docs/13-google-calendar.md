@@ -2,7 +2,7 @@
 기능ID: F12
 기능명: 구글 캘린더로 보내기 (앱 → Google Calendar 한 방향)
 마일스톤: 9
-상태: 계획됨
+상태: 개발중
 최종수정: 2026-09-10
 ---
 
@@ -83,7 +83,7 @@
 1. https://console.cloud.google.com 접속 (개인 Gmail) → 상단 프로젝트 선택 → **새 프로젝트**
    → 이름 `todo-calendar` → 만들기. "무료 체험/결제" 안내가 뜨면 **건너뜀**.
 2. 왼쪽 **API 및 서비스 → 라이브러리** → `Google Calendar API` 검색 → **사용**.
-3. **Google Auth Platform → 개요 → 시작하기**: 앱 이름 `나만의 행정 도우미`, 지원 이메일 = 본인
+3. **Google Auth Platform → 개요 → 시작하기**: 앱 이름 `할 일`(팝업에 보이는 표시용 이름), 지원 이메일 = 본인
    Gmail, 대상(Audience) = **외부(External)**, 연락처 = 본인 Gmail → 만들기.
    게시 상태는 **테스트(Testing)** 그대로 둠 (프로덕션으로 올리지 않음 — 검증 불필요).
 4. **Google Auth Platform → 대상(Audience) → 테스트 사용자 → + Add users** → 본인 Gmail 추가.
@@ -118,9 +118,10 @@
 - IndexedDB → settings·gcalLinks도 IndexedDB. 토큰은 저장하지 않음(메모리).
 
 ## 관련 파일 (구현하면서 채움)
-- (예정) `src/gcal.js` — 이벤트 변환(순수 함수, Node 테스트) + 구글 API 호출 + 보내기
-- (예정) `src/components/GcalView.jsx` — 설정 화면
-- (예정) `src/db.js` — version 8 (settings, gcalLinks)
+- `src/gcal.js` — 구글 연결(R2: GIS 동적 로드 + 팝업 토큰, 메모리 보관). 이벤트 변환·보내기는 R3~ 때 추가
+- `src/components/GcalView.jsx` — 설정 화면(R1: 클라이언트 ID 저장 · 구글 연결 · 보내기 자리 · 상태 줄)
+- `src/db.js` — version 8 (settings, gcalLinks) + `setSetting`
+- `src/App.jsx` — ⋯ 메뉴 "📆 구글 달력" 항목 + 화면 전환
 
 ## 비고 / 미결정
 - 2차 후보: 변경 후 자동 보내기(토큰 살아 있을 때만), 반복 → RRULE, 구글 일정 읽어서

@@ -26,6 +26,7 @@ import CalendarView from "./components/CalendarView.jsx";
 import StickyBoard from "./components/StickyBoard.jsx";
 import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
+import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import { todayStr } from "./date.js";
 import { tasksOnDate } from "./calendar.js";
@@ -44,6 +45,7 @@ export default function App() {
   const [confirmClear, setConfirmClear] = useState(false); // 모두 지우기 확인 중?
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
   const [showHelp, setShowHelp] = useState(false); // 도움말 화면 보는 중? (F10)
+  const [showGcal, setShowGcal] = useState(false); // 구글 달력 설정 화면 보는 중? (F12)
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
   const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
 
@@ -151,7 +153,7 @@ export default function App() {
       <header className="top">
         <h1>할 일</h1>
         {/* 자주 안 쓰는 액션은 ⋯ 메뉴 하나로 모음 (D00: 액션 정리) */}
-        {!showTrash && !showHelp && (
+        {!showTrash && !showHelp && !showGcal && (
           <div className="menu-wrap">
             <button
               className="menu-btn"
@@ -182,6 +184,14 @@ export default function App() {
                     }}
                   >
                     내보내기
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowGcal(true);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    📆 구글 달력
                   </button>
                   <button
                     onClick={() => {
@@ -216,7 +226,9 @@ export default function App() {
         )}
       </header>
 
-      {showHelp ? (
+      {showGcal ? (
+        <GcalView onBack={() => setShowGcal(false)} />
+      ) : showHelp ? (
         <HelpView onBack={() => setShowHelp(false)} />
       ) : showTrash ? (
         <TrashView

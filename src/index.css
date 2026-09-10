@@ -1146,3 +1146,27 @@ button.delete {
   border-radius: 6px;
   background: #fff;
 }
+
+/* 구글 달력 설정 화면 (F12) */
+.gcal-desc {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0 0 8px;
+}
+.gcal-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.gcal-row .notice-input {
+  flex: 1;
+}
+.gcal-status {
+  font-size: 0.85rem;
+  color: #666;
+}
+.gcal-msg {
+  font-size: 0.85rem;
+  color: #4a7dff;
+  margin: 8px 0 0;
+}

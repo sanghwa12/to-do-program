@@ -23,7 +23,7 @@
 | F09 | [10-recurring.md](10-recurring.md) | 반복 할 일 (매일~매년) | 7 | 개발중 |
 | F10 | [11-help.md](11-help.md) | 도움말 (앱 내 매뉴얼) | 상시 | 개발중 |
 | F11 | [12-memos.md](12-memos.md) | 노트 (통합: 기록+일정 공지) | 8 | 개발중 |
-| F12 | [13-google-calendar.md](13-google-calendar.md) | 구글 캘린더로 보내기 (앱 → 구글 한 방향) | 9 | 계획됨 |
+| F12 | [13-google-calendar.md](13-google-calendar.md) | 구글 캘린더로 보내기 (앱 → 구글 한 방향) | 9 | 개발중 |
 
 > 새 기능을 추가할 때는 [00-template.md](00-template.md)를 복사해서 새 문서를 만들고,
 > 위 표에 한 줄 추가하세요.
