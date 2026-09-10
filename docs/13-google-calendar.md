@@ -54,7 +54,8 @@
 - [ ] R4. **보내기(한 방향)**: "지금 보내기"를 누르면 대상 집합(날짜 있는 할 일 전부(휴지통 제외)
       + 날짜 있는 노트)을 계산해 —
       - 링크 없는 항목 → `events.insert` (앱 id를 `extendedProperties.private.todoId`에 기록)
-      - 링크 있고 내용이 바뀐 항목 → `events.patch` (내용 해시 비교, 안 바뀌면 호출 없음)
+      - 링크 있고 내용이 바뀐 항목 → `events.update`(통째 교체 — patch는 종일↔시간 전환 시
+        date/dateTime이 겹쳐 실패할 수 있음) (내용 지문 비교, 안 바뀌면 호출 없음)
       - 링크는 있는데 대상에서 빠진 항목 → `events.delete` 후 링크 제거
       - 진행 중엔 버튼 비활성 + "보내는 중 n/m", 끝나면 "보냄 n건 · 삭제 k건 · HH:MM".
 - [ ] R5. **입력 경로 무변경**: 한 줄 입력(QuickInput)·저장 함수는 손대지 않는다.
@@ -118,9 +119,13 @@
 - IndexedDB → settings·gcalLinks도 IndexedDB. 토큰은 저장하지 않음(메모리).
 
 ## 관련 파일 (구현하면서 채움)
-- `src/gcal.js` — 구글 연결(R2: GIS 동적 로드 + 팝업 토큰, 메모리 보관). 이벤트 변환·보내기는 R3~ 때 추가
-- `src/components/GcalView.jsx` — 설정 화면(R1: 클라이언트 ID 저장 · 구글 연결 · 보내기 자리 · 상태 줄)
-- `src/db.js` — version 8 (settings, gcalLinks) + `setSetting`
+- `src/gcalEvents.js` — 앱 항목 → 구글 이벤트 변환 (순수 함수, node 검증)
+- `src/gcal.js` — 구글 연결(R2: GIS 동적 로드 + 팝업 토큰, 메모리 보관) +
+  캘린더 API 호출·보조 달력·보내기·전부 다시 올리기 (R3·R4·R6·R8)
+- `src/components/GcalView.jsx` — 설정 화면(R1: 클라이언트 ID 저장 · 구글 연결 · 지금 보내기 ·
+  전부 다시 올리기 · 상태 줄)
+- `src/components/HelpView.jsx` — 도움말 "📆 구글 달력" 절 (R9)
+- `src/db.js` — version 8 (settings, gcalLinks) + `getSetting`/`setSetting`
 - `src/App.jsx` — ⋯ 메뉴 "📆 구글 달력" 항목 + 화면 전환
 
 ## 비고 / 미결정

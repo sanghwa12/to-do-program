@@ -1170,3 +1170,9 @@ button.delete {
   color: #4a7dff;
   margin: 8px 0 0;
 }
+.gcal-msg.gcal-error {
+  color: #c00;
+}
+.gcal-reset {
+  margin-top: 10px;
+}

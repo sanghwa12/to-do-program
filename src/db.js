@@ -394,6 +394,11 @@ export async function saveBoardLayout(cols) {
 // 설정값 (F12) — { key, value } 한 줄씩. 예: clientId
 // ------------------------------------------------------------
 
+/** 설정값 읽기 (없으면 undefined) */
+export async function getSetting(key) {
+  return (await db.settings.get(key))?.value;
+}
+
 /** 설정값 저장 (같은 key가 있으면 덮어씀) */
 export async function setSetting(key, value) {
   await db.settings.put({ key, value });

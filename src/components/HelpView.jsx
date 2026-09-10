@@ -108,6 +108,25 @@ export default function HelpView({ onBack }) {
       </section>
 
       <section className="help-section">
+        <h3>📆 구글 달력 (⋯ 메뉴)</h3>
+        <ul>
+          <li>
+            날짜 있는 할 일·일정 노트를 구글 캘린더의 <b>"할 일 앱" 달력</b>에
+            올려요 — <b>앱 → 구글 한 방향</b>. 구글에서 고친 건 다음 보내기 때 앱
+            내용으로 덮여요
+          </li>
+          <li>
+            <b>구글 연결</b>은 1시간짜리 출입증 — 앱을 켤 때·1시간 지나면 다시
+            클릭. 7일마다 "확인하지 않은 앱" 동의 화면이 다시 나오는 게 정상
+          </li>
+          <li>
+            같은 구글 계정의 <b>폰 캘린더에도 보여요</b> (부수 효과). 폰에서 안
+            보이면 폰 캘린더 앱 → 더보기 → "할 일 앱" 동기화 켜기
+          </li>
+        </ul>
+      </section>
+
+      <section className="help-section">
         <h3>💾 백업과 데이터 (⋯ 메뉴)</h3>
         <ul>
           <li>
