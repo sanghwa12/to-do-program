@@ -87,7 +87,7 @@ async function call(method, path, body) {
   });
   if (res.status === 401) {
     token = null;
-    throw new Error("출입증이 만료됐어요 — '다시 연결'을 누른 뒤 다시 보내세요");
+    throw new Error("출입증이 만료됐어요 — '지금 보내기'를 다시 누르면 새로 받아요");
   }
   return res;
 }

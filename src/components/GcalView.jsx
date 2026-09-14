@@ -65,9 +65,23 @@ export default function GcalView({ onBack }) {
     }
   }
 
-  // 보내기 공통 (R4·R6): 진행 "n/m" → 성공이면 시각 기록, 실패면 오류 한 줄 기록
+  // 보내기 공통 (R4·R6): 출입증이 없으면 먼저 팝업으로 받고 → 진행 "n/m" →
+  // 성공이면 시각 기록, 실패면 오류 한 줄 기록
   async function run(job, label) {
     setBusy(true);
+    setConfirmReset(false);
+    // 출입증이 없거나 만료됐으면 여기서 받음 — "보내기" 클릭 자체가 팝업 허가(사용자 동작)라 가능.
+    // 그래서 1시간 만료를 따로 신경 쓸 필요가 없음 (2026-09-10 보완)
+    if (!currentToken()) {
+      setSendMsg("구글 연결 중…");
+      try {
+        setToken(await connectGoogle(savedId));
+      } catch (e) {
+        setSendMsg(e.message);
+        setBusy(false);
+        return;
+      }
+    }
     setSendMsg(`${label} 중…`);
     try {
       const r = await job((done, total) => setSendMsg(`${label} 중 ${done}/${total}`));
@@ -81,13 +95,12 @@ export default function GcalView({ onBack }) {
       if (!currentToken()) setToken(null); // 출입증 만료였으면 "연결 안 됨"으로
     } finally {
       setBusy(false);
-      setConfirmReset(false);
     }
   }
 
   // 출입증 만료 시각 "HH:MM"
   const until = token ? hhmm(new Date(token.expiresAt)) : "";
-  const canSend = !!token && !busy;
+  const canSend = !!savedId && !busy; // 출입증은 보내기가 알아서 받으므로 ID만 있으면 됨
 
   return (
     <div className="gcal">
@@ -120,6 +133,10 @@ export default function GcalView({ onBack }) {
 
       <section className="help-section">
         <h3>2. 구글 연결</h3>
+        <p className="gcal-desc">
+          "지금 보내기"를 누르면 필요할 때 알아서 연결돼요 — 이 버튼은 미리
+          연결해 두고 싶을 때만.
+        </p>
         {online ? (
           <div className="gcal-row">
             <button onClick={handleConnect} disabled={busy || !savedId}>
@@ -153,7 +170,9 @@ export default function GcalView({ onBack }) {
             {settings?.lastSyncAt
               ? `마지막 보냄 ${whenLabel(settings.lastSyncAt)}`
               : "아직 보낸 적 없음"}
-            {!token && " · 먼저 구글 연결"}
+            {!savedId
+              ? " · 먼저 클라이언트 ID를 저장하세요"
+              : !token && " · 누르면 구글 연결 팝업이 먼저 떠요"}
           </span>
         </div>
         {sendMsg && <p className="gcal-msg">{sendMsg}</p>}
