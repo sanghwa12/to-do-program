@@ -1176,3 +1176,18 @@ button.delete {
 .gcal-reset {
   margin-top: 10px;
 }
+
+/* 달력: 선택한 날짜에 바로 등록 (F07 R9) — 토글은 📅 버튼(.date-toggle) 모양 재사용 */
+.cal-add {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  margin: 6px 0 10px;
+}
+.cal-add .notice-input {
+  flex: 1;
+}
+.cal-kind {
+  font-size: 0.85rem;
+  padding: 0 10px;
+}

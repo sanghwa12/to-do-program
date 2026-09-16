@@ -2,11 +2,14 @@
 // 달력 뷰 (F07): 날짜 있는 할 일을 월간 달력 위에서 보기
 // - 마감·당일은 그 날짜 칸에, 기간은 시작~끝 모든 칸에 칩으로 표시
 // - 칸을 클릭하면 아래에 그 날짜의 할 일 목록이 펼쳐짐
+// - 펼친 영역 맨 위 입력칸으로 그 날짜에 바로 등록 (할 일 / 📢 일정, R9)
 // ------------------------------------------------------------
 import { useState } from "react";
 import TaskItem from "./TaskItem.jsx";
 import { todayStr } from "../date.js";
 import { byDueDateTime } from "../sort.js";
+import { addTask, addMemo } from "../db.js";
+import { parseQuickInput } from "../parse.js";
 import {
   buildMonthCells,
   tasksOnDate,
@@ -132,6 +135,8 @@ export default function CalendarView({
             {selected}{" "}
             <span className="group-count">{selectedTasks.length}</span>
           </h2>
+          {/* 그 날짜에 바로 등록 (R9) — 날짜를 바꿔 클릭하면 입력칸도 새로 (key) */}
+          <DayAdd key={selected} date={selected} />
           {/* 그날의 공지 (있으면 목록 위에) */}
           {selectedNotes.map((n) => (
             <p key={n.id} className="cal-note-line">
@@ -157,5 +162,77 @@ export default function CalendarView({
         </div>
       )}
     </div>
+  );
+}
+
+// ------------------------------------------------------------
+// 선택한 날짜에 바로 등록 (R9): 제목만 치고 Enter — 날짜는 클릭한 칸(당일)
+// "할 일"은 맨 위 입력창과 같은 규칙, "📢 일정"은 노트 입력줄과 같은 규칙.
+// 텍스트에 날짜 표기(~9/25 등)를 쓰면 그게 우선 — 날짜가 제목에 글자로 박히지 않게.
+// ------------------------------------------------------------
+function DayAdd({ date }) {
+  const [kind, setKind] = useState("task"); // "task" 할 일 | "note" 📢 일정
+  const [text, setText] = useState("");
+
+  const parsed =
+    kind === "note"
+      ? parseQuickInput(text, { allowPast: true, repeatable: false })
+      : parseQuickInput(text);
+  const typedDate = parsed.startDate || parsed.dueDate; // 텍스트에 날짜를 썼나
+  const label = `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`; // "9/20"
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const { title, ...fields } = parsed;
+    if (title === "") return;
+    if (kind === "note") {
+      await addMemo(title, typedDate || date);
+    } else if (parsed.dueDate || parsed.repeat) {
+      await addTask(title, fields); // 텍스트 표기 우선 (맨 위 입력창과 동일)
+    } else {
+      await addTask(title, { dueDate: date, dateKind: "day" }); // 클릭한 날짜의 당일 일정
+    }
+    setText(""); // 커서는 그대로 → 연속 입력
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="cal-add">
+        <button
+          type="button"
+          className={"date-toggle cal-kind" + (kind === "task" ? " active" : "")}
+          onClick={() => setKind("task")}
+        >
+          할 일
+        </button>
+        <button
+          type="button"
+          className={"date-toggle cal-kind" + (kind === "note" ? " active" : "")}
+          onClick={() => setKind("note")}
+        >
+          📢 일정
+        </button>
+        <input
+          className="notice-input"
+          type="text"
+          placeholder={
+            kind === "note" ? `${label} 일정 노트 + Enter` : `${label}에 할 일 + Enter`
+          }
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          autoFocus
+        />
+      </div>
+      {text.trim() !== "" && (
+        <p className="parse-hint">
+          "{parsed.title}" —{" "}
+          {kind === "note"
+            ? `📢 ${typedDate || date} 일정 노트로 저장됩니다`
+            : typedDate
+              ? `텍스트의 날짜 표기대로 저장됩니다 (📅 ${parsed.dueDate})`
+              : `📅 ${date} 당일 할 일로 저장됩니다`}
+        </p>
+      )}
+    </form>
   );
 }
