@@ -3,7 +3,7 @@
 //  · 기본 스티커 "📌 메모" + 사용자가 만든 스티커들
 //  · 세로 열 3개 — 스티커의 ⠿ 손잡이를 끌어 원하는 열·순서에 배치 (R2e)
 //    (다른 스티커 위에 놓으면 그 아래로, 열의 빈 곳에 놓으면 그 열 맨 아래로)
-//  · 체크 = 완료, 글자 클릭 = 그 자리에서 바로 수정
+//  · 체크 = 완료, 글자 클릭 = 그 자리에서 바로 수정 (제목 + 세부 내용 칸이 함께 열림)
 //  · 메모를 끌어서 다른 스티커에 놓으면 이동 (R2d)
 //  · 스티커 제목 클릭 = 이름 바꾸기, ✕ = 삭제(메모는 기본으로 돌아감)
 //  · 메모 줄의 ✕ = 휴지통으로 (한 번 더 확인 — R7a. 실행취소 가능)
@@ -272,8 +272,8 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         />
       </form>
       <p className="sticky-hint">
-        체크하면 완료 · 글자를 누르면 바로 수정 · 메모를 끌어서 다른 스티커로 ·
-        스티커는 ⠿를 끌어서 배치
+        체크하면 완료 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 다른
+        스티커로 · 스티커는 ⠿를 끌어서 배치
       </p>
     </section>
   );
@@ -393,23 +393,39 @@ function Sticker({
 }
 
 // 메모 한 줄: 체크박스 + (점) + 글자(클릭하면 그 자리 수정) + ✕(휴지통). 끌 수 있음
+// 글자를 클릭하면 제목 칸 아래에 세부 내용 칸(task.memo)이 함께 열림 (2026-09-16)
 function StickyItem({ task, onToggle, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(task.title);
+  const [memoText, setMemoText] = useState(task.memo || ""); // 세부 내용
   const [dragging, setDragging] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false); // 삭제 한 번 더 확인 (R7a)
 
   function save() {
     const v = value.trim();
-    if (v !== "" && v !== task.title) {
-      updateTask(task.id, { title: v });
-    }
+    const m = memoText.trim();
+    const changes = {};
+    if (v !== "" && v !== task.title) changes.title = v;
+    if (m !== (task.memo || "")) changes.memo = m || undefined; // 비우면 필드 자체를 없앰
+    if (Object.keys(changes).length > 0) updateTask(task.id, changes);
+    setEditing(false);
+  }
+
+  function cancel() {
+    setValue(task.title); // 고치던 내용 버리기
+    setMemoText(task.memo || "");
     setEditing(false);
   }
 
   if (editing) {
     return (
-      <li className="sticky-item">
+      // 제목 칸 ↔ 세부 내용 칸 사이를 오갈 땐 안 닫히고, 둘 밖을 클릭하면 저장하고 닫힘
+      <li
+        className="sticky-item editing"
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) save();
+        }}
+      >
         <input
           className="sticky-edit"
           value={value}
@@ -419,13 +435,19 @@ function StickyItem({ task, onToggle, onDelete }) {
               e.preventDefault();
               save();
             }
-            if (e.key === "Escape") {
-              setValue(task.title); // 고치던 내용 버리기
-              setEditing(false);
-            }
+            if (e.key === "Escape") cancel();
           }}
-          onBlur={save}
           autoFocus
+        />
+        <textarea
+          className="sticky-edit sticky-edit-memo"
+          placeholder="세부 내용 (선택)"
+          value={memoText}
+          onChange={(e) => setMemoText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") cancel();
+          }}
+          rows={3}
         />
       </li>
     );
@@ -459,11 +481,18 @@ function StickyItem({ task, onToggle, onDelete }) {
         className={"sticky-text" + (task.priority === "high" ? " hi" : "")}
         onClick={() => {
           setValue(task.title);
+          setMemoText(task.memo || "");
           setEditing(true);
         }}
         title="클릭해서 수정"
       >
         {task.title}
+        {/* 세부 내용이 있으면 옅은 ⋯ — 마우스 올리면 내용 미리보기 */}
+        {task.memo && (
+          <span className="sticky-more" title={task.memo}>
+            ⋯
+          </span>
+        )}
       </span>
       {/* 삭제 (2026-08-11 추가): 휴지통으로 — 한 번 더 확인, 실행취소 가능 */}
       {confirmDel ? (

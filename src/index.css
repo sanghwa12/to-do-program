@@ -455,6 +455,24 @@ h1 {
   font-size: 0.72rem;
   color: #a89b5e;
 }
+/* 세부 내용 (2026-09-16): 글자 클릭 시 제목 칸 아래에 세부 내용 칸이 함께 열림 */
+.sticky-item.editing {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  cursor: default;
+}
+.sticky-edit-memo {
+  min-height: 3.6em;
+  line-height: 1.5;
+  resize: vertical;
+}
+.sticky-more {
+  margin-left: 4px;
+  color: #b3a76a;
+  font-size: 0.8rem;
+  cursor: help;
+}
 
 /* 하루 기록 (F04) */
 .day-list {
