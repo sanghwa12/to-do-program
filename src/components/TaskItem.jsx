@@ -1,10 +1,11 @@
 // ------------------------------------------------------------
 // 할 일 한 줄 (F02 + F03)
-// 보통 모드: 체크박스 + 제목 + 날짜·우선순위·카테고리 뱃지 + 수정/삭제
-// 편집 모드: 제목·메모에 더해 날짜·우선순위·카테고리를 "나중에" 붙일 수 있음 (F03 R1)
+// 보통 모드: 체크박스 + 제목 + 날짜·반복 뱃지 + 수정/삭제
+// 편집 모드: 제목·메모에 더해 날짜·반복을 "나중에" 붙일 수 있음 (F03 R1)
+// (우선순위는 2026-09-28, 카테고리는 2026-08-05에 화면에서 제거 — 저장된 값은 보존)
 // ------------------------------------------------------------
-import { useState, useRef } from "react";
-import { db, updateTask } from "../db.js";
+import { useState } from "react";
+import { updateTask } from "../db.js";
 import {
   todayStr,
   daysLate,
@@ -16,12 +17,7 @@ import {
   nextYearlyDate,
   dateOnly,
 } from "../date.js";
-import {
-  PRIORITY_LABEL,
-  WEEKDAY_LABEL,
-  NTH_LABEL,
-  repeatLabelOf,
-} from "../labels.js";
+import { WEEKDAY_LABEL, NTH_LABEL, repeatLabelOf } from "../labels.js";
 
 /** "YYYY-MM-DD"의 요일 (0=일~6=토) */
 function weekdayOf(dateStr) {
@@ -44,10 +40,6 @@ function presetFromTask(t) {
   return t.repeat; // daily/weekdays/weekly/monthly/yearly — 날짜가 곧 기준
 }
 
-// 우선순위 점 클릭 시 순환 순서: 없음 → 높음 → 중간 → 낮음 → 없음
-// (첫 클릭이 "높음"인 이유: 점을 누르는 상황 대부분이 "이거 중요해!" 표시라서)
-const NEXT_PRIORITY = { high: "med", med: "low", low: undefined };
-
 export default function TaskItem({ task, onToggle, onDelete }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
@@ -68,11 +60,8 @@ export default function TaskItem({ task, onToggle, onDelete }) {
   const [monthDay, setMonthDay] = useState(
     task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
   );
-  const [priority, setPriority] = useState(task.priority || "");
-  // 우선순위 점 클릭 줄세우기용 (R13).
-  // ⚠️ 훅은 항상 같은 순서로 전부 호출돼야 하므로 반드시 여기(early return 위)에 —
+  // ⚠️ 훅(useState 등)을 더할 땐 반드시 여기(early return 위)에 —
   //    편집 모드의 return보다 아래에 두면 수정 버튼 클릭 시 앱 전체가 하얗게 죽는다 (실제 사고)
-  const clickQueue = useRef(Promise.resolve());
 
   // 편집 내용 저장
   async function handleSave(e) {
@@ -167,8 +156,8 @@ export default function TaskItem({ task, onToggle, onDelete }) {
       repeat: saveRepeat,
       repeatNth: saveNth,
       repeatWeekday: saveWeekday,
-      priority: priority || undefined,
-      // 카테고리는 UI 정리(2026-08-05) — update에서 제외해 저장된 값은 보존
+      // 우선순위(2026-09-28)·카테고리(2026-08-05)는 화면에서 제거 —
+      // update에서 제외해 저장된 값은 보존
     });
     setEditing(false);
   }
@@ -190,11 +179,10 @@ export default function TaskItem({ task, onToggle, onDelete }) {
     setMonthDay(
       task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
     );
-    setPriority(task.priority || "");
   }
 
   // 편집 시작 — 반드시 최신 값으로 폼을 채우고 시작
-  // (점 클릭처럼 폼 밖에서 바뀐 값이, 저장할 때 옛 값으로 되돌아가지 않게)
+  // (폼 밖에서 바뀐 값이, 저장할 때 옛 값으로 되돌아가지 않게)
   function startEditing() {
     syncFormFromTask();
     setEditing(true);
@@ -230,7 +218,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
             onChange={(e) => setMemo(e.target.value)}
             rows={2}
           />
-          {/* F03: 날짜·우선순위·카테고리 — 전부 선택 사항 */}
+          {/* F03: 날짜·반복 — 전부 선택 사항 */}
           <div className="edit-extras">
             <label>
               날짜
@@ -371,18 +359,6 @@ export default function TaskItem({ task, onToggle, onDelete }) {
                   </select>
                 </label>
               )}
-            <label>
-              우선순위
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-              >
-                <option value="">없음</option>
-                <option value="high">높음</option>
-                <option value="med">중간</option>
-                <option value="low">낮음</option>
-              </select>
-            </label>
           </div>
           <div className="edit-buttons">
             <button type="submit">저장</button>
@@ -416,31 +392,9 @@ export default function TaskItem({ task, onToggle, onDelete }) {
     return `📅 ~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
   }
 
-  // 우선순위 점 클릭 → 다음 단계로 순환 (R13)
-  // 연타해도 한 클릭 = 한 단계가 되도록, 클릭들을 줄 세워 차례로 처리하고
-  // 매번 저장소의 최신 값을 읽어 다음 단계를 계산함
-  function cyclePriority() {
-    clickQueue.current = clickQueue.current.then(async () => {
-      const current = (await db.tasks.get(task.id))?.priority;
-      const next = current ? NEXT_PRIORITY[current] : "high";
-      await updateTask(task.id, { priority: next });
-    });
-  }
-
   return (
     <li className={"task-item" + (task.done ? " done" : "")}>
       <div className="task-main-row">
-        {/* 우선순위 점: ●높음/●중간/●낮음/○없음 — 클릭하면 변경 */}
-        <button
-          className={"pri-dot pri-" + (task.priority || "none")}
-          onClick={cyclePriority}
-          title={
-            "우선순위: " +
-            (task.priority ? PRIORITY_LABEL[task.priority] : "없음") +
-            " (클릭해서 변경)"
-          }
-          aria-label="우선순위 변경"
-        />
         <label className="task-main">
           <input
             type="checkbox"
@@ -470,7 +424,6 @@ export default function TaskItem({ task, onToggle, onDelete }) {
           {task.repeat && (
             <span className="badge">🔁 {repeatLabelOf(task)}</span>
           )}
-          {/* 우선순위는 제목 앞 점(●)으로 표시 (R13). 카테고리 뱃지는 정리됨(2026-08-05) */}
         </div>
       )}
 

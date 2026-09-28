@@ -1,11 +1,10 @@
 // ============================================================
 // "전체" 탭 정렬 규칙 (F03 R8) — 급한 것부터, 완료는 맨 아래
 // ① 미완료 + 날짜 있음 : 마감 빠른 순 (지난 것이 맨 위)
-// ② 미완료 + 날짜 없음 : 우선순위 순 (높음→중간→낮음→없음), 같으면 최신 입력이 위
+// ② 미완료 + 날짜 없음 : 최신 입력이 위
 // ③ 완료               : 맨 아래
+// (우선순위 순은 2026-09-28 우선순위 제거와 함께 빠짐)
 // ============================================================
-
-const PRIORITY_RANK = { high: 0, med: 1, low: 2 }; // 없음은 3
 
 /** 날짜 빠른 순, 같은 날짜면 시간 순 (시간 없는 것은 뒤) — F02 R15 */
 export function byDueDateTime(a, b) {
@@ -25,11 +24,7 @@ export function sortForAllTab(tasks) {
       const d = byDueDateTime(a, b);
       if (d !== 0) return d;
     }
-    // ③ 우선순위 높은 순
-    const ap = PRIORITY_RANK[a.priority] ?? 3;
-    const bp = PRIORITY_RANK[b.priority] ?? 3;
-    if (ap !== bp) return ap - bp;
-    // ④ 마지막 기준: 최신 입력이 위
+    // ③ 마지막 기준: 최신 입력이 위
     return b.createdAt.localeCompare(a.createdAt);
   });
 }

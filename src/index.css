@@ -446,9 +446,6 @@ h1 {
   flex: 1;
   min-width: 0;
 }
-.sticky-text.hi {
-  font-weight: bold;
-}
 .sticky-hint {
   margin: 8px 0 0;
   font-size: 0.72rem;
@@ -743,48 +740,6 @@ h1 {
   gap: 8px;
 }
 
-/* 우선순위 점 (R13): ●높음 빨강 / ●중간 주황 / ●낮음 파랑 / ○없음
-   D00 색 예외 — 정보를 담은 색, 면적 최소 */
-.pri-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid #ccc; /* 없음: 빈 동그라미 */
-  background: transparent;
-  padding: 0;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.pri-dot:hover {
-  border-color: #999;
-  background: #f0f0f0;
-}
-/* 신호등 색: 빨강=높음(급해!), 주황=중간(주의), 초록=낮음(여유) */
-.pri-dot.pri-high {
-  background: #e03131;
-  border-color: #e03131;
-}
-.pri-dot.pri-med {
-  background: #f59f00;
-  border-color: #f59f00;
-}
-.pri-dot.pri-low {
-  background: #37b24d;
-  border-color: #37b24d;
-}
-.pri-dot.pri-high:hover,
-.pri-dot.pri-med:hover,
-.pri-dot.pri-low:hover {
-  opacity: 0.75;
-}
-/* 메모판용 작은 정적 점 (클릭 안 됨) */
-.pri-dot.static {
-  width: 8px;
-  height: 8px;
-  border-width: 0;
-  cursor: inherit;
-}
-
 .task-main {
   display: flex;
   align-items: center;
@@ -807,18 +762,18 @@ h1 {
 }
 
 .task-memo {
-  margin: 6px 0 0 50px; /* 점(14)+간격(8)+체크박스(18)+간격(10) 아래 제목 위치에 맞춤 */
+  margin: 6px 0 0 28px; /* 체크박스(18)+간격(10) 아래 제목 위치에 맞춤 */
   font-size: 0.85rem;
   color: #777;
   white-space: pre-wrap;
 }
 
-/* 날짜·우선순위·카테고리 뱃지 */
+/* 날짜·반복 뱃지 */
 .task-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 6px 0 0 50px;
+  margin: 6px 0 0 28px; /* 제목 위치에 맞춤 (위 .task-memo와 같은 값) */
 }
 .badge {
   font-size: 0.75rem;
@@ -827,8 +782,7 @@ h1 {
   background: #f0f0f0;
   color: #555;
 }
-/* D00 색 줄이기: 강조색(빨강)은 '밀림'에만. 나머지는 회색 기본,
-   중요도는 색 대신 굵기로만 구분해 화면을 차분하게 유지 */
+/* D00 색 줄이기: 강조색(빨강)은 '밀림'에만. 나머지는 회색 기본 */
 .badge.late {
   background: #ffe3e3;
   color: #c00;
@@ -837,7 +791,6 @@ h1 {
 .badge.ongoing {
   font-weight: bold;
 }
-/* 우선순위는 제목 앞 .pri-dot 점으로 표시 (글자 뱃지 제거됨, R13) */
 
 /* D00 항목 버튼 숨기기: 평소엔 안 보이고, 마우스 올리거나 포커스 때만 노출 */
 .task-buttons {

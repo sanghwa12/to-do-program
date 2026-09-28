@@ -51,10 +51,6 @@ export default function HelpView({ onBack }) {
         <h3>📋 목록에서</h3>
         <ul>
           <li>
-            <b>제목 앞 ○ 클릭</b> = 중요도 순환: 🔴높음 → 🟠중간 → 🟢낮음 →
-            없음
-          </li>
-          <li>
             <b>체크</b> = 완료 — 아래 알림에서 <b>실행취소</b> 가능
           </li>
           <li>
@@ -97,8 +93,8 @@ export default function HelpView({ onBack }) {
             이름도 표시 (오늘 탭 날짜 옆에도)
           </li>
           <li>
-            <b>전체</b>: 급한 순 (밀림 → 마감 가까운 순 → 중요도), 완료는 맨
-            아래
+            <b>전체</b>: 급한 순 (밀림 → 마감 가까운 순 → 날짜 없는 것은 최신
+            순), 완료는 맨 아래
           </li>
         </ul>
       </section>

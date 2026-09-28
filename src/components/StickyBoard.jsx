@@ -19,10 +19,6 @@ import {
   saveBoardLayout,
 } from "../db.js";
 
-// 우선순위 정렬 순서: 높음 → 중간 → 낮음 → 미지정
-const ORDER = { high: 0, med: 1, low: 2 };
-const byPriority = (a, b) => (ORDER[a.priority] ?? 3) - (ORDER[b.priority] ?? 3);
-
 // 드래그할 때 실어 나르는 이름표 (종류 구분용)
 const DRAG_TYPE = "text/task-id"; // 메모 한 줄
 const BOARD_TYPE = "text/board-name"; // 스티커 자체 (R2e)
@@ -120,10 +116,9 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
     .map((b) => b.name);
   const known = new Set(userNames);
   // 기본 스티커: 소속 없는 메모 (혹시 없어진 스티커 이름이 남아 있어도 여기로)
-  const defaultTasks = tasks
-    .filter((t) => !t.board || !known.has(t.board))
-    .sort(byPriority);
-  const tasksOf = (name) => tasks.filter((t) => t.board === name).sort(byPriority);
+  // 순서는 받은 그대로 = 최신 입력이 위 (우선순위 정렬은 2026-09-28 제거)
+  const defaultTasks = tasks.filter((t) => !t.board || !known.has(t.board));
+  const tasksOf = (name) => tasks.filter((t) => t.board === name);
 
   async function handleNewBoard(e) {
     e.preventDefault();
@@ -392,7 +387,7 @@ function Sticker({
   );
 }
 
-// 메모 한 줄: 체크박스 + (점) + 글자(클릭하면 그 자리 수정) + ✕(휴지통). 끌 수 있음
+// 메모 한 줄: 체크박스 + 글자(클릭하면 그 자리 수정) + ✕(휴지통). 끌 수 있음
 // 글자를 클릭하면 제목 칸 아래에 세부 내용 칸(task.memo)이 함께 열림 (2026-09-16)
 function StickyItem({ task, onToggle, onDelete }) {
   const [editing, setEditing] = useState(false);
@@ -473,12 +468,8 @@ function StickyItem({ task, onToggle, onDelete }) {
         checked={task.done}
         onChange={() => onToggle(task)}
       />
-      {/* 우선순위가 있으면 색 점으로 표시 (R13과 동일한 색) */}
-      {task.priority && (
-        <span className={"pri-dot static pri-" + task.priority} />
-      )}
       <span
-        className={"sticky-text" + (task.priority === "high" ? " hi" : "")}
+        className="sticky-text"
         onClick={() => {
           setValue(task.title);
           setMemoText(task.memo || "");

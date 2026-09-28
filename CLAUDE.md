@@ -44,7 +44,7 @@ type Task = {
   dueTime?: string;                    // 시간, "HH:MM" (선택 — 날짜 뒤에 14:00처럼 쓰면 저장, F02 R15)
   startDate?: string;                  // 기간의 시작일 (dateKind가 "range"일 때만)
   dateKind?: "due" | "day" | "range";  // 날짜의 의미: ~까지 마감 | 그날 당일 | 기간
-  priority?: "low" | "med" | "high";   // 우선순위 (선택)
+  priority?: "low" | "med" | "high";   // 우선순위 (2026-09-28 화면에서 제거 — 데이터만 보존)
   repeat?: "daily" | "weekdays" | "weekly" | "monthly" | "yearly" | "monthlyNth"; // 반복 주기 (weekdays=주중 매일)
   repeatNth?: 1 | 2 | 3 | 4 | "last";  // monthlyNth일 때: 몇째 주 (매월 N번째 요일)
   repeatWeekday?: number;              // monthlyNth일 때: 요일 (0=일 ~ 6=토)
