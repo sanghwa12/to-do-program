@@ -207,7 +207,7 @@ function DayAdd({ date }) {
     } else if (parsed.dueDate || parsed.repeat) {
       await addTask(title, fields); // 텍스트 표기 우선 (맨 위 입력창과 동일)
     } else {
-      await addTask(title, { dueDate: date, dateKind: "day" }); // 클릭한 날짜의 당일 일정
+      await addTask(title, { dueDate: date, dateKind: "day" }); // 클릭한 날짜의 당일 할 일
     }
     setText(""); // 커서는 그대로 → 연속 입력
   }
@@ -217,23 +217,26 @@ function DayAdd({ date }) {
       <div className="cal-add">
         <button
           type="button"
-          className={"date-toggle cal-kind" + (kind === "task" ? " active" : "")}
+          className={"date-toggle kind-btn" + (kind === "task" ? " active" : "")}
           onClick={() => setKind("task")}
         >
+          <span className="check-icon" aria-hidden="true" />
           할 일
         </button>
         <button
           type="button"
-          className={"date-toggle cal-kind" + (kind === "note" ? " active" : "")}
+          className={
+            "date-toggle kind-btn kind-note" + (kind === "note" ? " active" : "")
+          }
           onClick={() => setKind("note")}
         >
           📢 일정
         </button>
         <input
-          className="notice-input"
+          className={"notice-input" + (kind === "note" ? " note" : "")}
           type="text"
           placeholder={
-            kind === "note" ? `${label} 일정 노트 + Enter` : `${label}에 할 일 + Enter`
+            kind === "note" ? `${label}에 일정 + Enter` : `${label}에 할 일 + Enter`
           }
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -241,10 +244,10 @@ function DayAdd({ date }) {
         />
       </div>
       {text.trim() !== "" && (
-        <p className="parse-hint">
+        <p className={"parse-hint" + (kind === "note" ? " event" : "")}>
           "{parsed.title}" —{" "}
           {kind === "note"
-            ? `📢 ${typedDate || date} 일정 노트로 저장됩니다`
+            ? `📢 ${typedDate || date} 일정으로 저장됩니다`
             : typedDate
               ? `텍스트의 날짜 표기대로 저장됩니다 (📅 ${parsed.dueDate})`
               : `📅 ${date} 당일 할 일로 저장됩니다`}

@@ -239,19 +239,18 @@ h1 {
 .notice-text {
   margin-right: auto;
 }
-/* 달력의 일정 칩·선택일 한 줄 (F11 R5) */
+/* 달력의 일정 칩·선택일 한 줄 (F11 R5) — 일정 색(연보라)으로 할 일(회색)과 구분 */
 .cal-chip.notice {
-  background: #fff;
-  border: 1px solid #ccc;
-  color: #555;
+  background: var(--event-bg);
+  color: var(--event-fg);
 }
 .cal-note-line {
   margin: 4px 2px;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 0.85rem;
-  color: #555;
-}
-.today-notice {
-  margin-top: 14px; /* 오늘 탭 맨 위의 "오늘 공지" 한 줄 (F08 R3b) */
+  background: var(--event-bg);
+  color: var(--event-fg);
 }
 .today-tasks-title {
   margin-top: 24px; /* 하루 기록 블록과 오늘 할 일 목록 사이 구분 (2026-08-05 통합) */
@@ -1229,7 +1228,120 @@ button.delete {
 .cal-add .notice-input {
   flex: 1;
 }
-.cal-kind {
+
+/* 종류 토글 [할 일] [📢 일정] — 맨 위 입력칸(F02 R16)과 달력 입력칸(F07 R9) 공용 */
+.kind-btn {
   font-size: 0.85rem;
   padding: 0 10px;
+}
+/* 할 일 토글 앞의 파란 체크 — 앱 아이콘(파란 바탕 + 흰 체크)과 같은 모양.
+   이모지는 색을 못 바꿔서(초록) CSS로 직접 그림: 파란 네모 + 기울인 ㄴ자 = 체크 */
+.check-icon {
+  display: inline-block;
+  position: relative;
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: 5px;
+  border-radius: 4px;
+  background: #4a7dff;
+  vertical-align: -0.17em;
+}
+.check-icon::after {
+  content: "";
+  position: absolute;
+  left: 0.36em;
+  top: 0.13em;
+  width: 0.25em;
+  height: 0.53em;
+  border: solid #fff;
+  border-width: 0 0.15em 0.15em 0;
+  transform: rotate(45deg);
+}
+.date-toggle.kind-note.active {
+  border-color: var(--event-accent); /* 할 일의 진한 파랑 테두리와 같은 세기로 */
+  background: var(--event-bg);
+  /* 글자색은 바꾸지 않음 — 할 일 버튼처럼 검은색 그대로 (사용자 요청) */
+}
+/* 일정을 고른 동안엔 입력칸의 포커스 테두리도 파랑 대신 보라 */
+.quick-input.note:focus,
+.notice-input.note:focus {
+  border-color: var(--event-accent);
+}
+.quick-row .quick-input {
+  min-width: 0; /* 토글이 늘어도 좁은 창에서 줄이 넘치지 않게 */
+}
+
+/* ------------------------------------------------------------
+   일정 색 = 연보라 (2026-09-28 개편 3단계, D00 색 예외)
+   일정이 보이는 모든 곳(달력 칩·달력 아래 목록·오늘 탭·메모 탭)에 같은 색
+   ------------------------------------------------------------ */
+:root {
+  --event-bg: #efe7fb; /* 연보라 바탕 */
+  --event-fg: #5a3d9a; /* 진보라 글자 */
+  --event-line: #cdbbee; /* 옅은 선 (목록 왼쪽 선·구분선) */
+  --event-accent: #8a5cf5; /* 진한 보라 — 고른 토글의 테두리 (파랑 #4a7dff와 같은 세기) */
+}
+.parse-hint.event {
+  color: var(--event-fg);
+}
+
+/* 오늘 탭 맨 위 일정 블록 (F11 R5) */
+.event-block {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--event-bg);
+  color: var(--event-fg);
+}
+.event-block-title {
+  font-size: 0.95rem;
+  margin: 0 0 6px;
+}
+.event-count {
+  font-size: 0.75rem;
+  font-weight: normal;
+  opacity: 0.7;
+}
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.event-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 2px 0;
+  font-size: 0.9rem;
+}
+.event-line.today {
+  font-weight: bold;
+}
+.event-when {
+  flex-shrink: 0;
+  min-width: 8.5em;
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+.event-sub {
+  margin: 10px 0 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--event-line);
+  font-size: 0.78rem;
+  font-weight: normal;
+  opacity: 0.85;
+}
+.event-none {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* 메모 탭 노트 구역의 일정 목록 — 왼쪽 보라 선으로 표시 */
+.notice-section.event {
+  color: var(--event-fg);
+}
+.notice-list.events .notice-item {
+  border-left: 3px solid var(--event-line);
+  padding-left: 8px;
 }

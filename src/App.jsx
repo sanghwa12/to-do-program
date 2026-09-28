@@ -28,7 +28,8 @@ import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
 import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
-import { todayStr } from "./date.js";
+import { todayStr, addDays } from "./date.js";
+import { WEEKDAY_LABEL } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab, byDueDateTime } from "./sort.js";
@@ -376,7 +377,7 @@ function TaskView({
     );
   }
 
-  // [오늘] 하루의 조종석 (2026-08-05 통합): 공지 → 하루 기록(계획/실제/회고) → 오늘 할 일
+  // [오늘] 하루의 조종석 (2026-08-05 통합): 📢 일정 → 하루 기록(계획/실제/회고) → 오늘 할 일
   if (tab === "오늘") {
     const today = todayStr();
     // 할 일 목록은 하루 기록의 ◀▶ 날짜를 따라감 (F04 R9):
@@ -397,18 +398,10 @@ function TaskView({
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
     const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;
 
-    // 오늘 날짜인 일정 노트만 한 줄로 (놓침 방지 — 전체는 메모 탭 노트 구역에, F11 R5)
-    const todaysNotices = memos
-      .filter((m) => m.date === today)
-      .map((m) => ({ ...m, text: m.text.split("\n")[0] }));
-
     return (
       <div>
-        {todaysNotices.map((n) => (
-          <p key={n.id} className="cal-note-line today-notice">
-            📢 오늘: {n.text}
-          </p>
-        ))}
+        {/* 📢 일정 블록 (F11 R5): 보는 날짜의 일정 + 다가오는 7일 */}
+        <EventBlock memos={memos} date={dayDate} today={today} />
         {/* 하루 기록 (F04) — 계획/실제/회고, ◀▶로 지난 날도 열람 */}
         <DayView tasks={tasks} date={dayDate} onDateChange={setDayDate} />
         {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
@@ -431,6 +424,72 @@ function TaskView({
   }
 
   return null; // TABS에 없는 탭은 없음
+}
+
+// ------------------------------------------------------------
+// 오늘 탭 맨 위 "📢 일정" 블록 (F11 R5, 2026-09-28 개편 3단계)
+//  · 보고 있는 날짜의 일정 (◀▶로 날짜를 옮기면 그 날 것)
+//  · 오늘을 볼 때는 "다가오는 일정"(내일~7일 뒤)도 — 내일 일정을 오늘 놓치지 않게
+// 보여줄 일정이 하나도 없으면 블록 자체를 그리지 않음
+// ------------------------------------------------------------
+function EventBlock({ memos, date, today }) {
+  const viewingToday = date === today;
+  const firstLine = (m) => m.text.split("\n")[0]; // 노트의 첫 줄 = 제목
+  const md = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`; // "10/6"
+
+  const dayEvents = memos.filter((m) => m.date === date);
+  const until = addDays(today, 7);
+  const upcoming = viewingToday
+    ? memos
+        .filter((m) => m.date && m.date > today && m.date <= until)
+        .sort((a, b) => a.date.localeCompare(b.date)) // 가까운 날부터
+    : [];
+  if (dayEvents.length === 0 && upcoming.length === 0) return null;
+
+  // 오늘부터 며칠 뒤인지: "내일" / "3일 뒤"
+  const daysAway = (ds) => {
+    const n = Math.round(
+      (new Date(ds + "T00:00:00") - new Date(today + "T00:00:00")) / 86400000
+    );
+    return n === 1 ? "내일" : `${n}일 뒤`;
+  };
+
+  return (
+    <section className="event-block">
+      <h2 className="event-block-title">
+        📢 {viewingToday ? "오늘 일정" : `${md(date)} 일정`}{" "}
+        <span className="event-count">{dayEvents.length}</span>
+      </h2>
+      {dayEvents.length === 0 ? (
+        <p className="event-none">오늘은 일정이 없어요.</p>
+      ) : (
+        <ul className="event-list">
+          {dayEvents.map((m) => (
+            <li key={m.id} className="event-line today">
+              {firstLine(m)}
+            </li>
+          ))}
+        </ul>
+      )}
+      {upcoming.length > 0 && (
+        <>
+          <h3 className="event-sub">다가오는 일정 (7일 이내)</h3>
+          <ul className="event-list">
+            {upcoming.map((m) => (
+              <li key={m.id} className="event-line">
+                <span className="event-when">
+                  {md(m.date)} (
+                  {WEEKDAY_LABEL[new Date(m.date + "T00:00:00").getDay()]}) ·{" "}
+                  {daysAway(m.date)}
+                </span>
+                <span>{firstLine(m)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
 }
 
 // ------------------------------------------------------------

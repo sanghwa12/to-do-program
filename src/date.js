@@ -15,6 +15,13 @@ export function daysLate(dueDate) {
   return Math.round((today - due) / (1000 * 60 * 60 * 24)); // 밀리초 차이를 일수로
 }
 
+/** "YYYY-MM-DD"에 n일 더하기 (빼려면 음수). 월·연 넘김은 자동 처리 */
+export function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  return ymd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
 // ------------------------------------------------------------
 // 반복 할 일 (F09): 다음 회차 계산
 // ------------------------------------------------------------

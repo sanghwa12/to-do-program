@@ -82,8 +82,9 @@ export default function MemoView({ memos, onDelete }) {
       {/* 📅 일정 구역 (R3) */}
       {(upcoming.length > 0 || past.length > 0) && (
         <>
-          <h3 className="notice-section">📅 일정</h3>
-          <ul className="notice-list">
+          {/* 일정은 보라색으로 (D00 색 예외) — 달력·오늘 탭과 같은 색 */}
+          <h3 className="notice-section event">📅 일정</h3>
+          <ul className="notice-list events">
             {[...upcoming, ...past].map((m) => (
               <li
                 key={m.id}
