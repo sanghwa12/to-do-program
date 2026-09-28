@@ -10,6 +10,7 @@ import { addMemo, updateMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { dateOnly } from "../date.js";
 import { noteDatesFrom, noteDateText, normalizeNoteDates } from "../notes.js";
+import ExceptionDates from "./ExceptionDates.jsx";
 
 // onConvert(일정): 에디터의 "할 일로 바꾸기"를 눌렀을 때 (R9)
 export default function MemoView({ memos, onDelete, onConvert }) {
@@ -102,7 +103,15 @@ export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
   const [date, setDate] = useState(memo?.date ?? "");
   const [endDate, setEndDate] = useState(memo?.endDate ?? ""); // 기간의 끝 (선택)
   const [time, setTime] = useState(memo?.time ?? ""); // 시간 (선택, 기간이 아닐 때)
+  // 기간의 예외 날짜 (F03 R9): 제외한 날들 / 추가한 날들
+  const [skipDates, setSkipDates] = useState(memo?.skipDates ?? []);
+  const [extraDates, setExtraDates] = useState(memo?.extraDates ?? []);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // 에디터의 날짜 칸 전부 — 정리(앞뒤 바뀐 기간, 범위를 벗어난 예외 등)는 normalizeNoteDates가 함
+  const dates = { date, endDate, time, skipDates, extraDates };
+  // 기간일 때만 예외 날짜 칸을 보여줌. 화면에도 정리된 값으로 (기간을 고치면 바로 반영)
+  const shown = normalizeNoteDates(dates);
 
   async function handleSave() {
     const trimmed = text.trim();
@@ -110,7 +119,6 @@ export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
       onClose(); // 빈 노트는 저장하지 않음
       return;
     }
-    const dates = { date, endDate, time }; // 정리(앞뒤 바뀐 기간 등)는 저장 함수가 함
     if (memo) await updateMemo(memo.id, trimmed, dates);
     else await addMemo(trimmed, dates);
     onClose();
@@ -121,12 +129,8 @@ export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
     const trimmed = text.trim();
     if (trimmed === "" || !date) return;
     // 예전 날짜 칸을 비운 뒤 지금 값으로 채움 (끝 날짜를 지웠다면 지운 대로)
-    const { endDate: _e, time: _t, ...rest } = memo;
-    onConvert({
-      ...rest,
-      text: trimmed,
-      ...normalizeNoteDates({ date, endDate, time }),
-    });
+    const { endDate: _e, time: _t, skipDates: _s, extraDates: _x, ...rest } = memo;
+    onConvert({ ...rest, text: trimmed, ...shown });
     onClose();
   }
 
@@ -178,12 +182,27 @@ export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
               setDate("");
               setEndDate("");
               setTime("");
+              setSkipDates([]);
+              setExtraDates([]);
             }}
           >
             날짜 지우기
           </button>
         )}
       </div>
+      {/* 기간의 예외 날짜 (F03 R9): 제외할 날 / 추가할 날 — 기간일 때만 */}
+      {shown.endDate && (
+        <ExceptionDates
+          start={shown.date}
+          end={shown.endDate}
+          skip={shown.skipDates ?? []}
+          extra={shown.extraDates ?? []}
+          onChange={({ skip, extra }) => {
+            setSkipDates(skip);
+            setExtraDates(extra);
+          }}
+        />
+      )}
       <div className="edit-buttons">
         {/* 할 일로 바꾸기 (R9) — 이미 저장된 일정(날짜 있음)에만.
             왼쪽 끝 정렬은 바로 뒤 삭제 버튼(.memo-delete)이 맡음 */}

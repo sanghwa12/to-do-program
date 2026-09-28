@@ -6,11 +6,13 @@
 // 모양은 두 가지:
 //  · 기본    — 달력 아래 목록의 카드 (할 일 카드와 같은 틀)
 //  · compact — 오늘 탭 일정 블록의 한 줄 (when = "9/29 (화) · 내일" 같은 앞머리, 없으면 굵게)
+// dayContext + onSkipDay(일정, 날짜): 달력에서 고른 날짜 — 기간 일정에 "이 날 빼기" (F03 R9)
 // ------------------------------------------------------------
 import { useState } from "react";
 import { MemoEditor } from "./MemoView.jsx";
 import { todayStr } from "../date.js";
 import { noteDateText, noteLastDate } from "../notes.js";
+import { spanOfNote, isActiveOn, exceptionText, canSkip } from "../span.js";
 
 /** "2026-10-06" → "10/6" */
 const md = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`;
@@ -21,6 +23,8 @@ export default function EventItem({
   onConvert,
   compact = false,
   when = "",
+  dayContext,
+  onSkipDay,
 }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
@@ -43,6 +47,9 @@ export default function EventItem({
   // ----- 보통 모드 -----
   const [first, ...rest] = note.text.split("\n"); // 첫 줄 = 제목, 나머지 = 세부 내용
   const detail = rest.join("\n").trim();
+  const span = spanOfNote(note);
+  // 기간의 예외 날짜를 글로 (" · 제외 10/9 · 추가 10/19") — 기간일 때만
+  const exceptions = note.endDate ? exceptionText(note) : "";
 
   // 수정/삭제 버튼 — 삭제는 그 자리에서 한 번 더 확인 (할 일과 같은 방식)
   const actions = (className) =>
@@ -62,6 +69,15 @@ export default function EventItem({
       </div>
     ) : (
       <div className={className}>
+        {/* 달력에서 고른 날짜만 빼기 (F03 R9) — 기간 일정이고, 뺄 수 있는 날일 때만 */}
+        {dayContext && onSkipDay && note.endDate && canSkip(span, dayContext) && (
+          <button
+            onClick={() => onSkipDay(note, dayContext)}
+            title="이 날짜만 빼기 — 기간의 다른 날은 그대로"
+          >
+            이 날 빼기
+          </button>
+        )}
         <button onClick={() => setEditing(true)}>수정</button>
         <button className="delete" onClick={() => setConfirmDelete(true)}>
           삭제
@@ -81,6 +97,7 @@ export default function EventItem({
         {note.endDate && (
           <span className="event-range">
             {md(note.date)}~{md(note.endDate)}
+            {exceptions}
           </span>
         )}
         {actions("event-actions")}
@@ -91,7 +108,7 @@ export default function EventItem({
   // 달력 아래 목록의 카드
   const today = todayStr();
   const isPast = noteLastDate(note) < today;
-  const ongoing = note.endDate && note.date <= today && !isPast; // 기간이 오늘을 지나는 중
+  const ongoing = note.endDate && isActiveOn(span, today); // 기간이 오늘을 지나는 중
 
   return (
     <li className={"task-item event-item" + (isPast ? " past" : "")}>
@@ -105,6 +122,7 @@ export default function EventItem({
       <div className="task-badges">
         <span className="badge">
           📅 {noteDateText(note)}
+          {exceptions}
           {isPast && " · 지남"}
           {ongoing && " · 진행중"}
         </span>

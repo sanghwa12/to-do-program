@@ -4,6 +4,7 @@
 // 기획서 "데이터 → 이벤트 매핑" 표를 그대로 코드로 옮긴 것.
 // 구글 규칙: 종일 이벤트의 end.date는 "마지막 날의 다음 날" (끝 배타).
 // ============================================================
+import { spanOfTask, spanOfNote, activeSegments, hasExceptions } from "./span.js";
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -61,6 +62,36 @@ export function memoToEvent(memo, tz) {
     start: { date: memo.date },
     end: { date: addDays(memo.endDate || memo.date, 1) },
   };
+}
+
+// ------------------------------------------------------------
+// 예외 날짜가 있는 기간 (F03 R9): 구글 이벤트 하나로는 "중간에 빠진 날"을 못 나타내므로
+// 이어진 날끼리 조각으로 나눠 조각마다 종일 이벤트 하나씩 올린다.
+//   10/6~10/16, 10/9 제외, 10/19 추가 → 10/6~8 · 10/10~16 · 10/19 (3개)
+// key는 연결표에서 조각을 구분하는 꼬리표("#0", "#1", …). 예외가 없으면 "" 하나
+// ------------------------------------------------------------
+
+function segmentEvents(summary, span) {
+  return activeSegments(span).map((s, i) => ({
+    key: `#${i}`,
+    event: { summary, start: { date: s.from }, end: { date: addDays(s.to, 1) } },
+  }));
+}
+
+/** 할 일 → 이벤트들 [{ key, event }] */
+export function taskToEvents(task, tz) {
+  if (task.dateKind === "range" && task.startDate && hasExceptions(task)) {
+    return segmentEvents(task.title, spanOfTask(task));
+  }
+  return [{ key: "", event: taskToEvent(task, tz) }];
+}
+
+/** 일정 → 이벤트들 [{ key, event }] */
+export function memoToEvents(memo, tz) {
+  if (memo.endDate && hasExceptions(memo)) {
+    return segmentEvents("📢 " + memo.text.split("\n")[0], spanOfNote(memo));
+  }
+  return [{ key: "", event: memoToEvent(memo, tz) }];
 }
 
 /** 내용 지문 — "바뀌었나?" 비교용 (직렬화한 본문 그대로). 연결표의 hash 칸에 저장 */

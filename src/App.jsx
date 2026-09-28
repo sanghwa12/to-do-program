@@ -22,6 +22,7 @@ import {
   convertNoteToTask,
   restoreTaskFromNote,
   restoreNoteFromTask,
+  setExceptions,
 } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
@@ -39,6 +40,14 @@ import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab, byDueDateTime } from "./sort.js";
 import { firstLineOf, notesOnDate, byNoteTime } from "./notes.js";
+import {
+  spanOfTask,
+  spanOfNote,
+  isActiveOn,
+  nextActiveAfter,
+  skipDay,
+  isDueToday,
+} from "./span.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
@@ -151,6 +160,24 @@ export default function App() {
     setUndo({ type: "toTask", note, label: `"${title}"` });
   }
 
+  // 기간에서 그 날만 빼기 (F03 R9) — 달력의 "이 날 빼기". kind: "task" | "note"
+  // 실행취소를 위해 빼기 전의 예외 목록을 기억해 둠
+  async function handleSkipDay(kind, item, day) {
+    const span = kind === "note" ? spanOfNote(item) : spanOfTask(item);
+    const next = skipDay(span, day);
+    await setExceptions(kind, item.id, next.skip, next.extra);
+    const title = kind === "note" ? firstLineOf(item.text) : item.title;
+    setUndo({
+      type: "skipDay",
+      kind,
+      id: item.id,
+      prevSkip: item.skipDates,
+      prevExtra: item.extraDates,
+      day: `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`, // "10/9"
+      label: `"${title.slice(0, 20)}"`,
+    });
+  }
+
   // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
     if (undo) {
@@ -159,6 +186,8 @@ export default function App() {
       else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "toNote") await restoreTaskFromNote(undo.task);
       else if (undo.type === "toTask") await restoreNoteFromTask(undo.note);
+      else if (undo.type === "skipDay")
+        await setExceptions(undo.kind, undo.id, undo.prevSkip, undo.prevExtra);
       else if (undo.type === "repeat")
         await undoCompleteRepeating(
           undo.recordId,
@@ -304,6 +333,7 @@ export default function App() {
               onDeleteMemo={handleDeleteMemo}
               onConvertToNote={handleConvertToNote}
               onConvertToTask={handleConvertToTask}
+              onSkipDay={handleSkipDay}
             />
           )}
 
@@ -323,9 +353,11 @@ export default function App() {
                   ? "일정으로 바꿈"
                   : undo.type === "toTask"
                     ? "할 일로 바꿈"
-                    : undo.type === "repeat"
-                      ? `완료 · 다음 ${undo.nextDue}`
-                      : "완료됨"}
+                    : undo.type === "skipDay"
+                      ? `${undo.day} 제외됨`
+                      : undo.type === "repeat"
+                        ? `완료 · 다음 ${undo.nextDue}`
+                        : "완료됨"}
           </span>
           <button onClick={handleUndo}>실행취소</button>
           <button
@@ -354,6 +386,7 @@ function TaskView({
   onDeleteMemo,
   onConvertToNote, // 할 일 → 일정 (F11 R9)
   onConvertToTask, // 일정 → 할 일
+  onSkipDay, // 기간에서 그 날만 빼기 (F03 R9)
 }) {
   // 하루 기록에서 ◀▶로 보는 날짜 (F04 R9) — 오늘 탭의 할 일 목록도 이 날짜를 따라감
   // ⚠️ 훅은 항상 같은 순서로 호출돼야 하므로 반드시 탭 분기(return)보다 위에!
@@ -396,6 +429,7 @@ function TaskView({
         onConvert={onConvertToNote}
         onDeleteNote={onDeleteMemo}
         onConvertNote={onConvertToTask}
+        onSkipDay={onSkipDay}
       />
     );
   }
@@ -418,17 +452,11 @@ function TaskView({
     const today = todayStr();
     // 할 일 목록은 하루 기록의 ◀▶ 날짜를 따라감 (F04 R9):
     // 오늘 = 오늘 마감 + 밀린 것 (미완료만) / 다른 날 = 그 날짜에 걸린 할 일 (달력과 같은 규칙)
+    // 기간 할 일은 제외한 날엔 안 나옴 — 규칙은 span.js의 isDueToday (F03 R9)
     const viewingToday = dayDate === today;
     const list = viewingToday
       ? tasks
-          .filter(
-            (t) =>
-              !t.done &&
-              t.dueDate &&
-              (t.dateKind === "range" && t.startDate
-                ? t.startDate <= today
-                : t.dueDate <= today)
-          )
+          .filter((t) => isDueToday(t, today))
           .sort(byDueDateTime) // 밀린 것부터 위로, 같은 날은 시간 순
       : tasksOnDate(tasks, dayDate);
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
@@ -483,11 +511,19 @@ function EventBlock({ memos, date, today, onDelete, onConvert }) {
 
   const dayEvents = notesOnDate(memos, date).sort(byNoteTime);
   const until = addDays(today, 7);
+  // 다가오는 일정: 오늘은 안 걸리지만 7일 안에 "다음으로 걸리는 날"이 있는 것.
+  // 기간에서 오늘을 제외했거나, 기간이 끝난 뒤 추가한 날이 남은 일정도 여기 나옴 (F03 R9)
   const upcoming = viewingToday
     ? memos
-        .filter((m) => m.date && m.date > today && m.date <= until)
+        .map((m) => {
+          const span = spanOfNote(m);
+          if (!span || isActiveOn(span, today)) return null; // 오늘 걸린 건 위 목록에
+          const next = nextActiveAfter(span, today);
+          return next && next <= until ? { m, next } : null;
+        })
+        .filter(Boolean)
         // 가까운 날부터, 같은 날은 시간 순
-        .sort((a, b) => a.date.localeCompare(b.date) || byNoteTime(a, b))
+        .sort((a, b) => a.next.localeCompare(b.next) || byNoteTime(a.m, b.m))
     : [];
   if (dayEvents.length === 0 && upcoming.length === 0) return null;
 
@@ -524,15 +560,15 @@ function EventBlock({ memos, date, today, onDelete, onConvert }) {
         <>
           <h3 className="event-sub">다가오는 일정 (7일 이내)</h3>
           <ul className="event-list">
-            {upcoming.map((m) => (
+            {upcoming.map(({ m, next }) => (
               <EventItem
                 key={m.id}
                 note={m}
                 compact
-                // 앞머리: "9/29 (화) · 내일"
-                when={`${md(m.date)} (${
-                  WEEKDAY_LABEL[new Date(m.date + "T00:00:00").getDay()]
-                }) · ${daysAway(m.date)}`}
+                // 앞머리: "9/29 (화) · 내일" — 다음으로 걸리는 날 기준
+                when={`${md(next)} (${
+                  WEEKDAY_LABEL[new Date(next + "T00:00:00").getDay()]
+                }) · ${daysAway(next)}`}
                 onDelete={onDelete}
                 onConvert={onConvert}
               />

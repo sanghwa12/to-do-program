@@ -8,7 +8,7 @@
 // 캘린더 API는 전부 브라우저 fetch로 직접 호출합니다 (서버 없음).
 // ============================================================
 import { db, getSetting, setSetting } from "./db.js";
-import { taskToEvent, memoToEvent, fingerprint } from "./gcalEvents.js";
+import { taskToEvents, memoToEvents, fingerprint } from "./gcalEvents.js";
 
 // 권한 범위: "앱이 만든 달력만" — 기본 달력엔 손댈 수 없음 (기획서 핵심 결정)
 const SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
@@ -131,9 +131,18 @@ async function targets() {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const tasks = await db.tasks.filter((t) => !!t.dueDate && !t.deletedAt).toArray();
   const memos = await db.memos.filter((m) => !!m.date).toArray();
+  // 보통은 항목 하나 = 이벤트 하나. 예외 날짜가 있는 기간은 조각 수만큼 (F03 R9) —
+  // 조각은 id 뒤에 "#0", "#1"…을 붙여 구분. 조각 수가 줄면 남는 것은 아래에서 삭제됨
   return [
-    ...tasks.map((t) => ({ localId: t.id, event: taskToEvent(t, tz) })),
-    ...memos.map((m) => ({ localId: "memo:" + m.id, event: memoToEvent(m, tz) })),
+    ...tasks.flatMap((t) =>
+      taskToEvents(t, tz).map(({ key, event }) => ({ localId: t.id + key, event }))
+    ),
+    ...memos.flatMap((m) =>
+      memoToEvents(m, tz).map(({ key, event }) => ({
+        localId: "memo:" + m.id + key,
+        event,
+      }))
+    ),
   ];
 }
 

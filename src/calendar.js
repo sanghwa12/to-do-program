@@ -2,6 +2,7 @@
 // 달력 계산 도우미 (F07)
 // 화면과 분리된 순수 계산 함수들 — Node로 테스트할 수 있음
 // ============================================================
+import { spanOfTask, isActiveOn } from "./span.js";
 
 /** 연·월·일 → "YYYY-MM-DD" */
 export function dateStrOf(year, month, day) {
@@ -27,21 +28,11 @@ export function buildMonthCells(year, month) {
 /**
  * 특정 날짜에 걸리는 할 일 찾기 (F07 R3).
  * - 마감(due)·당일(day): dueDate가 그 날짜인 것
- * - 기간(range): 시작일 ≤ 날짜 ≤ 끝일인 것
+ * - 기간(range): 시작일 ≤ 날짜 ≤ 끝일인 것 — 단 제외한 날은 빼고, 추가한 날은 더함 (F03 R9)
+ * (계산 규칙은 span.js — 시작·끝이 뒤바뀐 데이터도 거기서 바로잡음)
  */
 export function tasksOnDate(tasks, dateStr) {
-  return tasks.filter((t) => {
-    if (!t.dueDate) return false;
-    if (t.dateKind === "range" && t.startDate) {
-      // 혹시 시작일·끝일이 뒤바뀐 데이터가 있어도 안 사라지게 앞뒤를 정렬해서 비교
-      const [from, to] =
-        t.startDate <= t.dueDate
-          ? [t.startDate, t.dueDate]
-          : [t.dueDate, t.startDate];
-      return from <= dateStr && dateStr <= to;
-    }
-    return t.dueDate === dateStr;
-  });
+  return tasks.filter((t) => isActiveOn(spanOfTask(t), dateStr));
 }
 
 /** 이전/다음 달 계산 (해 넘김 처리) — delta는 -1 또는 +1 */

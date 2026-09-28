@@ -39,6 +39,7 @@ export default function CalendarView({
   onConvert, // 할 일 → 일정으로 바꾸기 (F11 R9)
   onDeleteNote, // 일정 삭제 (F11 R10)
   onConvertNote, // 일정 → 할 일로 바꾸기
+  onSkipDay, // (종류, 항목, 날짜) 기간에서 그 날만 빼기 (F03 R9) — 종류는 "task" | "note"
 }) {
   const today = todayStr();
   const [todayY, todayM] = today.split("-").map(Number);
@@ -177,6 +178,8 @@ export default function CalendarView({
                   note={n}
                   onDelete={onDeleteNote}
                   onConvert={onConvertNote}
+                  dayContext={selected}
+                  onSkipDay={(note, day) => onSkipDay("note", note, day)}
                 />
               ))}
             </ul>
@@ -194,6 +197,8 @@ export default function CalendarView({
                   onToggle={onToggle}
                   onDelete={onDelete}
                   onConvert={onConvert}
+                  dayContext={selected}
+                  onSkipDay={(t, day) => onSkipDay("task", t, day)}
                 />
               ))}
             </ul>

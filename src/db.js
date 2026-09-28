@@ -297,8 +297,8 @@ export async function setDayNote(date, note) {
 
 // ------------------------------------------------------------
 // 노트 (F11 통합) — 자유 글 + 선택적 날짜(일정 성격)
-// 날짜 칸 dates = { date?, endDate?, time? } — 날짜가 있으면 일정.
-// 기간(endDate)·시간(time)은 2026-09-28 추가 (F11 R8)
+// 날짜 칸 dates = { date?, endDate?, time?, skipDates?, extraDates? } — 날짜가 있으면 일정.
+// 기간(endDate)·시간(time)은 2026-09-28 추가 (F11 R8), 예외 날짜는 F03 R9
 // ------------------------------------------------------------
 
 /** 새 노트 저장. 만든 노트의 id를 반환 */
@@ -323,8 +323,24 @@ export async function updateMemo(id, text, dates = {}) {
     date: d.date, // 없는 칸은 undefined → 저장된 값도 지워짐
     endDate: d.endDate,
     time: d.time,
+    skipDates: d.skipDates,
+    extraDates: d.extraDates,
     updatedAt: new Date().toISOString(),
   });
+}
+
+/** 예외 날짜(제외한 날·추가한 날)만 바꾸기 — 달력의 "이 날 빼기"와 그 실행취소용 (F03 R9).
+ *  kind: "task"(할 일) | "note"(일정). 빈 목록은 칸 자체를 없앰 */
+export async function setExceptions(kind, id, skipDates, extraDates) {
+  const changes = {
+    skipDates: skipDates?.length ? skipDates : undefined,
+    extraDates: extraDates?.length ? extraDates : undefined,
+  };
+  if (kind === "note") {
+    await db.memos.update(id, { ...changes, updatedAt: new Date().toISOString() });
+  } else {
+    await db.tasks.update(id, changes);
+  }
 }
 
 // ------------------------------------------------------------

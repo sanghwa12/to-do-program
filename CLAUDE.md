@@ -44,6 +44,8 @@ type Task = {
   dueTime?: string;                    // 시간, "HH:MM" (선택 — 날짜 뒤에 14:00처럼 쓰면 저장, F02 R15)
   startDate?: string;                  // 기간의 시작일 (dateKind가 "range"일 때만)
   dateKind?: "due" | "day" | "range";  // 날짜의 의미: ~까지 마감 | 그날 당일 | 기간
+  skipDates?: string[];                // 기간에서 제외한 날들 (dateKind가 "range"일 때만, F03 R9)
+  extraDates?: string[];               // 기간 밖에 추가한 날들 (dateKind가 "range"일 때만, F03 R9)
   priority?: "low" | "med" | "high";   // 우선순위 (2026-09-28 화면에서 제거 — 데이터만 보존)
   repeat?: "daily" | "weekdays" | "weekly" | "monthly" | "yearly" | "monthlyNth"; // 반복 주기 (weekdays=주중 매일)
   repeatNth?: 1 | 2 | 3 | 4 | "last";  // monthlyNth일 때: 몇째 주 (매월 N번째 요일)
@@ -74,9 +76,10 @@ type Task = {
 (오늘/메모/달력/전체 — 정보 탭은 2026-09-04 메모 탭 하단 노트 구역으로 흡수).
 F12 구글 캘린더 보내기 구현 완료 (2026-09-10, 실사용 검증 중).
 다음 후보: 자동 백업(보류 중)·검색.**
-- **진행 중 (2026-09-28~) 5단계 개편**: ①이름(My planner) → ②공휴일 → ③일정 잘 보이게 →
+- **5단계 개편 (2026-09-28)**: ①이름(My planner) → ②공휴일 → ③일정 잘 보이게 →
   ④일정에 기간·시간 + 할 일 ↔ 일정 변환 → ⑤기간 일부 수정(제외/추가, 할 일·일정 둘 다).
   (④⑤는 처음 계획에서 순서를 바꿈.) 단계마다 사용자 확인 후 다음으로.
+  **①~⑤ 모두 구현 + 사용자 확인 완료 (2026-09-28) — 개편 끝.**
   합의 내용·결정은 `docs/작업노트.md` 2026-09-28 항목.
 - 운영: 정식 빌드 서버(`npm run preview`, 5173) 자동 시작 + 설치형 앱(오프라인 검증 완료).
 - **개발 절차**: 코드 수정 시 → preview 중지 → `npm run dev`로 작업 → `npm run build` →

@@ -11,13 +11,21 @@ import { todayStr } from "./date.js";
 import { PRIORITY_LABEL, repeatLabelOf } from "./labels.js";
 import { noteDateText } from "./notes.js";
 
+/** 기간의 예외 날짜 표기 (F03 R9): " ➖제외한날,… ➕추가한날,…" — 가져오기가 그대로 읽음 */
+function exceptionMarks(item) {
+  let s = "";
+  if (item.skipDates?.length) s += ` ➖${item.skipDates.join(",")}`;
+  if (item.extraDates?.length) s += ` ➕${item.extraDates.join(",")}`;
+  return s;
+}
+
 /** 할 일 하나를 마크다운 한 줄로 변환 */
 function taskToLine(task) {
   const box = task.done ? "x" : " "; // 완료면 [x], 미완료면 [ ]
   let line = `- [${box}] ${task.title}`;
   // 날짜 종류에 맞게 표기 (마감 ~날짜 / 당일 / 기간 시작~끝)
   if (task.dateKind === "range" && task.startDate)
-    line += ` 📅 ${task.startDate} ~ ${task.dueDate}`;
+    line += ` 📅 ${task.startDate} ~ ${task.dueDate}${exceptionMarks(task)}`;
   else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
   else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
   // 시간 (R15) — 날짜 바로 뒤에 두면 가져오기가 그대로 읽음
@@ -83,7 +91,9 @@ export async function exportBackup() {
       const [first, ...rest] = m.text.split("\n");
       if (m.date) {
         // 기간이면 "시작 ~ 끝", 시간이 있으면 날짜 뒤에 (F11 R8)
-        lines.push(`- 📢 ${first} 📅 ${noteDateText(m)}`);
+        lines.push(
+          `- 📢 ${first} 📅 ${noteDateText(m)}${m.endDate ? exceptionMarks(m) : ""}`
+        );
       } else {
         lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
         lines.push(`📝 ${first}`);

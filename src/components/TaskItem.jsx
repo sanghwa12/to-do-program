@@ -18,6 +18,15 @@ import {
   dateOnly,
 } from "../date.js";
 import { WEEKDAY_LABEL, NTH_LABEL, repeatLabelOf } from "../labels.js";
+import ExceptionDates from "./ExceptionDates.jsx";
+import {
+  spanOfTask,
+  isActiveOn,
+  lastActiveDate,
+  cleanExceptions,
+  exceptionText,
+  canSkip,
+} from "../span.js";
 
 /** "YYYY-MM-DD"의 요일 (0=일~6=토) */
 function weekdayOf(dateStr) {
@@ -41,10 +50,21 @@ function presetFromTask(t) {
 }
 
 // onConvert(할 일): "📢 일정으로 바꾸기"를 눌렀을 때 (F11 R9) — 안 주면 버튼이 안 보임
-export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
+// dayContext + onSkipDay(할 일, 날짜): 달력에서 고른 날짜 — 기간 할 일에 "이 날 빼기" (F03 R9)
+export default function TaskItem({
+  task,
+  onToggle,
+  onDelete,
+  onConvert,
+  dayContext,
+  onSkipDay,
+}) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
   const [confirmConvert, setConfirmConvert] = useState(false); // 일정 변환 확인 중? (반복일 때)
+  // 기간의 예외 날짜 (F03 R9): 제외한 날들 / 추가한 날들
+  const [skipDates, setSkipDates] = useState(task.skipDates ?? []);
+  const [extraDates, setExtraDates] = useState(task.extraDates ?? []);
   const [title, setTitle] = useState(task.title);
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
@@ -147,6 +167,11 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
         if (!kind) kind = "day"; // 자동 계산된 날짜는 "당일" 성격
       }
     }
+    // 예외 날짜 정리 (F03 R9): 기간에만 남기고, 기간을 고쳐 범위를 벗어난 것은 뺌
+    const exc =
+      kind === "range"
+        ? cleanExceptions(saveStart, saveDue, skipDates, extraDates)
+        : { skipDates: undefined, extraDates: undefined };
     return {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
@@ -154,6 +179,8 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
       dueTime: kind && kind !== "range" && dueTime ? dueTime : undefined, // 기간엔 시간 없음
       dateKind: kind,
       startDate: saveStart,
+      skipDates: exc.skipDates,
+      extraDates: exc.extraDates,
       repeat: saveRepeat,
       repeatNth: saveNth,
       repeatWeekday: saveWeekday,
@@ -202,6 +229,8 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
     setMonthDay(
       task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
     );
+    setSkipDates(task.skipDates ?? []);
+    setExtraDates(task.extraDates ?? []);
     setConfirmConvert(false);
   }
 
@@ -227,6 +256,14 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
     const baseMonth = Number(base.slice(5, 7));
     const baseDay = Number(base.slice(8, 10));
     const baseNth = nthOfDate(base);
+    // 예외 날짜 칸 (F03 R9)은 기간일 때만. 폼의 시작·끝이 뒤바뀌어 있어도 바로잡아 넘기고,
+    // 기간을 고치는 중에 범위를 벗어난 예외는 화면에서도 바로 빠지게 정리해서 보여줌
+    const isRangeForm = dueDate && dateKind === "range" && startDate;
+    const [rangeFrom, rangeTo] =
+      startDate <= dueDate ? [startDate, dueDate] : [dueDate, startDate];
+    const shownExc = isRangeForm
+      ? cleanExceptions(rangeFrom, rangeTo, skipDates, extraDates)
+      : {};
     return (
       <li className="task-item editing">
         <form onSubmit={handleSave} className="edit-form">
@@ -384,6 +421,19 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
                 </label>
               )}
           </div>
+          {/* 기간의 예외 날짜 (F03 R9): 제외할 날 / 추가할 날 — 기간일 때만 */}
+          {isRangeForm && (
+            <ExceptionDates
+              start={rangeFrom}
+              end={rangeTo}
+              skip={shownExc.skipDates ?? []}
+              extra={shownExc.extraDates ?? []}
+              onChange={({ skip, extra }) => {
+                setSkipDates(skip);
+                setExtraDates(extra);
+              }}
+            />
+          )}
           <div className="edit-buttons">
             {/* 📢 일정으로 바꾸기 (F11 R9) — 날짜가 있을 때만. 왼쪽에 따로 떨어뜨려 둠 */}
             {onConvert &&
@@ -420,20 +470,19 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
 
   // ----- 보통 모드 화면 -----
   const today = todayStr();
-  // 날짜가 지났는지 (미완료 + 날짜(기간이면 끝)가 오늘 이전)
-  const late = !task.done && task.dueDate && task.dueDate < today;
-  // 기간 한가운데인지 (예: 11/11~11/23 사이의 오늘)
-  const ongoing =
-    !task.done &&
-    task.dateKind === "range" &&
-    task.startDate &&
-    task.startDate <= today &&
-    today <= task.dueDate;
+  const isRange = task.dateKind === "range" && task.startDate;
+  const span = spanOfTask(task); // 걸리는 날 계산용 (날짜 없으면 null)
+  // 마지막으로 걸리는 날 — 기간이면 끝, 추가한 날이 더 뒤면 그 날 (F03 R9)
+  const lastDay = span ? lastActiveDate(span) ?? span.end : null;
+  // 날짜가 지났는지 (미완료 + 마지막 날이 오늘 이전)
+  const late = !task.done && lastDay && lastDay < today;
+  // 기간이 오늘을 지나는 중인지 (예: 11/11~11/23 사이의 오늘). 제외한 날에는 아님
+  const ongoing = !task.done && isRange && isActiveOn(span, today);
 
-  // 날짜 뱃지 문구: 종류에 따라 다르게 (F03 R2b)
+  // 날짜 뱃지 문구: 종류에 따라 다르게 (F03 R2b). 기간의 예외 날짜도 뒤에 (R9)
   function dateBadgeText() {
-    if (task.dateKind === "range" && task.startDate)
-      return `📅 ${task.startDate} ~ ${task.dueDate}`;
+    if (isRange)
+      return `📅 ${task.startDate} ~ ${task.dueDate}${exceptionText(task)}`;
     const time = task.dueTime ? ` ${task.dueTime}` : ""; // 시간이 있으면 뒤에 (R15)
     if (task.dateKind === "day") return `📅 ${task.dueDate} 당일${time}`;
     return `📅 ~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
@@ -463,7 +512,7 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
               }
             >
               {dateBadgeText()}
-              {late && ` · ${daysLate(task.dueDate)}일 지남`}
+              {late && ` · ${daysLate(lastDay)}일 지남`}
               {ongoing && " · 진행중"}
             </span>
           )}
@@ -491,6 +540,15 @@ export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
         </div>
       ) : (
         <div className="task-buttons">
+          {/* 달력에서 고른 날짜만 빼기 (F03 R9) — 기간 할 일이고, 뺄 수 있는 날일 때만 */}
+          {dayContext && onSkipDay && isRange && canSkip(span, dayContext) && (
+            <button
+              onClick={() => onSkipDay(task, dayContext)}
+              title="이 날짜만 빼기 — 기간의 다른 날은 그대로"
+            >
+              이 날 빼기
+            </button>
+          )}
           <button onClick={startEditing}>수정</button>
           <button className="delete" onClick={() => setConfirmDelete(true)}>
             삭제

@@ -8,6 +8,7 @@
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // ============================================================
 import { todayStr, nextNthWeekday, nextBusinessDay } from "./date.js";
+import { cleanExceptions } from "./span.js";
 
 /** 연·월·일 숫자를 "YYYY-MM-DD" 문자열로 */
 function fmt(year, month, day) {
@@ -231,10 +232,14 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
     let start = resolveYMD(m[1], m[2], m[3], true);
     let end = resolveYMD(m[4], m[5], m[6], true);
     if (start && end) {
+      // 연도를 직접 적었으면 적은 대로 둔다 — 아래 두 보정은 "연도를 생략했을 때"만.
+      // (2026-09-28 수정: 백업 파일처럼 연도가 적힌 지난 기간이 가져올 때 내년으로 밀리던 버그)
+      const endYearGiven = !!m[4];
+      const anyYearGiven = !!m[1] || endYearGiven;
       // 연도 생략한 기간이 해를 넘는 경우 (예: 12/28~1/3) → 끝을 다음 해로
-      if (end < start) end = plusOneYear(end);
+      if (end < start && !endYearGiven) end = plusOneYear(end);
       // 기간이 통째로 지난 경우에만 내년으로 (공지 입력(allowPast)은 지난 기간도 그대로)
-      if (!allowPast && end < todayStr()) {
+      if (!allowPast && !anyYearGiven && end < todayStr()) {
         start = plusOneYear(start);
         end = plusOneYear(end);
       }
@@ -322,6 +327,19 @@ export function parseImportLine(line) {
     t = t.replace(pin[0], " ");
   }
 
+  // 기간의 예외 날짜 (F03 R9): ➖제외한 날들 ➕추가한 날들 — 쉼표로 구분 (내보내기 형식)
+  const takeDates = (mark) => {
+    const found = t.match(new RegExp(mark + "\\s*([0-9][0-9,\\-\\s]*)"));
+    if (!found) return [];
+    t = t.replace(found[0], " ");
+    return found[1]
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+  };
+  const skipDates = takeDates("➖");
+  const extraDates = takeDates("➕");
+
   // 우선순위 (높음/중간/낮음)
   let priority;
   const pr = t.match(/\((높음|중간|낮음)\)/);
@@ -350,6 +368,12 @@ export function parseImportLine(line) {
     if (parsed.dueTime) draft.dueTime = parsed.dueTime;
   }
   if (parsed.startDate) draft.startDate = parsed.startDate;
+  if (parsed.dateKind === "range") {
+    // 예외 날짜는 기간에만 — 범위를 벗어난 것은 정리하면서 빠짐
+    const exc = cleanExceptions(parsed.startDate, parsed.dueDate, skipDates, extraDates);
+    if (exc.skipDates) draft.skipDates = exc.skipDates;
+    if (exc.extraDates) draft.extraDates = exc.extraDates;
+  }
   if (parsed.repeat) draft.repeat = parsed.repeat;
   if (parsed.repeatNth !== undefined) draft.repeatNth = parsed.repeatNth;
   if (parsed.repeatWeekday !== undefined) draft.repeatWeekday = parsed.repeatWeekday;
