@@ -96,7 +96,7 @@ export default function QuickInput() {
           type="button"
           className={"date-toggle kind-btn kind-note" + (isNote ? " active" : "")}
           onClick={() => switchKind("note")}
-          title="체크 없는 일정으로 저장 (달력·오늘 탭에 보라색으로 표시)"
+          title="체크 없는 일정으로 저장 (달력·오늘 탭에 보라색 줄로 표시)"
         >
           📢 일정
         </button>

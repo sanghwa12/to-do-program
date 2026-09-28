@@ -33,7 +33,7 @@ const MAX_CHIPS = 3; // 한 칸에 보여줄 최대 칩 수 (R5)
 
 export default function CalendarView({
   tasks,
-  notes = [], // 일정 (날짜 있는 노트) — 달력에 보라색으로 표시
+  notes = [], // 일정 (날짜 있는 노트) — 달력에 보라색 줄로 표시
   onToggle,
   onDelete,
   onConvert, // 할 일 → 일정으로 바꾸기 (F11 R9)

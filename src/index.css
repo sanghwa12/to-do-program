@@ -106,7 +106,7 @@ h1 {
   background: none;
   font-size: 1.3rem;
   line-height: 1;
-  color: #666;
+  color: #222;
   padding: 4px 10px;
 }
 .menu-backdrop {
@@ -135,7 +135,7 @@ h1 {
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
-  color: #333;
+  color: #222;
 }
 .menu button:hover {
   background: #f0f0f0;
@@ -185,7 +185,7 @@ h1 {
   background: none;
   padding: 8px 12px;
   font-size: 0.9rem;
-  color: #666;
+  color: #222;
   border-radius: 6px 6px 0 0;
   cursor: pointer;
 }
@@ -214,22 +214,14 @@ h1 {
 .notice-text {
   margin-right: auto;
 }
-/* 달력의 일정 칩·선택일 한 줄 (F11 R5) — 일정 색(연보라)으로 할 일(회색)과 구분 */
+/* 달력의 일정 칩 (F11 R5) — 할 일 칩과 같은 모양, 왼쪽 줄만 보라 (D00 종류 색) */
 .cal-chip.notice {
-  background: var(--event-bg);
-  color: var(--event-fg);
+  border-left-color: var(--line-event);
 }
-/* 일정 한 줄 (F11 R10) — 할 일 줄(.task-item)과 같은 틀에 보라색 바탕.
+/* 일정 한 줄 (F11 R10) — 할 일 줄(.task-item)과 같은 틀, 왼쪽 줄만 보라.
    달력 아래 목록에서 할 일처럼 마우스를 올리면 수정/삭제 */
 .task-item.event-item {
-  background: var(--event-bg);
-}
-.event-item .task-title {
-  color: var(--event-fg);
-}
-.event-item .badge {
-  background: #fff;
-  color: var(--event-fg);
+  --line: var(--line-event);
 }
 .event-item.past {
   opacity: 0.55; /* 지난 일정은 흐리게 */
@@ -321,7 +313,7 @@ h1 {
 .sticky-title {
   font-size: 0.95rem;
   margin: 0;
-  color: #6b5d1f;
+  color: #222;
   flex: 1;
   min-width: 0;
 }
@@ -444,7 +436,7 @@ h1 {
 }
 .sticky-text {
   font-size: 0.85rem;
-  color: #4a4226;
+  color: #222;
   flex: 1;
   min-width: 0;
 }
@@ -500,9 +492,6 @@ h1 {
 .day-line.done .day-text {
   text-decoration: line-through;
   color: #aaa;
-}
-.day-line.auto .day-text {
-  color: #555;
 }
 /* 글자 클릭 = 그 자리 수정 (2026-08-05) */
 .day-text.editable {
@@ -580,7 +569,6 @@ h1 {
   border: 1px solid #ddd;
   border-radius: 10px;
   background: #fafafa;
-  color: #555;
 }
 .day-datepick {
   margin-left: 26px;
@@ -610,7 +598,6 @@ h1 {
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 0.88rem;
-  color: #444;
 }
 .hint.small {
   margin: 4px 0;
@@ -645,7 +632,7 @@ h1 {
 .cal-weekday {
   text-align: center;
   font-size: 0.75rem;
-  color: #999;
+  color: #222;
   padding: 2px 0;
 }
 .cal-cell {
@@ -680,17 +667,19 @@ h1 {
 }
 .cal-day {
   font-size: 0.75rem;
-  color: #666;
+  color: #222;
 }
 .cal-cell.today .cal-day {
   color: #4a7dff;
   font-weight: bold;
 }
+/* 칩: 회색 바탕 + 검정 글자, 종류는 왼쪽 줄 색으로 (할 일 파랑 · 일정 보라 · 완료 회색) */
 .cal-chip {
   font-size: 0.65rem;
   background: #f0f0f0;
-  color: #444;
-  border-radius: 4px;
+  color: #222;
+  border-left: 3px solid var(--line-task);
+  border-radius: 0 4px 4px 0; /* 줄이 있는 왼쪽은 각지게 — 줄이 곧게 보이도록 */
   padding: 1px 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -700,6 +689,7 @@ h1 {
 .cal-chip.done {
   text-decoration: line-through;
   color: #bbb;
+  border-left-color: var(--line-off);
 }
 .cal-more {
   font-size: 0.65rem;
@@ -713,7 +703,7 @@ h1 {
 .group-title {
   font-size: 0.95rem;
   margin: 18px 2px 6px;
-  color: #555;
+  color: #222;
 }
 .group-count {
   font-size: 0.75rem;
@@ -728,12 +718,19 @@ h1 {
   margin: 16px 0 0;
 }
 
+/* 흰 카드 + 왼쪽의 가는 줄(종류 색, D00): 할 일 파랑 · 끝난 것(완료·휴지통) 회색.
+   일정은 같은 틀에 줄만 보라 (.task-item.event-item) */
 .task-item {
+  --line: var(--line-task);
   background: #fff;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 14px;
   margin-bottom: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 4px 0 0 var(--line), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.task-item.done,
+.task-item.trashed {
+  --line: var(--line-off);
 }
 
 .task-main-row {
@@ -757,16 +754,19 @@ h1 {
   flex-shrink: 0;
 }
 
-/* 완료된 할 일: 취소선 + 흐리게 */
+/* 완료된 할 일: 취소선 + 흐리게 (딸린 메모·뱃지 글자도 같이 회색) */
 .task-item.done .task-title {
   text-decoration: line-through;
+  color: #aaa;
+}
+.task-item.done .task-memo,
+.task-item.done .badge {
   color: #aaa;
 }
 
 .task-memo {
   margin: 6px 0 0 28px; /* 체크박스(18)+간격(10) 아래 제목 위치에 맞춤 */
   font-size: 0.85rem;
-  color: #777;
   white-space: pre-wrap;
 }
 
@@ -782,7 +782,7 @@ h1 {
   padding: 2px 8px;
   border-radius: 10px;
   background: #f0f0f0;
-  color: #555;
+  color: #222;
 }
 /* D00 색 줄이기: 강조색(빨강)은 '밀림'에만. 나머지는 회색 기본 */
 .badge.late {
@@ -851,7 +851,7 @@ button.delete {
 .link-btn {
   border: none;
   background: none;
-  color: #666;
+  color: #222;
   font-size: 0.85rem;
 }
 .link-btn:hover {
@@ -926,7 +926,7 @@ button.delete {
   flex-direction: column;
   gap: 3px;
   font-size: 0.75rem;
-  color: #666;
+  color: #222;
 }
 .memo-editor-date input[type="date"] {
   padding: 5px 8px;
@@ -969,7 +969,6 @@ button.delete {
 }
 .help-section p {
   font-size: 0.85rem;
-  color: #555;
   margin: 0 0 6px;
 }
 .help-section ul {
@@ -978,7 +977,6 @@ button.delete {
 }
 .help-section li {
   font-size: 0.85rem;
-  color: #444;
   margin-bottom: 5px;
   line-height: 1.5;
 }
@@ -987,7 +985,6 @@ button.delete {
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.8rem;
-  color: #1a5fb4;
 }
 
 /* 휴지통 화면 */
@@ -1093,7 +1090,7 @@ button.delete {
   flex-direction: column;
   gap: 3px;
   font-size: 0.75rem;
-  color: #666;
+  color: #222;
 }
 .edit-extras input,
 .edit-extras select {
@@ -1107,7 +1104,6 @@ button.delete {
 /* 구글 달력 설정 화면 (F12) */
 .gcal-desc {
   font-size: 0.85rem;
-  color: #666;
   margin: 0 0 8px;
 }
 .gcal-row {
@@ -1120,7 +1116,6 @@ button.delete {
 }
 .gcal-status {
   font-size: 0.85rem;
-  color: #666;
 }
 .gcal-msg {
   font-size: 0.85rem;
@@ -1212,26 +1207,53 @@ button.delete {
 }
 
 /* ------------------------------------------------------------
-   일정 색 = 연보라 (2026-09-28 개편 3단계, D00 색 예외)
-   일정이 보이는 모든 곳(달력 칩·달력 아래 목록·오늘 탭·메모 탭)에 같은 색
+   종류 색 = 왼쪽의 가는 줄 (2026-09-28 디자인 정리, 사용자 결정 · D00)
+   바탕은 흰색, 글자는 검정으로 통일하고 — 종류는 줄의 색으로만 구분한다.
+   (그 전엔 일정만 넓은 연보라 바탕 + 보라 글자라 혼자 튀었음)
+   색을 바꾸고 싶으면 아래 값만 고치면 앱 전체에 반영됨
    ------------------------------------------------------------ */
 :root {
-  --event-bg: #efe7fb; /* 연보라 바탕 */
-  --event-fg: #5a3d9a; /* 진보라 글자 */
-  --event-line: #cdbbee; /* 옅은 선 (목록 왼쪽 선·구분선) */
-  --event-accent: #8a5cf5; /* 진한 보라 — 고른 토글의 테두리 (파랑 #4a7dff와 같은 세기) */
+  --line-task: #4a7dff; /* 할 일 = 파랑 (앱의 기본 강조색과 같은 색) */
+  --line-event: #8a5cf5; /* 일정 = 보라 */
+  --line-plan: #f08c00; /* 오늘의 계획 = 주황 */
+  --line-done: #2f9e44; /* 실제 한 일 = 초록 */
+  --line-off: #cfcfcf; /* 끝난 것 (완료·휴지통) = 회색 */
+  /* 입력칸의 [📢 일정] 토글·미리보기에 쓰는 보라 (할 일의 파랑과 짝) */
+  --event-bg: #efe7fb; /* 연보라 바탕 — 고른 토글 */
+  --event-fg: #5a3d9a; /* 진보라 글자 — 입력 미리보기 */
+  --event-accent: var(--line-event); /* 고른 토글·포커스 테두리 */
 }
 .parse-hint.event {
   color: var(--event-fg);
 }
 
+/* 줄이 있는 흰 카드 — 오늘 탭의 일정 블록, 하루 기록의 계획·실제 한 일 블록 공용.
+   (할 일·일정 한 줄짜리 카드는 .task-item이 같은 방식으로 그림) */
+.event-block,
+.day-block {
+  padding: 10px 14px 10px 16px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: inset 4px 0 0 var(--line), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
 /* 오늘 탭 맨 위 일정 블록 (F11 R5) */
 .event-block {
+  --line: var(--line-event);
   margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--event-bg);
-  color: var(--event-fg);
+}
+/* 하루 기록의 블록 (F04): 오늘의 계획 = 주황, 실제 한 일 = 초록 */
+.day-block {
+  margin-top: 10px;
+}
+.day-block.plan {
+  --line: var(--line-plan);
+}
+.day-block.done {
+  --line: var(--line-done);
+}
+.day-block .group-title {
+  margin: 0 0 6px; /* 카드 안에선 위 여백 없이 */
 }
 .event-block-title {
   font-size: 0.95rem;
@@ -1240,7 +1262,7 @@ button.delete {
 .event-count {
   font-size: 0.75rem;
   font-weight: normal;
-  opacity: 0.7;
+  color: #999; /* 보조 글씨(개수)는 회색 — .group-count와 같게 */
 }
 .event-list {
   list-style: none;
@@ -1301,7 +1323,6 @@ button.delete {
   flex-shrink: 0;
   min-width: 8.5em;
   font-size: 0.78rem;
-  opacity: 0.8;
 }
 /* 일정의 시간("14:00")과 기간("10/6~10/16") 꼬리표 (F11 R8) — 오늘 탭 일정 블록 */
 .event-time {
@@ -1312,20 +1333,18 @@ button.delete {
   margin-left: 8px;
   font-size: 0.78rem;
   font-weight: normal;
-  opacity: 0.75;
 }
 .event-sub {
   margin: 10px 0 2px;
   padding-top: 8px;
-  border-top: 1px solid var(--event-line);
+  border-top: 1px solid #e5e5e5;
   font-size: 0.78rem;
   font-weight: normal;
-  opacity: 0.85;
 }
 .event-none {
   margin: 0;
   font-size: 0.8rem;
-  opacity: 0.75;
+  color: #888; /* 빈 안내문은 회색 (.hint와 같게) */
 }
 
 /* 기간의 예외 날짜 고르기 (F03 R9): 제외할 날 / 추가할 날 — 할 일·일정 수정 화면 공용 */
@@ -1348,7 +1367,7 @@ button.delete {
   flex-direction: column;
   gap: 3px;
   font-size: 0.75rem;
-  color: #666;
+  color: #222;
 }
 .exc-row input[type="date"] {
   padding: 5px 8px;
@@ -1381,11 +1400,10 @@ button.delete {
   border-radius: 12px;
   font-size: 0.8rem;
   background: #f0f0f0;
-  color: #555;
+  color: #222;
 }
 .exc-chip.extra {
-  background: #e8f1ff;
-  color: #2f5fc4;
+  background: #e8f1ff; /* 추가한 날은 바탕만 옅은 파랑 — 글자는 검정 */
 }
 .exc-chip button {
   border: none;
