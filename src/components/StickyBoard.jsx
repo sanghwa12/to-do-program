@@ -4,7 +4,8 @@
 //  · 세로 열 3개 — 스티커의 ⠿ 손잡이를 끌어 원하는 열·순서에 배치 (R2e)
 //    (다른 스티커 위에 놓으면 그 아래로, 열의 빈 곳에 놓으면 그 열 맨 아래로)
 //  · 체크 = 완료, 글자 클릭 = 그 자리에서 바로 수정 (제목 + 세부 내용 칸이 함께 열림)
-//  · 메모를 끌어서 다른 스티커에 놓으면 이동 (R2d)
+//  · 메모를 끌어서 다른 메모 위·아래에 놓으면 순서 바꾸기 (R2f),
+//    다른 스티커에 놓으면 그리로 이동 (R2d) — 놓일 자리는 갈색 줄로 미리 보임
 //  · 스티커 제목 클릭 = 이름 바꾸기, ✕ = 삭제(메모는 기본으로 돌아감)
 //  · 메모 줄의 ✕ = 휴지통으로 (한 번 더 확인 — R7a. 실행취소 가능)
 // 날짜 붙이기 같은 세부 작업은 "전체" 탭에서.
@@ -15,9 +16,10 @@ import {
   addBoard,
   renameBoard,
   deleteBoard,
-  moveTaskToBoard,
+  saveMemoOrder,
   saveBoardLayout,
 } from "../db.js";
+import { byMemoOrder, placeMemo } from "../sort.js";
 
 // 드래그할 때 실어 나르는 이름표 (종류 구분용)
 const DRAG_TYPE = "text/task-id"; // 메모 한 줄
@@ -28,9 +30,32 @@ const NCOLS = 3; // 스티커 열 개수 (R2e)
 // 지금 끌고 있는 스티커 이름 ("" = 기본 스티커, null = 스티커 안 끄는 중)
 // — dragover 중엔 dataTransfer 내용을 읽을 수 없어서 모듈 변수로 기억
 let draggingBoardName = null;
+// 지금 끌고 있는 메모의 id (null = 메모 안 끄는 중) — 같은 이유로 모듈 변수 (R2f)
+let draggingTaskId = null;
 
 function isBoardDrag(e) {
   return e.dataTransfer.types.includes(BOARD_TYPE);
+}
+
+// ------------------------------------------------------------
+// 메모를 놓을 자리 찾기 (R2f): 마우스에서 가장 가까운 메모 줄을 찾아
+// 그 줄의 위쪽 절반이면 "앞", 아래쪽 절반이면 "뒤".
+//  · 줄 위가 아니라 제목·여백에 있어도 가장 가까운 줄 기준 (제목 위 = 첫 줄 앞)
+//  · 메모가 없는 스티커면 null (그냥 그 스티커로 이동)
+// boardEl = 스티커 한 장의 요소, x·y = 마우스 위치
+// ------------------------------------------------------------
+function dropSpot(boardEl, x, y) {
+  let best = null;
+  for (const li of boardEl.querySelectorAll(".sticky-item[data-id]")) {
+    const r = li.getBoundingClientRect();
+    const dx = Math.max(r.left - x, 0, x - r.right); // 줄 밖으로 벗어난 거리 (안이면 0)
+    const dy = Math.max(r.top - y, 0, y - r.bottom);
+    const dist = dx * dx + dy * dy;
+    if (best === null || dist < best.dist) {
+      best = { id: li.dataset.id, before: y < r.top + r.height / 2, dist };
+    }
+  }
+  return best && { id: best.id, before: best.before };
 }
 
 // ------------------------------------------------------------
@@ -110,15 +135,21 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
   const [dragOver, setDragOver] = useState(null);
   // 스티커 자체를 끄는 중인지 (열 테두리 안내용, R2e)
   const [movingBoard, setMovingBoard] = useState(false);
+  // 끌고 있는 메모가 놓일 자리: { id: 기준 메모, before: 그 앞이면 true } (갈색 줄 표시용, R2f)
+  const [dropAt, setDropAt] = useState(null);
 
   const userNames = boards
     .filter((b) => b.name !== "") // ""는 기본 스티커의 자리 기록용
     .map((b) => b.name);
   const known = new Set(userNames);
-  // 기본 스티커: 소속 없는 메모 (혹시 없어진 스티커 이름이 남아 있어도 여기로)
-  // 순서는 받은 그대로 = 최신 입력이 위 (우선순위 정렬은 2026-09-28 제거)
-  const defaultTasks = tasks.filter((t) => !t.board || !known.has(t.board));
-  const tasksOf = (name) => tasks.filter((t) => t.board === name);
+  // 스티커별 메모 — "" = 기본 스티커: 소속 없는 메모 (없어진 스티커 이름이 남아 있어도 여기로).
+  // 순서: 새 메모는 맨 위(최신순), 손으로 옮긴 뒤엔 그 순서 (R2f)
+  const tasksOf = (name) =>
+    tasks
+      .filter((t) =>
+        name === "" ? !t.board || !known.has(t.board) : t.board === name
+      )
+      .sort(byMemoOrder);
 
   async function handleNewBoard(e) {
     e.preventDefault();
@@ -128,11 +159,12 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
     setNewName("");
   }
 
-  // 메모 드롭 = 그 스티커로 이동 / 스티커 드롭 = 그 스티커 바로 아래로 (R2e)
+  // 메모 드롭 = 놓은 자리로 (순서 바꾸기·스티커 이동) / 스티커 드롭 = 그 스티커 바로 아래로 (R2e)
   async function handleDrop(e, name) {
     e.preventDefault();
     stopAutoScroll(); // 드롭 후 원래 줄이 사라져 dragend가 안 올 수 있으니 여기서도 확실히 끔
     setDragOver(null);
+    setDropAt(null);
     if (isBoardDrag(e)) {
       const dragged = draggingBoardName;
       draggingBoardName = null;
@@ -147,7 +179,13 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
       return;
     }
     const id = e.dataTransfer.getData(DRAG_TYPE);
-    if (id) await moveTaskToBoard(id, name);
+    if (!id) return;
+    // 놓은 자리에 끼워 넣은 새 순서 (R2f). 제자리에 놓았으면 저장하지 않음
+    const spot = dropSpot(e.currentTarget, e.clientX, e.clientY);
+    const ids = tasksOf(name).map((t) => t.id);
+    const next = placeMemo(ids, id, spot?.id, spot?.before);
+    if (next.join() === ids.join()) return;
+    await saveMemoOrder(next, id, name);
   }
 
   // 열의 빈 곳에 스티커 드롭 = 그 열 맨 아래로 (R2e)
@@ -171,8 +209,20 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
       e.preventDefault(); // 이걸 해야 드롭이 허용됨
       e.dataTransfer.dropEffect = "move";
       if (dragOver !== name) setDragOver(name);
+      if (isBoardDrag(e)) return;
+      // 메모를 끄는 중: 놓일 자리를 줄로 미리 보여줌 (R2f). 끌고 있는 줄 자신 위에선 표시 없음
+      let spot = dropSpot(e.currentTarget, e.clientX, e.clientY);
+      if (spot && spot.id === draggingTaskId) spot = null;
+      if (spot?.id !== dropAt?.id || spot?.before !== dropAt?.before) {
+        setDropAt(spot); // 바뀔 때만 (이 이벤트는 아주 자주 옴)
+      }
     },
-    onDragLeave: () => setDragOver(null),
+    onDragLeave: (e) => {
+      // 스티커 안에서 줄 사이를 오갈 때도 오는 이벤트 — 스티커를 완전히 벗어났을 때만 지움
+      if (e.currentTarget.contains(e.relatedTarget)) return;
+      setDragOver(null);
+      setDropAt(null);
+    },
     onDrop: (e) => {
       e.stopPropagation(); // 열의 드롭 처리와 겹치지 않게
       handleDrop(e, name);
@@ -204,10 +254,11 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         key="__default__"
         name=""
         title="📌 메모"
-        tasks={defaultTasks}
+        tasks={tasksOf("")}
         onToggle={onToggle}
         onDelete={onDelete}
         highlighted={dragOver === ""}
+        dropAt={dropAt}
         solo={solo}
         handleProps={handleProps}
         emptyText={
@@ -226,6 +277,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         onToggle={onToggle}
         onDelete={onDelete}
         highlighted={dragOver === n}
+        dropAt={dropAt}
         solo={solo}
         handleProps={handleProps}
         emptyText="비어 있음 — 메모를 끌어다 놓으세요"
@@ -234,7 +286,14 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
     );
 
   return (
-    <section className="sticky-area">
+    // 끌기가 어디서 끝나든(놓기·Esc 취소) 강조와 자리 표시를 지움 — 끝났다는 신호는 여기까지 올라옴
+    <section
+      className="sticky-area"
+      onDragEnd={() => {
+        setDragOver(null);
+        setDropAt(null);
+      }}
+    >
       {solo ? (
         // 스티커가 없으면: 넓은 한 판 (여러 단, R2d)
         <div className="sticky-grid solo">{stickerOf("")}</div>
@@ -267,8 +326,8 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         />
       </form>
       <p className="sticky-hint">
-        체크하면 완료 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 다른
-        스티커로 · 스티커는 ⠿를 끌어서 배치
+        체크하면 완료 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
+        바꾸기·다른 스티커로 · 스티커는 ⠿를 끌어서 배치
       </p>
     </section>
   );
@@ -282,6 +341,7 @@ function Sticker({
   onToggle,
   onDelete,
   highlighted,
+  dropAt, // 끌고 있는 메모가 놓일 자리 { id, before } (R2f)
   solo,
   handleProps,
   emptyText,
@@ -379,6 +439,10 @@ function Sticker({
               task={t}
               onToggle={onToggle}
               onDelete={onDelete}
+              // 이 줄 앞/뒤가 놓일 자리면 "before"/"after" (갈색 줄)
+              dropMark={
+                dropAt?.id === t.id ? (dropAt.before ? "before" : "after") : ""
+              }
             />
           ))}
         </ul>
@@ -389,7 +453,8 @@ function Sticker({
 
 // 메모 한 줄: 체크박스 + 글자(클릭하면 그 자리 수정) + ✕(휴지통). 끌 수 있음
 // 글자를 클릭하면 제목 칸 아래에 세부 내용 칸(task.memo)이 함께 열림 (2026-09-16)
-function StickyItem({ task, onToggle, onDelete }) {
+// data-id는 끌어다 놓을 때 "어느 줄 근처인지" 찾는 표식 (dropSpot, R2f)
+function StickyItem({ task, onToggle, onDelete, dropMark }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(task.title);
   const [memoText, setMemoText] = useState(task.memo || ""); // 세부 내용
@@ -416,7 +481,8 @@ function StickyItem({ task, onToggle, onDelete }) {
     return (
       // 제목 칸 ↔ 세부 내용 칸 사이를 오갈 땐 안 닫히고, 둘 밖을 클릭하면 저장하고 닫힘
       <li
-        className="sticky-item editing"
+        className={"sticky-item editing" + (dropMark ? " drop-" + dropMark : "")}
+        data-id={task.id}
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget)) save();
         }}
@@ -450,15 +516,22 @@ function StickyItem({ task, onToggle, onDelete }) {
 
   return (
     <li
-      className={"sticky-item" + (dragging ? " dragging" : "")}
+      className={
+        "sticky-item" +
+        (dragging ? " dragging" : "") +
+        (dropMark ? " drop-" + dropMark : "")
+      }
+      data-id={task.id}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(DRAG_TYPE, task.id);
         e.dataTransfer.effectAllowed = "move";
+        draggingTaskId = task.id;
         setDragging(true);
         startAutoScroll();
       }}
       onDragEnd={() => {
+        draggingTaskId = null;
         setDragging(false);
         stopAutoScroll();
       }}

@@ -37,3 +37,30 @@ export function sortForAllTab(tasks) {
     return b.createdAt.localeCompare(a.createdAt);
   });
 }
+
+// ============================================================
+// 메모판 순서 (F03 R2f) — 메모를 끌어서 손으로 정한 순서
+// 순서 값(memoOrder)은 끌어다 놓을 때만 생김: 그 스티커의 메모들에 위에서부터 0, 1, 2…
+// ============================================================
+
+/** 스티커 안 메모의 순서: 아직 순서 값이 없는 메모(새로 쓴 메모 등)는 맨 위에 최신순,
+ *  그 아래로 손으로 정한 순서 */
+export function byMemoOrder(a, b) {
+  const aSet = typeof a.memoOrder === "number";
+  const bSet = typeof b.memoOrder === "number";
+  if (aSet !== bSet) return aSet ? 1 : -1; // 순서 값 없는 것이 위
+  if (aSet && a.memoOrder !== b.memoOrder) return a.memoOrder - b.memoOrder;
+  return b.createdAt.localeCompare(a.createdAt); // 같으면 최신 입력이 위
+}
+
+/** 끌어다 놓은 뒤의 새 순서 (id 목록).
+ *  ids = 놓은 스티커의 메모 id들(보이는 순서), moved = 끌어온 메모,
+ *  target = 놓은 자리의 메모 — 그 앞(before)이나 뒤에 끼움. target이 없으면(빈 스티커) 맨 아래 */
+export function placeMemo(ids, moved, target, before) {
+  if (target === moved) return ids; // 제자리에 놓음
+  const rest = ids.filter((id) => id !== moved);
+  const at = rest.indexOf(target);
+  if (at === -1) return [...rest, moved];
+  rest.splice(before ? at : at + 1, 0, moved);
+  return rest;
+}

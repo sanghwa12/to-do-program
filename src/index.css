@@ -388,6 +388,14 @@ h1 {
 .sticky-item.dragging {
   opacity: 0.4;
 }
+/* 끌고 있는 메모가 놓일 자리 (R2f): 기준 줄의 위(앞)나 아래(뒤)에 갈색 줄.
+   줄 안쪽에 그림(inset) — 여러 단으로 나뉜 판에서도 단 경계에 잘리지 않게 */
+.sticky-item.drop-before {
+  box-shadow: inset 0 2px 0 #8a7a2e;
+}
+.sticky-item.drop-after {
+  box-shadow: inset 0 -2px 0 #8a7a2e;
+}
 /* 노트 구역 (F11) — 메모 탭 하단, 노란 판과 구분되게 (2026-09-04 이사) */
 .memo-area {
   margin-top: 28px;

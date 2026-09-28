@@ -432,9 +432,17 @@ export async function deleteBoard(name) {
   });
 }
 
-/** 메모를 다른 스티커로 옮기기 (board가 비어 있으면 기본 스티커로) */
-export async function moveTaskToBoard(id, board) {
-  await db.tasks.update(id, { board: board || undefined });
+/** 메모를 끌어다 놓은 결과 저장 (R2f): ids = 놓은 스티커의 메모 id들을 새 순서대로.
+ *  위에서부터 순서 값(memoOrder) 0, 1, 2…를 적고, 끌어온 메모(movedId)는 소속 스티커도
+ *  함께 바꿈 (board가 비어 있으면 기본 스티커). 한 묶음으로 저장 — 화면은 한 번만 다시 그려짐 */
+export async function saveMemoOrder(ids, movedId, board) {
+  await db.transaction("rw", db.tasks, async () => {
+    for (let i = 0; i < ids.length; i++) {
+      const changes = { memoOrder: i };
+      if (ids[i] === movedId) changes.board = board || undefined;
+      await db.tasks.update(ids[i], changes);
+    }
+  });
 }
 
 /** 스티커 배치 일괄 저장 (R2e) — cols는 열별 스티커 이름 배열. "" = 기본 📌 메모 스티커.
