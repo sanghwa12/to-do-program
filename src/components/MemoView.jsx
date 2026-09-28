@@ -1,77 +1,67 @@
 // ------------------------------------------------------------
-// 노트 (F11 통합, 2026-08-03): 기록 + 일정 공지가 하나로
-//  · 노트 = 자유 글 + 선택적 날짜
-//  · 날짜 있음 → "📅 일정" 구역 (임박순, 지나면 흐림, 달력에도 📢)
-//  · 날짜 없음 → "📝 노트" 구역 (카드, 최신 수정순)
+// 노트 (F11 통합, 2026-08-03): 자유 글 + 선택적 날짜
+//  · 날짜 없음 → 노트 — 이 화면(메모 탭 아래)에 카드로, 최신 수정순
+//  · 날짜 있음 → 일정 — 달력과 오늘 탭에 보라색으로 보이고, 거기서 바로 수정 (R10).
+//    예전엔 이 화면에 "📅 일정" 목록이 있었으나 2026-09-28 제거 (사용자 결정)
+//  · 아래 MemoEditor는 노트·일정 공용 에디터 (달력·오늘 탭의 일정 줄도 이걸 씀)
 // ------------------------------------------------------------
 import { useState } from "react";
 import { addMemo, updateMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
-import { todayStr, dateOnly } from "../date.js";
+import { dateOnly } from "../date.js";
+import { noteDatesFrom, noteDateText, normalizeNoteDates } from "../notes.js";
 
-/** 첫 줄 = 제목 역할 */
-function firstLineOf(text) {
-  return text.split("\n")[0];
-}
-
-export default function MemoView({ memos, onDelete }) {
+// onConvert(일정): 에디터의 "할 일로 바꾸기"를 눌렀을 때 (R9)
+export default function MemoView({ memos, onDelete, onConvert }) {
   // null = 목록, "new" = 새 노트, 그 외 = 그 id 편집
   const [openId, setOpenId] = useState(null);
   const [quickText, setQuickText] = useState("");
 
-  const today = todayStr();
-  const all = memos ?? [];
-
-  // 📅 일정 구역: 임박한 순 → 지난 것(흐림) 맨 아래
-  const upcoming = all
-    .filter((m) => m.date && m.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const past = all
-    .filter((m) => m.date && m.date < today)
-    .sort((a, b) => b.date.localeCompare(a.date));
-  // 📝 노트 구역: 최신 수정순
-  const plain = all
+  // 이 화면엔 날짜 없는 노트만 — 최신 수정순 (날짜 있는 것 = 일정은 달력·오늘 탭에서)
+  const plain = (memos ?? [])
     .filter((m) => !m.date)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   // 빠른 입력: 날짜 자동 인식 (지난 날짜 그대로, 반복 인식 없음 — F11 R2)
   const parsed = parseQuickInput(quickText, { allowPast: true, repeatable: false });
-  const quickDate = parsed.startDate || parsed.dueDate;
+  const quickDates = noteDatesFrom(parsed); // 날짜·기간의 끝·시간 (없으면 빈 값)
 
   async function handleQuickAdd(e) {
     e.preventDefault();
     if (parsed.title === "") return;
-    await addMemo(parsed.title, quickDate);
+    await addMemo(parsed.title, quickDates);
     setQuickText("");
   }
 
   // 에디터 열림
   if (openId !== null) {
-    const memo = openId === "new" ? null : all.find((m) => m.id === openId);
+    const memo = openId === "new" ? null : plain.find((m) => m.id === openId);
     return (
       <MemoEditor
         key={openId}
         memo={memo}
         onClose={() => setOpenId(null)}
         onDelete={onDelete}
+        onConvert={onConvert}
       />
     );
   }
 
   return (
     <div className="memo-view">
-      {/* 통합 입력줄 (R2): 날짜 쓰면 일정, 아니면 노트 */}
+      {/* 입력줄 (R2): 보통은 노트. 날짜를 쓰면 일정이 되어 달력·오늘 탭으로 감 */}
       <form onSubmit={handleQuickAdd}>
         <input
-          className="notice-input"
+          className={"notice-input" + (quickDates.date ? " note" : "")}
           type="text"
-          placeholder="알아둘 것·기록 + Enter (예: 정전 8/12 · 외부 강연 등록은 윤리센터)"
+          placeholder="기록·참고 + Enter (예: 외부 강연 등록은 윤리센터 · 날짜를 쓰면 일정으로)"
           value={quickText}
           onChange={(e) => setQuickText(e.target.value)}
         />
-        {quickDate && (
-          <p className="parse-hint">
-            "{parsed.title}" — 📅 {quickDate} 일정으로 저장됩니다
+        {quickDates.date && (
+          <p className="parse-hint event">
+            "{parsed.title}" — 📢 {noteDateText(quickDates)} 일정으로 저장됩니다
+            (달력·오늘 탭에 보여요)
           </p>
         )}
       </form>
@@ -79,38 +69,8 @@ export default function MemoView({ memos, onDelete }) {
         + 새 노트 (긴 글)
       </button>
 
-      {/* 📅 일정 구역 (R3) */}
-      {(upcoming.length > 0 || past.length > 0) && (
-        <>
-          {/* 일정은 보라색으로 (D00 색 예외) — 달력·오늘 탭과 같은 색 */}
-          <h3 className="notice-section event">📅 일정</h3>
-          <ul className="notice-list events">
-            {[...upcoming, ...past].map((m) => (
-              <li
-                key={m.id}
-                className={"notice-item" + (m.date < today ? " past" : "")}
-              >
-                <div className="notice-line">
-                  <button
-                    className="memo-line-btn"
-                    onClick={() => setOpenId(m.id)}
-                  >
-                    {firstLineOf(m.text)}
-                  </button>
-                  <span className="badge">
-                    📅 {m.date}
-                    {m.date < today && " · 지남"}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* 📝 노트 구역 (R3) */}
-      {plain.length > 0 && <h3 className="notice-section">📝 노트</h3>}
-      {all.length === 0 && (
+      {/* 📝 노트 목록 (R3) */}
+      {plain.length === 0 && (
         <p className="hint">
           아직 없어요. 위에 한 줄 쓰거나 "+ 새 노트"로 시작하세요.
         </p>
@@ -134,10 +94,14 @@ export default function MemoView({ memos, onDelete }) {
   );
 }
 
-// 노트 에디터 (R4): 여러 줄 + 날짜(선택) — 날짜를 붙이면 일정이 됨
-function MemoEditor({ memo, onClose, onDelete }) {
+// 노트 에디터 (R4): 여러 줄 + 날짜(선택) — 날짜를 붙이면 일정이 됨.
+// 일정에는 끝 날짜(기간) 또는 시간을 더 붙일 수 있음 (R8)
+// 달력 아래 목록의 일정 줄(EventItem)도 이 에디터를 씀 (R10) — rows로 글 칸 높이 조절
+export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
   const [text, setText] = useState(memo?.text ?? "");
   const [date, setDate] = useState(memo?.date ?? "");
+  const [endDate, setEndDate] = useState(memo?.endDate ?? ""); // 기간의 끝 (선택)
+  const [time, setTime] = useState(memo?.time ?? ""); // 시간 (선택, 기간이 아닐 때)
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function handleSave() {
@@ -146,8 +110,23 @@ function MemoEditor({ memo, onClose, onDelete }) {
       onClose(); // 빈 노트는 저장하지 않음
       return;
     }
-    if (memo) await updateMemo(memo.id, trimmed, date);
-    else await addMemo(trimmed, date);
+    const dates = { date, endDate, time }; // 정리(앞뒤 바뀐 기간 등)는 저장 함수가 함
+    if (memo) await updateMemo(memo.id, trimmed, dates);
+    else await addMemo(trimmed, dates);
+    onClose();
+  }
+
+  // 할 일로 바꾸기 (R9): 지금 에디터에 보이는 내용 그대로 할 일이 됨
+  function handleConvert() {
+    const trimmed = text.trim();
+    if (trimmed === "" || !date) return;
+    // 예전 날짜 칸을 비운 뒤 지금 값으로 채움 (끝 날짜를 지웠다면 지운 대로)
+    const { endDate: _e, time: _t, ...rest } = memo;
+    onConvert({
+      ...rest,
+      text: trimmed,
+      ...normalizeNoteDates({ date, endDate, time }),
+    });
     onClose();
   }
 
@@ -158,7 +137,7 @@ function MemoEditor({ memo, onClose, onDelete }) {
         placeholder={"자유롭게 쓰세요.\n첫 줄이 목록에서 제목처럼 보여요."}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={12}
+        rows={rows}
         autoFocus
       />
       <div className="memo-editor-date">
@@ -170,17 +149,54 @@ function MemoEditor({ memo, onClose, onDelete }) {
             onChange={(e) => setDate(e.target.value)}
           />
         </label>
+        {/* 기간·시간 (R8) — 날짜가 있을 때만. 끝 날짜를 넣으면 기간이 되고 시간 칸은 숨음 */}
+        {date && (
+          <label>
+            끝 날짜 (선택 — 기간일 때)
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </label>
+        )}
+        {date && !endDate && (
+          <label>
+            시간 (선택)
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </label>
+        )}
         {date && (
           <button
             type="button"
             className="link-btn"
-            onClick={() => setDate("")}
+            onClick={() => {
+              setDate("");
+              setEndDate("");
+              setTime("");
+            }}
           >
             날짜 지우기
           </button>
         )}
       </div>
       <div className="edit-buttons">
+        {/* 할 일로 바꾸기 (R9) — 이미 저장된 일정(날짜 있음)에만.
+            왼쪽 끝 정렬은 바로 뒤 삭제 버튼(.memo-delete)이 맡음 */}
+        {memo && date && onConvert && (
+          <button
+            type="button"
+            onClick={handleConvert}
+            title="체크하는 할 일로 바꾸기 — 첫 줄은 제목, 나머지는 세부 메모가 돼요"
+          >
+            <span className="check-icon" aria-hidden="true" />
+            할 일로 바꾸기
+          </button>
+        )}
         {memo &&
           (confirmDelete ? (
             <span className="danger-confirm">

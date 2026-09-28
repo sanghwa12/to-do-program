@@ -40,9 +40,11 @@ function presetFromTask(t) {
   return t.repeat; // daily/weekdays/weekly/monthly/yearly — 날짜가 곧 기준
 }
 
-export default function TaskItem({ task, onToggle, onDelete }) {
+// onConvert(할 일): "📢 일정으로 바꾸기"를 눌렀을 때 (F11 R9) — 안 주면 버튼이 안 보임
+export default function TaskItem({ task, onToggle, onDelete, onConvert }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
+  const [confirmConvert, setConfirmConvert] = useState(false); // 일정 변환 확인 중? (반복일 때)
   const [title, setTitle] = useState(task.title);
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
@@ -63,11 +65,10 @@ export default function TaskItem({ task, onToggle, onDelete }) {
   // ⚠️ 훅(useState 등)을 더할 땐 반드시 여기(early return 위)에 —
   //    편집 모드의 return보다 아래에 두면 수정 버튼 클릭 시 앱 전체가 하얗게 죽는다 (실제 사고)
 
-  // 편집 내용 저장
-  async function handleSave(e) {
-    e.preventDefault();
+  // 폼 내용을 저장할 값으로 정리 — 저장과 "일정으로 바꾸기"가 함께 씀. 제목이 비면 null
+  function buildChanges() {
     const newTitle = title.trim();
-    if (newTitle === "") return; // 제목을 비워서 저장하는 건 막음
+    if (newTitle === "") return null; // 제목을 비워서 저장하는 건 막음
     // 날짜 종류 정리: 날짜가 없으면 종류도 없음. "기간"인데 시작일이 없으면 "마감"으로.
     let kind = !dueDate ? undefined : dateKind === "range" && !startDate ? "due" : dateKind;
     // 기간의 시작일이 끝일보다 늦으면 앞뒤를 자동으로 바꿔줌
@@ -146,7 +147,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
         if (!kind) kind = "day"; // 자동 계산된 날짜는 "당일" 성격
       }
     }
-    await updateTask(task.id, {
+    return {
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: saveDue,
@@ -158,8 +159,30 @@ export default function TaskItem({ task, onToggle, onDelete }) {
       repeatWeekday: saveWeekday,
       // 우선순위(2026-09-28)·카테고리(2026-08-05)는 화면에서 제거 —
       // update에서 제외해 저장된 값은 보존
-    });
+    };
+  }
+
+  // 편집 내용 저장
+  async function handleSave(e) {
+    e.preventDefault();
+    const changes = buildChanges();
+    if (!changes) return;
+    await updateTask(task.id, changes);
     setEditing(false);
+  }
+
+  // 📢 일정으로 바꾸기 (F11 R9): 지금 폼에 보이는 내용 그대로 일정이 됨.
+  // 반복은 일정에 없는 개념이라 사라지므로, 반복 할 일이면 한 번 더 물어봄 (confirmed)
+  function handleConvert(confirmed) {
+    const changes = buildChanges();
+    if (!changes || !changes.dueDate) return; // 일정은 날짜가 있어야 함
+    if (changes.repeat && !confirmed) {
+      setConfirmConvert(true);
+      return;
+    }
+    setConfirmConvert(false);
+    setEditing(false);
+    onConvert({ ...task, ...changes });
   }
 
   // 폼 내용을 지금 저장돼 있는 값으로 다시 채움
@@ -179,6 +202,7 @@ export default function TaskItem({ task, onToggle, onDelete }) {
     setMonthDay(
       task.dueDate ? Number(task.dueDate.slice(8, 10)) : new Date().getDate()
     );
+    setConfirmConvert(false);
   }
 
   // 편집 시작 — 반드시 최신 값으로 폼을 채우고 시작
@@ -361,6 +385,29 @@ export default function TaskItem({ task, onToggle, onDelete }) {
               )}
           </div>
           <div className="edit-buttons">
+            {/* 📢 일정으로 바꾸기 (F11 R9) — 날짜가 있을 때만. 왼쪽에 따로 떨어뜨려 둠 */}
+            {onConvert &&
+              dueDate &&
+              (confirmConvert ? (
+                <span className="danger-confirm convert-left">
+                  반복은 일정에 없어서 사라져요. 바꿀까요?
+                  <button type="button" onClick={() => handleConvert(true)}>
+                    바꾸기
+                  </button>
+                  <button type="button" onClick={() => setConfirmConvert(false)}>
+                    취소
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="convert-left"
+                  onClick={() => handleConvert(false)}
+                  title="체크 없는 일정으로 바꾸기 — 제목·메모·날짜는 그대로 옮겨져요"
+                >
+                  📢 일정으로 바꾸기
+                </button>
+              ))}
             <button type="submit">저장</button>
             <button type="button" onClick={handleCancel}>
               취소

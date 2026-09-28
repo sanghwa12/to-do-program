@@ -9,6 +9,7 @@
 import { db } from "./db.js";
 import { todayStr } from "./date.js";
 import { PRIORITY_LABEL, repeatLabelOf } from "./labels.js";
+import { noteDateText } from "./notes.js";
 
 /** 할 일 하나를 마크다운 한 줄로 변환 */
 function taskToLine(task) {
@@ -81,7 +82,8 @@ export async function exportBackup() {
     for (const m of memos) {
       const [first, ...rest] = m.text.split("\n");
       if (m.date) {
-        lines.push(`- 📢 ${first} 📅 ${m.date}`);
+        // 기간이면 "시작 ~ 끝", 시간이 있으면 날짜 뒤에 (F11 R8)
+        lines.push(`- 📢 ${first} 📅 ${noteDateText(m)}`);
       } else {
         lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
         lines.push(`📝 ${first}`);

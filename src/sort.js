@@ -6,10 +6,19 @@
 // (우선순위 순은 2026-09-28 우선순위 제거와 함께 빠짐)
 // ============================================================
 
+/** 시간("HH:MM") 비교: 빠른 시간이 앞, 시간 없는 것은 맨 뒤.
+ *  ⚠️ localeCompare를 쓰면 안 됨 — 기호("~")를 숫자보다 "앞"에 놓아서 시간 없는 것이
+ *  맨 앞으로 와 버림 (2026-09-28 발견·수정). 글자 코드 순(<, >)으로 비교해야 "~"가 뒤 */
+export function compareTime(a, b) {
+  const x = a || "~";
+  const y = b || "~";
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+
 /** 날짜 빠른 순, 같은 날짜면 시간 순 (시간 없는 것은 뒤) — F02 R15 */
 export function byDueDateTime(a, b) {
   if (a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
-  return (a.dueTime || "~").localeCompare(b.dueTime || "~"); // "~"는 숫자보다 뒤
+  return compareTime(a.dueTime, b.dueTime);
 }
 
 export function sortForAllTab(tasks) {

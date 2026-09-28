@@ -21,19 +21,23 @@ export function addDays(dateStr, n) {
   return fmtDate(new Date(y, m - 1, d + n));
 }
 
+/** 그 날짜·시각부터 60분짜리 시작·끝 (앱에 길이 개념이 없어 기본값 60분) */
+function hourFrom(dateStr, timeStr, tz) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [hh, mm] = timeStr.split(":").map(Number);
+  const start = new Date(y, m - 1, d, hh, mm);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  return {
+    start: { dateTime: fmtDateTime(start), timeZone: tz },
+    end: { dateTime: fmtDateTime(end), timeZone: tz },
+  };
+}
+
 /** 할 일 → 이벤트 본문. tz는 "Asia/Seoul" 같은 시간대 이름 (시간 있는 일정에만 쓰임) */
 export function taskToEvent(task, tz) {
-  // 시간 있음 (F02 R15): 그 시각부터 60분 — 앱에 길이 개념이 없어 기본값. 기간에는 시간 없음
+  // 시간 있음 (F02 R15): 그 시각부터 60분. 기간에는 시간 없음
   if (task.dueTime && task.dateKind !== "range") {
-    const [y, m, d] = task.dueDate.split("-").map(Number);
-    const [hh, mm] = task.dueTime.split(":").map(Number);
-    const start = new Date(y, m - 1, d, hh, mm);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    return {
-      summary: task.title,
-      start: { dateTime: fmtDateTime(start), timeZone: tz },
-      end: { dateTime: fmtDateTime(end), timeZone: tz },
-    };
+    return { summary: task.title, ...hourFrom(task.dueDate, task.dueTime, tz) };
   }
   // 종일: 당일·마감은 그날 하루, 기간은 시작일~끝일
   const first =
@@ -45,12 +49,17 @@ export function taskToEvent(task, tz) {
   };
 }
 
-/** 날짜 있는 노트(📢 일정) → 종일 이벤트. 제목은 첫 줄 */
-export function memoToEvent(memo) {
+/** 일정(날짜 있는 노트) → 이벤트. 제목은 "📢 " + 첫 줄.
+ *  시간 있으면 60분, 기간이면 시작~끝 종일, 아니면 그날 종일 (F11 R8) */
+export function memoToEvent(memo, tz) {
+  const summary = "📢 " + memo.text.split("\n")[0];
+  if (memo.time && !memo.endDate) {
+    return { summary, ...hourFrom(memo.date, memo.time, tz) };
+  }
   return {
-    summary: "📢 " + memo.text.split("\n")[0],
+    summary,
     start: { date: memo.date },
-    end: { date: addDays(memo.date, 1) },
+    end: { date: addDays(memo.endDate || memo.date, 1) },
   };
 }
 

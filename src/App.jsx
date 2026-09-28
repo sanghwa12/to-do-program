@@ -18,6 +18,10 @@ import {
   restoreMemos,
   completeRepeatingTask,
   undoCompleteRepeating,
+  convertTaskToNote,
+  convertNoteToTask,
+  restoreTaskFromNote,
+  restoreNoteFromTask,
 } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
@@ -28,11 +32,13 @@ import DayView from "./components/DayView.jsx";
 import HelpView from "./components/HelpView.jsx";
 import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
+import EventItem from "./components/EventItem.jsx";
 import { todayStr, addDays } from "./date.js";
 import { WEEKDAY_LABEL } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab, byDueDateTime } from "./sort.js";
+import { firstLineOf, notesOnDate, byNoteTime } from "./notes.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
@@ -132,12 +138,27 @@ export default function App() {
     setUndo({ type: "memo", memos: [memo], label: `"${title}" 노트` });
   }
 
+  // 할 일 → 일정 (F11 R9). 실행취소를 위해 바꾸기 전 할 일을 통째로 기억해 둠
+  async function handleConvertToNote(task) {
+    await convertTaskToNote(task);
+    setUndo({ type: "toNote", task, label: `"${task.title}"` });
+  }
+
+  // 일정 → 할 일 (F11 R9). 같은 방식으로 바꾸기 전 일정을 기억
+  async function handleConvertToTask(note) {
+    await convertNoteToTask(note);
+    const title = firstLineOf(note.text).slice(0, 20);
+    setUndo({ type: "toTask", note, label: `"${title}"` });
+  }
+
   // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
     if (undo) {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
       else if (undo.type === "memo") await restoreMemos(undo.memos);
+      else if (undo.type === "toNote") await restoreTaskFromNote(undo.task);
+      else if (undo.type === "toTask") await restoreNoteFromTask(undo.note);
       else if (undo.type === "repeat")
         await undoCompleteRepeating(
           undo.recordId,
@@ -281,6 +302,8 @@ export default function App() {
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
+              onConvertToNote={handleConvertToNote}
+              onConvertToTask={handleConvertToTask}
             />
           )}
 
@@ -296,9 +319,13 @@ export default function App() {
               ? "휴지통으로 이동"
               : undo.type === "memo"
                 ? "삭제됨"
-                : undo.type === "repeat"
-                  ? `완료 · 다음 ${undo.nextDue}`
-                  : "완료됨"}
+                : undo.type === "toNote"
+                  ? "일정으로 바꿈"
+                  : undo.type === "toTask"
+                    ? "할 일로 바꿈"
+                    : undo.type === "repeat"
+                      ? `완료 · 다음 ${undo.nextDue}`
+                      : "완료됨"}
           </span>
           <button onClick={handleUndo}>실행취소</button>
           <button
@@ -325,6 +352,8 @@ function TaskView({
   onToggle,
   onDelete,
   onDeleteMemo,
+  onConvertToNote, // 할 일 → 일정 (F11 R9)
+  onConvertToTask, // 일정 → 할 일
 }) {
   // 하루 기록에서 ◀▶로 보는 날짜 (F04 R9) — 오늘 탭의 할 일 목록도 이 날짜를 따라감
   // ⚠️ 훅은 항상 같은 순서로 호출돼야 하므로 반드시 탭 분기(return)보다 위에!
@@ -342,10 +371,15 @@ function TaskView({
           onToggle={onToggle}
           onDelete={onDelete}
         />
-        {/* 노트 구역 (F11): 일정 + 기록 — 정보 탭에서 이사 옴 (2026-09-04) */}
+        {/* 노트 구역 (F11): 날짜 없는 기록 — 정보 탭에서 이사 옴 (2026-09-04).
+            일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28) */}
         <div className="memo-area">
-          <h2 className="group-title">🗂 노트 (체크 없는 기록·일정)</h2>
-          <MemoView memos={memos} onDelete={onDeleteMemo} />
+          <h2 className="group-title">🗂 노트 (체크 없는 기록)</h2>
+          <MemoView
+            memos={memos}
+            onDelete={onDeleteMemo}
+            onConvert={onConvertToTask}
+          />
         </div>
       </div>
     );
@@ -356,11 +390,12 @@ function TaskView({
     return (
       <CalendarView
         tasks={tasks}
-        notes={memos
-          .filter((m) => m.date)
-          .map((m) => ({ ...m, text: m.text.split("\n")[0] }))}
+        notes={memos.filter((m) => m.date)} // 일정 = 날짜 있는 노트 (글 전체를 넘김 — 달력에서 수정)
         onToggle={onToggle}
         onDelete={onDelete}
+        onConvert={onConvertToNote}
+        onDeleteNote={onDeleteMemo}
+        onConvertNote={onConvertToTask}
       />
     );
   }
@@ -372,6 +407,7 @@ function TaskView({
         tasks={sortForAllTab(tasks)}
         onToggle={onToggle}
         onDelete={onDelete}
+        onConvert={onConvertToNote}
         emptyHint="할 일이 없어요. 위에 입력하고 Enter를 누르세요!"
       />
     );
@@ -400,8 +436,14 @@ function TaskView({
 
     return (
       <div>
-        {/* 📢 일정 블록 (F11 R5): 보는 날짜의 일정 + 다가오는 7일 */}
-        <EventBlock memos={memos} date={dayDate} today={today} />
+        {/* 📢 일정 블록 (F11 R5): 보는 날짜의 일정 + 다가오는 7일. 여기서 바로 수정 (R10) */}
+        <EventBlock
+          memos={memos}
+          date={dayDate}
+          today={today}
+          onDelete={onDeleteMemo}
+          onConvert={onConvertToTask}
+        />
         {/* 하루 기록 (F04) — 계획/실제/회고, ◀▶로 지난 날도 열람 */}
         <DayView tasks={tasks} date={dayDate} onDateChange={setDayDate} />
         {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
@@ -413,6 +455,7 @@ function TaskView({
           tasks={list}
           onToggle={onToggle}
           onDelete={onDelete}
+          onConvert={onConvertToNote}
           emptyHint={
             viewingToday
               ? "오늘 마감인 할 일이 없어요."
@@ -429,20 +472,22 @@ function TaskView({
 // ------------------------------------------------------------
 // 오늘 탭 맨 위 "📢 일정" 블록 (F11 R5, 2026-09-28 개편 3단계)
 //  · 보고 있는 날짜의 일정 (◀▶로 날짜를 옮기면 그 날 것)
-//  · 오늘을 볼 때는 "다가오는 일정"(내일~7일 뒤)도 — 내일 일정을 오늘 놓치지 않게
+//    기간 일정은 시작~끝 사이의 모든 날에, 같은 날은 시간 순 (R8)
+//  · 오늘을 볼 때는 "다가오는 일정"(내일~7일 뒤에 시작)도 — 내일 일정을 오늘 놓치지 않게
+//  · 줄마다 마우스를 올리면 수정/삭제 — 달력과 같은 방식 (R10)
 // 보여줄 일정이 하나도 없으면 블록 자체를 그리지 않음
 // ------------------------------------------------------------
-function EventBlock({ memos, date, today }) {
+function EventBlock({ memos, date, today, onDelete, onConvert }) {
   const viewingToday = date === today;
-  const firstLine = (m) => m.text.split("\n")[0]; // 노트의 첫 줄 = 제목
   const md = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`; // "10/6"
 
-  const dayEvents = memos.filter((m) => m.date === date);
+  const dayEvents = notesOnDate(memos, date).sort(byNoteTime);
   const until = addDays(today, 7);
   const upcoming = viewingToday
     ? memos
         .filter((m) => m.date && m.date > today && m.date <= until)
-        .sort((a, b) => a.date.localeCompare(b.date)) // 가까운 날부터
+        // 가까운 날부터, 같은 날은 시간 순
+        .sort((a, b) => a.date.localeCompare(b.date) || byNoteTime(a, b))
     : [];
   if (dayEvents.length === 0 && upcoming.length === 0) return null;
 
@@ -465,9 +510,13 @@ function EventBlock({ memos, date, today }) {
       ) : (
         <ul className="event-list">
           {dayEvents.map((m) => (
-            <li key={m.id} className="event-line today">
-              {firstLine(m)}
-            </li>
+            <EventItem
+              key={m.id}
+              note={m}
+              compact
+              onDelete={onDelete}
+              onConvert={onConvert}
+            />
           ))}
         </ul>
       )}
@@ -476,14 +525,17 @@ function EventBlock({ memos, date, today }) {
           <h3 className="event-sub">다가오는 일정 (7일 이내)</h3>
           <ul className="event-list">
             {upcoming.map((m) => (
-              <li key={m.id} className="event-line">
-                <span className="event-when">
-                  {md(m.date)} (
-                  {WEEKDAY_LABEL[new Date(m.date + "T00:00:00").getDay()]}) ·{" "}
-                  {daysAway(m.date)}
-                </span>
-                <span>{firstLine(m)}</span>
-              </li>
+              <EventItem
+                key={m.id}
+                note={m}
+                compact
+                // 앞머리: "9/29 (화) · 내일"
+                when={`${md(m.date)} (${
+                  WEEKDAY_LABEL[new Date(m.date + "T00:00:00").getDay()]
+                }) · ${daysAway(m.date)}`}
+                onDelete={onDelete}
+                onConvert={onConvert}
+              />
             ))}
           </ul>
         </>
@@ -576,7 +628,7 @@ function EmptyTrashButton({ count, onEmpty }) {
 }
 
 /** 할 일 목록 하나를 그리는 공통 부품 */
-function TaskList({ tasks, onToggle, onDelete, emptyHint }) {
+function TaskList({ tasks, onToggle, onDelete, onConvert, emptyHint }) {
   if (tasks.length === 0) {
     return emptyHint ? <p className="hint">{emptyHint}</p> : null;
   }
@@ -588,6 +640,7 @@ function TaskList({ tasks, onToggle, onDelete, emptyHint }) {
           task={task}
           onToggle={onToggle}
           onDelete={onDelete}
+          onConvert={onConvert}
         />
       ))}
     </ul>

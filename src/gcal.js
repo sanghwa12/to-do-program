@@ -133,7 +133,7 @@ async function targets() {
   const memos = await db.memos.filter((m) => !!m.date).toArray();
   return [
     ...tasks.map((t) => ({ localId: t.id, event: taskToEvent(t, tz) })),
-    ...memos.map((m) => ({ localId: "memo:" + m.id, event: memoToEvent(m) })),
+    ...memos.map((m) => ({ localId: "memo:" + m.id, event: memoToEvent(m, tz) })),
   ];
 }
 

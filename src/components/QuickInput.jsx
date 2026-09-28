@@ -11,6 +11,7 @@ import { useState, useRef } from "react";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { repeatLabelOf } from "../labels.js";
+import { noteDatesFrom, noteDateText } from "../notes.js";
 
 export default function QuickInput() {
   const [text, setText] = useState("");
@@ -35,10 +36,9 @@ export default function QuickInput() {
         ? { ...parsed, dueDate: pickedDate, dateKind: "due" }
         : parsed;
 
-  // [일정] 날짜: 텍스트 표기 우선, 없으면 📅로 고른 날짜. 둘 다 없으면 날짜 없는 노트가 됨
-  const noteDate = parsed.startDate || parsed.dueDate || pickedDate;
-  // 일정은 아직 날짜 하나만 저장 — 기간의 끝·시간을 썼다면 빠진다는 걸 미리 알려줌
-  const noteLoses = parsed.dateKind === "range" || !!parsed.dueTime;
+  // [일정] 날짜 칸(날짜·기간의 끝·시간): 텍스트 표기 우선, 없으면 📅로 고른 날짜.
+  // 둘 다 없으면 빈 값 → 날짜 없는 노트가 됨
+  const noteDates = noteDatesFrom(parsed, pickedDate);
 
   // 종류 바꾸기 — 바로 이어서 칠 수 있게 커서를 입력칸으로
   function switchKind(k) {
@@ -51,7 +51,7 @@ export default function QuickInput() {
     e.preventDefault(); // 페이지 새로고침(폼 기본 동작) 막기
     if (isNote) {
       if (parsed.title === "") return;
-      await addMemo(parsed.title, noteDate);
+      await addMemo(parsed.title, noteDates);
     } else {
       const { title, ...dateFields } = effective;
       if (title === "") return; // 빈 제목은 추가하지 않음
@@ -149,11 +149,9 @@ export default function QuickInput() {
       {/* 입력 중엔 어떤 종류로 저장될지 항상 보여줌 (R14: 날짜 있음/없음 구분, R16: 일정) */}
       {text.trim() !== "" &&
         (isNote ? (
-          noteDate ? (
+          noteDates.date ? (
             <p className="parse-hint event">
-              "{parsed.title}" — 📢 {noteDate} 일정으로 저장됩니다
-              {noteLoses &&
-                " (일정은 아직 날짜 하나만 저장돼요 — 기간의 끝·시간은 빠집니다)"}
+              "{parsed.title}" — 📢 {noteDateText(noteDates)} 일정으로 저장됩니다
             </p>
           ) : (
             <p className="parse-hint muted">

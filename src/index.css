@@ -199,7 +199,7 @@ h1 {
   margin-bottom: -2px;
 }
 
-/* 정보 탭 입력줄·목록 (F11 통합에서 재사용) */
+/* 작은 입력줄 — 노트 입력, 달력의 날짜 클릭 입력, 구글 달력 설정에서 공용 */
 .notice-input {
   width: 100%;
   padding: 7px 10px;
@@ -211,31 +211,6 @@ h1 {
   outline: none;
   border-color: #4a7dff;
 }
-.notice-list {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-}
-.notice-section {
-  font-size: 0.8rem;
-  color: #888;
-  margin: 10px 0 2px;
-  font-weight: normal;
-}
-.notice-item {
-  padding: 4px 0;
-  border-top: 1px dashed #eee;
-  font-size: 0.88rem;
-}
-.notice-item.past {
-  opacity: 0.45; /* 날짜 지난 공지는 흐리게 (R4) */
-}
-.notice-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 .notice-text {
   margin-right: auto;
 }
@@ -244,13 +219,32 @@ h1 {
   background: var(--event-bg);
   color: var(--event-fg);
 }
-.cal-note-line {
-  margin: 4px 2px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.85rem;
+/* 일정 한 줄 (F11 R10) — 할 일 줄(.task-item)과 같은 틀에 보라색 바탕.
+   달력 아래 목록에서 할 일처럼 마우스를 올리면 수정/삭제 */
+.task-item.event-item {
   background: var(--event-bg);
+}
+.event-item .task-title {
   color: var(--event-fg);
+}
+.event-item .badge {
+  background: #fff;
+  color: var(--event-fg);
+}
+.event-item.past {
+  opacity: 0.55; /* 지난 일정은 흐리게 */
+}
+.event-mark {
+  flex-shrink: 0;
+  width: 27px; /* 할 일의 체크박스 자리와 같은 폭 → 제목·뱃지 위치가 할 일과 맞음 */
+  text-align: center;
+}
+.event-item .memo-editor {
+  margin-top: 0;
+}
+/* 에디터의 날짜 줄과 버튼 줄이 붙어 보이지 않게 */
+.memo-editor .edit-buttons {
+  margin-top: 12px;
 }
 .today-tasks-title {
   margin-top: 24px; /* 하루 기록 블록과 오늘 할 일 목록 사이 구분 (2026-08-05 통합) */
@@ -913,21 +907,6 @@ button.delete {
   font-size: 0.72rem;
   color: #bbb;
 }
-.memo-line-btn {
-  border: none;
-  background: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  padding: 0;
-  cursor: pointer;
-  flex: 1;
-  min-width: 0;
-}
-.memo-line-btn:hover {
-  background: none;
-  text-decoration: underline;
-}
 .memo-editor-date {
   display: flex;
   align-items: flex-end;
@@ -1270,11 +1249,62 @@ button.delete {
 .event-line.today {
   font-weight: bold;
 }
+.event-text {
+  min-width: 0;
+}
+/* 줄마다 수정/삭제 (F11 R10) — 할 일처럼 마우스를 올릴 때만 보임 */
+.event-actions {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: normal;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.event-line:hover .event-actions,
+.event-line:focus-within .event-actions,
+.event-actions.confirm {
+  opacity: 1;
+}
+.event-actions button {
+  padding: 1px 8px; /* 블록의 줄 간격이 벌어지지 않게 작게 */
+  font-size: 0.75rem;
+}
+.event-actions .confirm-text {
+  margin-right: 0;
+}
+/* 일정을 고치는 에디터의 글 칸 포커스 테두리도 보라 (입력칸과 같은 원칙) */
+.event-item .memo-textarea:focus,
+.event-line .memo-textarea:focus {
+  border-color: var(--event-accent);
+}
+/* 수정 중인 줄: 그 자리에 에디터가 펼쳐짐 */
+.event-line.editing {
+  display: block;
+  padding: 6px 0;
+  font-weight: normal;
+}
+.event-line.editing .memo-editor {
+  margin-top: 0;
+}
 .event-when {
   flex-shrink: 0;
   min-width: 8.5em;
   font-size: 0.78rem;
   opacity: 0.8;
+}
+/* 일정의 시간("14:00")과 기간("10/6~10/16") 꼬리표 (F11 R8) — 오늘 탭 일정 블록 */
+.event-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums; /* 숫자 폭을 같게 — 시간이 세로로 가지런히 */
+}
+.event-range {
+  margin-left: 8px;
+  font-size: 0.78rem;
+  font-weight: normal;
+  opacity: 0.75;
 }
 .event-sub {
   margin: 10px 0 2px;
@@ -1290,11 +1320,16 @@ button.delete {
   opacity: 0.75;
 }
 
-/* 메모 탭 노트 구역의 일정 목록 — 왼쪽 보라 선으로 표시 */
-.notice-section.event {
-  color: var(--event-fg);
+/* 할 일 ↔ 일정 "바꾸기" 버튼 (F11 R9) — 저장/취소와 떨어뜨려 왼쪽 끝에 */
+.convert-left {
+  margin-right: auto;
 }
-.notice-list.events .notice-item {
-  border-left: 3px solid var(--event-line);
-  padding-left: 8px;
+/* 노트 에디터의 날짜 줄: 끝 날짜·시간 칸이 늘어 좁은 창에선 줄바꿈 (F11 R8) */
+.memo-editor-date {
+  flex-wrap: wrap;
+}
+.memo-editor-date input[type="time"] {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }

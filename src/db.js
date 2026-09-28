@@ -7,6 +7,7 @@
 // ============================================================
 import Dexie from "dexie";
 import { nextOccurrence } from "./date.js";
+import { normalizeNoteDates, taskToNote, noteToTask } from "./notes.js";
 
 // 데이터베이스(냉장고)를 만들고 이름을 붙입니다.
 export const db = new Dexie("todoDB");
@@ -296,15 +297,17 @@ export async function setDayNote(date, note) {
 
 // ------------------------------------------------------------
 // 노트 (F11 통합) — 자유 글 + 선택적 날짜(일정 성격)
+// 날짜 칸 dates = { date?, endDate?, time? } — 날짜가 있으면 일정.
+// 기간(endDate)·시간(time)은 2026-09-28 추가 (F11 R8)
 // ------------------------------------------------------------
 
-/** 새 노트 저장 (date는 선택 — 있으면 일정 성격). 만든 노트의 id를 반환 */
-export async function addMemo(text, date) {
+/** 새 노트 저장. 만든 노트의 id를 반환 */
+export async function addMemo(text, dates = {}) {
   const now = new Date().toISOString();
   const memo = {
     id: crypto.randomUUID(),
     text,
-    date: date || undefined,
+    ...normalizeNoteDates(dates), // 값이 있는 날짜 칸만 들어감
     createdAt: now,
     updatedAt: now,
   };
@@ -312,12 +315,55 @@ export async function addMemo(text, date) {
   return memo.id;
 }
 
-/** 노트 수정 (내용·날짜) — 수정 시각 갱신 (목록 정렬 기준) */
-export async function updateMemo(id, text, date) {
+/** 노트 수정 (내용·날짜 칸) — 수정 시각 갱신 (목록 정렬 기준) */
+export async function updateMemo(id, text, dates = {}) {
+  const d = normalizeNoteDates(dates);
   await db.memos.update(id, {
     text,
-    date: date || undefined,
+    date: d.date, // 없는 칸은 undefined → 저장된 값도 지워짐
+    endDate: d.endDate,
+    time: d.time,
     updatedAt: new Date().toISOString(),
+  });
+}
+
+// ------------------------------------------------------------
+// 할 일 ↔ 일정 변환 (F11 R9, 2026-09-28)
+// 한쪽 보관함에서 지우고 다른 쪽에 같은 id로 만든다 (둘을 한 묶음으로 — 중간에 실패하면
+// 둘 다 없던 일로). 변환 규칙 자체는 notes.js의 taskToNote / noteToTask
+// ------------------------------------------------------------
+
+/** 할 일 → 일정 */
+export async function convertTaskToNote(task) {
+  const note = taskToNote(task, new Date().toISOString());
+  await db.transaction("rw", db.tasks, db.memos, async () => {
+    await db.tasks.delete(task.id);
+    await db.memos.put(note);
+  });
+}
+
+/** 일정 → 할 일 */
+export async function convertNoteToTask(note) {
+  const task = noteToTask(note);
+  await db.transaction("rw", db.tasks, db.memos, async () => {
+    await db.memos.delete(note.id);
+    await db.tasks.put(task);
+  });
+}
+
+/** "일정으로 바꾸기" 실행취소: 만든 일정을 지우고 원래 할 일을 그대로 되살림 */
+export async function restoreTaskFromNote(task) {
+  await db.transaction("rw", db.tasks, db.memos, async () => {
+    await db.memos.delete(task.id);
+    await db.tasks.put(task);
+  });
+}
+
+/** "할 일로 바꾸기" 실행취소: 만든 할 일을 지우고 원래 일정을 그대로 되살림 */
+export async function restoreNoteFromTask(note) {
+  await db.transaction("rw", db.tasks, db.memos, async () => {
+    await db.tasks.delete(note.id);
+    await db.memos.put(note);
   });
 }
 
