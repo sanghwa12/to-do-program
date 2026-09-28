@@ -3,6 +3,7 @@
 // - 마감·당일은 그 날짜 칸에, 기간은 시작~끝 모든 칸에 칩으로 표시
 // - 칸을 클릭하면 아래에 그 날짜의 할 일 목록이 펼쳐짐
 // - 펼친 영역 맨 위 입력칸으로 그 날짜에 바로 등록 (할 일 / 📢 일정, R9)
+// - 공휴일·일요일은 빨간 날짜, 공휴일은 이름도 표시 (R10)
 // ------------------------------------------------------------
 import { useState } from "react";
 import TaskItem from "./TaskItem.jsx";
@@ -10,6 +11,7 @@ import { todayStr } from "../date.js";
 import { byDueDateTime } from "../sort.js";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
+import { holidayName, hasHolidayData } from "../holidays.js";
 import {
   buildMonthCells,
   tasksOnDate,
@@ -76,10 +78,17 @@ export default function CalendarView({
         </button>
       </div>
 
-      {/* 요일 머리줄 */}
+      {/* 공휴일 표에 없는 해 (R10) — 빨간 날이 조용히 빠지지 않게 알려줌 */}
+      {!hasHolidayData(year) && (
+        <p className="cal-no-holiday">
+          {year}년 공휴일 정보는 아직 없어요 (일요일만 빨갛게 표시)
+        </p>
+      )}
+
+      {/* 요일 머리줄 — 일요일은 빨강 (R10) */}
       <div className="cal-grid cal-weekdays">
-        {WEEKDAYS.map((w) => (
-          <div key={w} className="cal-weekday">
+        {WEEKDAYS.map((w, i) => (
+          <div key={w} className={"cal-weekday" + (i === 0 ? " red" : "")}>
             {w}
           </div>
         ))}
@@ -92,6 +101,8 @@ export default function CalendarView({
             return <div key={i} className="cal-cell empty" />;
           }
           const ds = dateStrOf(year, month, day);
+          const holiday = holidayName(ds); // 공휴일 이름 (없으면 undefined)
+          const red = holiday || i % 7 === 0; // 빨간 날 = 공휴일 또는 일요일 (R10)
           const dayNotes = notesOn(ds); // 공지 먼저, 그다음 할 일
           const list = tasksOnDate(tasks, ds).sort(byDueDateTime);
           const shownNotes = dayNotes.slice(0, MAX_CHIPS);
@@ -107,7 +118,10 @@ export default function CalendarView({
               }
               onClick={() => setSelected(ds === selected ? null : ds)}
             >
-              <span className="cal-day">{day}</span>
+              <span className={"cal-day" + (red ? " red" : "")}>
+                {day}
+                {holiday && <span className="cal-holiday">{holiday}</span>}
+              </span>
               {shownNotes.map((n) => (
                 <span key={n.id} className="cal-chip notice">
                   📢 {n.text}
@@ -132,7 +146,10 @@ export default function CalendarView({
       {selected && (
         <div className="cal-selected">
           <h2 className="group-title">
-            {selected}{" "}
+            {selected}
+            {holidayName(selected) && (
+              <span className="holiday-name"> · {holidayName(selected)}</span>
+            )}{" "}
             <span className="group-count">{selectedTasks.length}</span>
           </h2>
           {/* 그 날짜에 바로 등록 (R9) — 날짜를 바꿔 클릭하면 입력칸도 새로 (key) */}

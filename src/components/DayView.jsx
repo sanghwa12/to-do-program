@@ -22,6 +22,7 @@ import {
 } from "../db.js";
 import { todayStr, dateOnly } from "../date.js";
 import { WEEKDAY_LABEL } from "../labels.js";
+import { holidayName } from "../holidays.js";
 
 /** "YYYY-MM-DD"를 delta일만큼 이동 */
 function shiftDate(dateStr, delta) {
@@ -131,6 +132,10 @@ export default function DayView({ tasks, date, onDateChange }) {
         </button>
         <span className="cal-month-label">
           {date} ({weekday})
+          {/* 보고 있는 날이 공휴일이면 이름을 빨갛게 (F07 R10) */}
+          {holidayName(date) && (
+            <span className="holiday-name"> · {holidayName(date)}</span>
+          )}
         </span>
         <button
           onClick={() => onDateChange(shiftDate(date, 1))}

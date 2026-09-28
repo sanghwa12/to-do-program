@@ -1195,6 +1195,30 @@ button.delete {
   margin-top: 10px;
 }
 
+/* 빨간 날 (F07 R10): 공휴일·일요일 — 한국 달력 관례 (D00 색 예외).
+   글자에만 쓰고 배경은 칠하지 않음. 오늘 칸의 파란 숫자보다 빨강이 우선 */
+.cal-weekday.red,
+.cal-cell .cal-day.red,
+.holiday-name {
+  color: #d9363e;
+}
+.cal-day {
+  /* 공휴일 이름이 길어도 칸 밖으로 넘치지 않게 말줄임 */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-holiday {
+  margin-left: 4px;
+  font-size: 0.65rem;
+}
+.cal-no-holiday {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  color: #999;
+}
+
 /* 달력: 선택한 날짜에 바로 등록 (F07 R9) — 토글은 📅 버튼(.date-toggle) 모양 재사용 */
 .cal-add {
   display: flex;
