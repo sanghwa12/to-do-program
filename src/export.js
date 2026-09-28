@@ -40,7 +40,7 @@ export async function exportBackup() {
   const done = tasks.filter((t) => t.done);
 
   const lines = [
-    `# 할 일 백업 (${today})`,
+    `# My planner 백업 (${today})`,
     "",
     `## 미완료 (${todo.length}개)`,
     ...todo.map(taskToLine),
@@ -100,7 +100,7 @@ export async function exportBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `할일백업-${today}.md`; // 파일명에 날짜 → 백업본 구분
+  a.download = `MyPlanner-백업-${today}.md`; // 파일명에 날짜 → 백업본 구분
   a.click();
   URL.revokeObjectURL(url); // 뒷정리
 }

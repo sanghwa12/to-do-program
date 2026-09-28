@@ -159,7 +159,7 @@ export default function GcalView({ onBack }) {
       <section className="help-section">
         <h3>3. 보내기</h3>
         <p className="gcal-desc">
-          날짜 있는 할 일·일정 노트를 구글의 "할 일 앱" 달력에 올려요 — 앱 → 구글
+          날짜 있는 할 일·일정 노트를 구글의 앱 전용 달력("My planner")에 올려요 — 앱 → 구글
           한 방향 (구글에서 고친 건 다음 보내기 때 앱 내용으로 덮여요).
         </p>
         <div className="gcal-row">
@@ -183,7 +183,7 @@ export default function GcalView({ onBack }) {
         <div className="gcal-row gcal-reset">
           {confirmReset ? (
             <span className="danger-confirm">
-              구글의 "할 일 앱" 달력을 지우고 전부 새로 올릴까요?
+              구글의 앱 전용 달력을 지우고 전부 새로 올릴까요?
               <button className="delete" onClick={() => run(resendAll, "다시 올리기")}>
                 다시 올리기
               </button>

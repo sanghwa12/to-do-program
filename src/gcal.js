@@ -14,7 +14,9 @@ import { taskToEvent, memoToEvent, fingerprint } from "./gcalEvents.js";
 const SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
 const GIS_URL = "https://accounts.google.com/gsi/client";
 const API = "https://www.googleapis.com/calendar/v3";
-const CALENDAR_NAME = "할 일 앱"; // 앱이 만드는 보조 달력 이름 (R3)
+// 앱이 만드는 보조 달력 이름 (R3) — 새로 만들 때만 쓰임 (찾을 땐 저장해 둔 id).
+// 2026-09-28 이전에 만든 달력은 구글에서 이름을 바꾸기 전까지 "할 일 앱"
+const CALENDAR_NAME = "My planner";
 
 // 메모리에만 두는 출입증: { accessToken, expiresAt(ms) } — 없으면 null
 let token = null;
@@ -109,7 +111,7 @@ async function callOk(method, path, body) {
 
 const calPath = (id) => `/calendars/${encodeURIComponent(id)}`;
 
-/** 보조 달력 "할 일 앱" 확보 (R3): 기억한 id가 살아 있으면 그대로,
+/** 보조 달력 확보 (R3): 기억한 id가 살아 있으면 그대로,
  *  사용자가 구글에서 지웠으면(404) 새로 만들고 연결표를 비움 */
 async function ensureCalendar() {
   const saved = await getSetting("calendarId");

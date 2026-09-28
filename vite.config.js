@@ -26,9 +26,10 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate", // 새 버전 배포 시 자동 갱신
       manifest: {
-        name: "할 일",
-        short_name: "할 일",
-        description: "쏟아붓는 할 일 관리",
+        // 앱 이름 (2026-09-28 "할 일" → "My planner": 일정·메모·기록까지 담게 되어)
+        name: "My planner",
+        short_name: "My planner",
+        description: "할 일·일정·메모를 한곳에서",
         lang: "ko",
         start_url: "/",
         display: "standalone", // 설치하면 주소창 없는 독립 창으로

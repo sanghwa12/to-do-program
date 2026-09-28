@@ -151,7 +151,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <h1>할 일</h1>
+        <h1>My planner</h1>
         {/* 자주 안 쓰는 액션은 ⋯ 메뉴 하나로 모음 (D00: 액션 정리) */}
         {!showTrash && !showHelp && !showGcal && (
           <div className="menu-wrap">
