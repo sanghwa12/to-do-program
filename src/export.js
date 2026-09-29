@@ -77,6 +77,7 @@ export async function exportBackup() {
       for (const x of l.extras) {
         lines.push(`- 📓 (계획 외) ${x.text}`);
       }
+      // 한 줄 회고: 입력칸은 2026-09-29 화면에서 없앴지만, 전에 써 둔 것은 백업에 계속 담음
       if (l.note) lines.push(`- 📓 메모: ${l.note}`);
     }
     lines.push("");

@@ -447,7 +447,7 @@ function TaskView({
     );
   }
 
-  // [오늘] 하루의 조종석 (2026-08-05 통합): 📢 일정 → 하루 기록(계획/실제/회고) → 오늘 할 일
+  // [오늘] 하루의 조종석 (2026-08-05 통합): 📢 일정 → 하루 기록(계획/실제) → 오늘 할 일
   if (tab === "오늘") {
     const today = todayStr();
     // 할 일 목록은 하루 기록의 ◀▶ 날짜를 따라감 (F04 R9):
@@ -472,7 +472,7 @@ function TaskView({
           onDelete={onDeleteMemo}
           onConvert={onConvertToTask}
         />
-        {/* 하루 기록 (F04) — 계획/실제/회고, ◀▶로 지난 날도 열람 */}
+        {/* 하루 기록 (F04) — 계획/실제, ◀▶로 지난 날도 열람 */}
         <DayView tasks={tasks} date={dayDate} onDateChange={setDayDate} />
         {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
         <h2 className="group-title today-tasks-title">

@@ -201,6 +201,8 @@ export async function emptyTrash() {
 
 // ------------------------------------------------------------
 // 하루 기록 (F04) — 날짜당 1개의 문서: { date, plans, extras, note }
+// (note = 한 줄 회고. 입력칸은 2026-09-29 화면에서 제거 — 이미 저장된 값은 그대로 두고
+//  백업에도 계속 담김. 아래 함수들은 기록을 통째로 읽고 써서 note를 건드리지 않음)
 // ------------------------------------------------------------
 
 /** 그 날짜의 기록을 가져오고, 없으면 빈 기록을 만들어 반환 (저장은 안 함) */
@@ -285,13 +287,6 @@ export async function addExtraLine(date, text) {
 export async function deleteExtraLine(date, id) {
   const log = await getDayLog(date);
   log.extras = log.extras.filter((x) => x.id !== id);
-  await db.dayLogs.put(log);
-}
-
-/** 회고 메모 저장 (R5) */
-export async function setDayNote(date, note) {
-  const log = await getDayLog(date);
-  log.note = note.trim();
   await db.dayLogs.put(log);
 }
 

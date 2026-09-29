@@ -2,7 +2,7 @@
 // 하루 기록 (F04): 매일 쓰는 계획서 + 일기
 //  · 오늘의 계획: 자유 줄 작성 + 달성 체크 (할 일 앱과 독립)
 //  · 실제 한 일: 그날 완료한 할 일 자동 + 계획 외 한 일 수기
-//  · 비교 요약 + 회고 한 줄
+// (비교 요약 줄과 한 줄 회고는 2026-09-29 화면에서 제거 — 저장된 회고는 보존, 백업에 계속 담김)
 // ------------------------------------------------------------
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -17,7 +17,6 @@ import {
   addExtraLine,
   deleteExtraLine,
   updateExtraLine,
-  setDayNote,
   addTask,
 } from "../db.js";
 import { todayStr, dateOnly } from "../date.js";
@@ -96,8 +95,6 @@ export default function DayView({ tasks, date, onDateChange }) {
     .filter((t) => t.done && t.completedAt && dateOnly(t.completedAt) === date)
     .sort((a, b) => (a.completedAt || "").localeCompare(b.completedAt || ""));
 
-  const achieved = plans.filter((p) => p.done).length;
-  const movedCount = plans.filter((p) => p.movedTo).length;
   // 미루기 가능한 것 = 미완료이면서 아직 안 미룬 것
   const deferrable = plans.filter((p) => !p.done && !p.movedTo);
   const weekday = WEEKDAY_LABEL[new Date(date + "T00:00:00").getDay()];
@@ -240,18 +237,6 @@ export default function DayView({ tasks, date, onDateChange }) {
           />
         </form>
       </section>
-
-      {/* 비교 요약 + 회고 (R5) — 미룬 것도 총 개수에 포함 (기록 보존, R8) */}
-      <div className="day-summary">
-        계획 {plans.length}개 중 <b>{achieved}개 달성</b>
-        {movedCount > 0 && <> · {movedCount}개 미룸</>} · 완료한 할 일{" "}
-        {doneTasks.length}건 · 계획 외 {extras.length}건
-      </div>
-      <NoteLine
-        key={date + "|" + (log ? "1" : "0")}
-        date={date}
-        initial={log?.note ?? ""}
-      />
     </div>
   );
 }
@@ -340,27 +325,5 @@ function PlanLine({ date, line, today }) {
         />
       )}
     </li>
-  );
-}
-
-// 회고 한 줄 — Enter나 칸 밖 클릭으로 저장
-function NoteLine({ date, initial }) {
-  const [val, setVal] = useState(initial);
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setDayNote(date, val);
-      }}
-    >
-      <input
-        className="day-input note"
-        type="text"
-        placeholder="오늘 한 줄 회고 (선택) — Enter로 저장"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={() => setDayNote(date, val)}
-      />
-    </form>
   );
 }
