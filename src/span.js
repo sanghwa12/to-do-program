@@ -173,8 +173,23 @@ export function exceptionText(item) {
  *          제외한 날에는 안 나오고, 끝난 뒤 추가한 날을 기다리는 동안에도 안 나옴 */
 export function isDueToday(task, today) {
   if (task.done || !task.dueDate) return false;
+  // 이번 주 중에 할 일 (F03 R10): 그 주 동안은 "이번 주에 할 일" 묶음에 있고,
+  // 일요일이 지나서야 여기로 올라옴 (밀림)
+  if (task.dateKind === "week") return task.dueDate < today;
   if (!(task.dateKind === "range" && task.startDate)) return task.dueDate <= today;
   const span = spanOfTask(task);
   const last = lastActiveDate(span) ?? span.end;
   return isActiveOn(span, today) || last < today;
+}
+
+/** 오늘 탭 "이번 주에 할 일" 묶음에 나올 할 일인가 (F03 R10):
+ *  미완료 + "이번 주" 종류 + 오늘이 그 주(월~일) 안 */
+export function isThisWeekTask(task, today) {
+  return (
+    !task.done &&
+    task.dateKind === "week" &&
+    !!task.startDate &&
+    task.startDate <= today &&
+    today <= task.dueDate
+  );
 }

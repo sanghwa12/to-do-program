@@ -22,6 +22,14 @@ export function addDays(dateStr, n) {
   return ymd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
 }
 
+/** 그 날짜가 들어 있는 주(월요일~일요일) → { start: 월요일, end: 일요일} (F03 R10)
+ *  예: 2026-10-28(수) → { start: "2026-10-26", end: "2026-11-01" } */
+export function weekOf(dateStr) {
+  const wd = new Date(dateStr + "T00:00:00").getDay(); // 0=일 ~ 6=토
+  const start = addDays(dateStr, wd === 0 ? -6 : 1 - wd); // 일요일이면 6일 전 월요일
+  return { start, end: addDays(start, 6) };
+}
+
 // ------------------------------------------------------------
 // 반복 할 일 (F09): 다음 회차 계산
 // ------------------------------------------------------------

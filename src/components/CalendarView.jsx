@@ -14,6 +14,7 @@ import { byDueDateTime } from "../sort.js";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { holidayName, hasHolidayData } from "../holidays.js";
+import { weekRangeText } from "../labels.js";
 import {
   firstLineOf,
   notesOnDate,
@@ -220,7 +221,7 @@ function DayAdd({ date }) {
 
   const parsed =
     kind === "note"
-      ? parseQuickInput(text, { allowPast: true, repeatable: false })
+      ? parseQuickInput(text, { allowPast: true, repeatable: false, weekable: false })
       : parseQuickInput(text);
   const typedDate = parsed.startDate || parsed.dueDate; // 텍스트에 날짜를 썼나
   const label = `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`; // "9/20"
@@ -277,7 +278,9 @@ function DayAdd({ date }) {
           "{parsed.title}" —{" "}
           {kind === "note"
             ? `📢 ${noteDateText(noteDates)} 일정으로 저장됩니다`
-            : typedDate
+            : parsed.dateKind === "week"
+              ? `🗓 이번 주(${weekRangeText(parsed)}) 안에 할 일로 저장됩니다`
+              : typedDate
               ? `텍스트의 날짜 표기대로 저장됩니다 (📅 ${parsed.dueDate})`
               : `📅 ${date} 당일 할 일로 저장됩니다`}
         </p>

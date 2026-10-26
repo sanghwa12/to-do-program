@@ -24,3 +24,9 @@ export function repeatLabelOf(t) {
   }
   return REPEAT_LABEL[t.repeat];
 }
+
+/** "이번 주 중에" 할 일의 주 표기: "10/26~11/1" (F03 R10) */
+export function weekRangeText(t) {
+  const md = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`;
+  return `${md(t.startDate)}~${md(t.dueDate)}`;
+}

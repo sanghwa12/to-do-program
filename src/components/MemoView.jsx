@@ -24,7 +24,11 @@ export default function MemoView({ memos, onDelete, onConvert }) {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   // 빠른 입력: 날짜 자동 인식 (지난 날짜 그대로, 반복 인식 없음 — F11 R2)
-  const parsed = parseQuickInput(quickText, { allowPast: true, repeatable: false });
+  const parsed = parseQuickInput(quickText, {
+    allowPast: true,
+    repeatable: false,
+    weekable: false, // "~이번주"는 할 일 전용 (F02 R17)
+  });
   const quickDates = noteDatesFrom(parsed); // 날짜·기간의 끝·시간 (없으면 빈 값)
 
   async function handleQuickAdd(e) {

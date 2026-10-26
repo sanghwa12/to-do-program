@@ -47,6 +47,7 @@ import {
   nextActiveAfter,
   skipDay,
   isDueToday,
+  isThisWeekTask,
 } from "./span.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
@@ -459,6 +460,10 @@ function TaskView({
           .filter((t) => isDueToday(t, today))
           .sort(byDueDateTime) // 밀린 것부터 위로, 같은 날은 시간 순
       : tasksOnDate(tasks, dayDate);
+    // 이번 주 중에 할 일 (F03 R10) — 주가 지나면 위의 "오늘 할 일"로 올라감 (isDueToday)
+    const weekList = tasks
+      .filter((t) => isThisWeekTask(t, today))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
     const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;
 
@@ -490,6 +495,22 @@ function TaskView({
               : "이 날짜의 할 일이 없어요."
           }
         />
+        {/* 🗓 이번 주에 할 일 (F03 R10): "~이번주"로 넣은, 요일을 정하지 않은 할 일.
+            오늘을 볼 때만, 하나라도 있을 때만. 최신 입력이 위 */}
+        {viewingToday && weekList.length > 0 && (
+          <>
+            <h2 className="group-title">
+              🗓 이번 주에 할 일{" "}
+              <span className="group-count">{weekList.length}</span>
+            </h2>
+            <TaskList
+              tasks={weekList}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              onConvert={onConvertToNote}
+            />
+          </>
+        )}
       </div>
     );
   }

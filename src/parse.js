@@ -7,7 +7,7 @@
 //   기간(range): "학부실험 조교 11/11~11/23"             → 그 기간 동안
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // ============================================================
-import { todayStr, nextNthWeekday, nextBusinessDay } from "./date.js";
+import { todayStr, nextNthWeekday, nextBusinessDay, weekOf } from "./date.js";
 import { cleanExceptions } from "./span.js";
 
 /** 연·월·일 숫자를 "YYYY-MM-DD" 문자열로 */
@@ -84,6 +84,8 @@ const RANGE_RE = new RegExp(`\\(?\\s*${D}\\s*~\\s*${D}\\s*\\)?`);
 const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\)?(?:\\s+${T})?\\s*\\)?`);
 // 마감(말): ~오늘, ~내일, ~모레, ~월요일 ... ~일요일
 const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)\s*\)?/;
+// 이번 주 중에 (F02 R17): ~이번주 / ~이번 주 / (~이번주) — 뒤에 다른 글자가 바로 붙으면 인식 안 함
+const WEEK_RE = /\(?\s*~\s*이번\s?주\s*\)?(?=\s|$)/;
 // 당일: 맨 날짜 (+시간) — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
 // 닫는 괄호는 날짜 뒤·시간 뒤 어디든: "(9/7) 14:00", "(9/7 14:00)" 모두 인식
 const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?(?:\\s+${T})?\\s*\\)?\\s*$`);
@@ -186,18 +188,27 @@ function detectRepeat(text) {
  * 날짜 표기가 없거나 이상하면 전체를 제목으로 그대로 반환.
  * opts.allowPast: 지난 날짜를 내년으로 올리지 않음 (공지처럼 "있었던 날"도 유효할 때)
  * opts.repeatable: 반복 표기(매주 등) 인식 여부 (기본 켜짐 — 공지 입력에선 끔)
+ * opts.weekable: "~이번주" 인식 여부 (기본 켜짐 — 📢 일정 입력에선 끔, F02 R17)
  */
-export function parseQuickInput(text, { allowPast = false, repeatable = true } = {}) {
+export function parseQuickInput(
+  text,
+  { allowPast = false, repeatable = true, weekable = true } = {}
+) {
   // 반복 표기 먼저 확인 (F09) — 찾으면 표기를 뺀 나머지로 날짜·제목을 계속 해석
   if (repeatable) {
     const rep = detectRepeat(text);
     if (rep) {
-      const inner = parseQuickInput(rep.rest, { allowPast, repeatable: false });
+      const inner = parseQuickInput(rep.rest, { allowPast, repeatable: false, weekable });
       if (inner.title === "") return { title: text.trim() }; // 제목이 없으면 인식 취소
       if (inner.dateKind === "range") {
         // 기간엔 반복 미지원 (R1) — '매주' 표기를 조용히 지우지 않고
         // 원문 그대로 기간으로 해석 (표기가 제목에 남아 사용자가 알 수 있게)
-        return parseQuickInput(text, { allowPast, repeatable: false });
+        return parseQuickInput(text, { allowPast, repeatable: false, weekable });
+      }
+      if (inner.dateKind === "week") {
+        // 반복 + ~이번주: 반복이 우선 (F02 R17) — 이번 주 날짜는 버리고 반복 기준일로
+        inner.dueDate = undefined;
+        inner.dateKind = undefined;
       }
       const title = inner.title.replace(/\s+/g, " ").trim(); // 표기 뺀 자리 공백 정리
       if (rep.repeat === "monthlyNth") {
@@ -224,8 +235,18 @@ export function parseQuickInput(text, { allowPast = false, repeatable = true } =
 
   const plain = { title: text.trim() };
 
+  // 0) 이번 주 중에 (F03 R10): ~이번주 → 이번 주 월요일~일요일, 요일은 정하지 않음
+  let m = weekable ? text.match(WEEK_RE) : null;
+  if (m) {
+    const title = stripTitle(text, m[0]);
+    if (title) {
+      const week = weekOf(todayStr());
+      return { title, startDate: week.start, dueDate: week.end, dateKind: "week" };
+    }
+  }
+
   // 1) 기간: 11/11~11/23 (마감 ~보다 먼저 검사해야 함 — "~11/23" 부분만 잡히지 않게)
-  let m = text.match(RANGE_RE);
+  m = text.match(RANGE_RE);
   if (m) {
     // 시작·끝 모두 일단 올해 그대로 해석 — "진행 중인 기간"(시작은 지났고 끝은 남음)을
     // 입력하는 흔한 경우를 내년으로 밀어버리지 않기 위해
@@ -317,7 +338,9 @@ export function parseImportLine(line) {
   // 내보내기 형식의 이모지 제거. 반복 인식은 🔁 표기가 "실제로 있던 줄"에만 적용 —
   // 제목에 우연히 '매일/매주' 단어가 든 일반 할 일이 반복으로 둔갑하지 않게 (R7)
   const hadRepeatMark = t.includes("🔁");
-  t = t.replace(/📅/g, " ").replace(/🔁/g, " ");
+  // 🗓 = "이번 주 중에" 할 일 (F03 R10) — 내보내기가 "🗓 월요일 ~ 일요일"로 적음
+  const hadWeekMark = t.includes("🗓");
+  t = t.replace(/📅/g, " ").replace(/🔁/g, " ").replace(/🗓️?/g, " ");
 
   // 메모판 스티커 소속 📌이름 (F03 R2d) — 내보내기가 줄 맨 끝에 붙이므로 끝까지 이름
   let board;
@@ -368,7 +391,9 @@ export function parseImportLine(line) {
     if (parsed.dueTime) draft.dueTime = parsed.dueTime;
   }
   if (parsed.startDate) draft.startDate = parsed.startDate;
-  if (parsed.dateKind === "range") {
+  if (hadWeekMark && parsed.dateKind === "range") {
+    draft.dateKind = "week"; // 🗓 기간 = 그 주의 월~일 (예외 날짜 없음)
+  } else if (parsed.dateKind === "range") {
     // 예외 날짜는 기간에만 — 범위를 벗어난 것은 정리하면서 빠짐
     const exc = cleanExceptions(parsed.startDate, parsed.dueDate, skipDates, extraDates);
     if (exc.skipDates) draft.skipDates = exc.skipDates;

@@ -26,6 +26,9 @@ function taskToLine(task) {
   // 날짜 종류에 맞게 표기 (마감 ~날짜 / 당일 / 기간 시작~끝)
   if (task.dateKind === "range" && task.startDate)
     line += ` 📅 ${task.startDate} ~ ${task.dueDate}${exceptionMarks(task)}`;
+  // 이번 주 중에 (F03 R10): 🗓 그 주 월요일 ~ 일요일 — 가져오기가 🗓을 보고 복원
+  else if (task.dateKind === "week" && task.startDate)
+    line += ` 🗓 ${task.startDate} ~ ${task.dueDate}`;
   else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
   else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
   // 시간 (R15) — 날짜 바로 뒤에 두면 가져오기가 그대로 읽음

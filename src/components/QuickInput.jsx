@@ -10,7 +10,7 @@
 import { useState, useRef } from "react";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
-import { repeatLabelOf } from "../labels.js";
+import { repeatLabelOf, weekRangeText } from "../labels.js";
 import { noteDatesFrom, noteDateText } from "../notes.js";
 
 export default function QuickInput() {
@@ -23,9 +23,9 @@ export default function QuickInput() {
   const isNote = kind === "note";
 
   // 지금 친 내용에서 날짜·반복이 인식되는지 (미리보기용, F02 R10)
-  // 일정은 노트 입력 규칙: 지난 날짜도 그대로, 반복 인식 없음 (F11 R2)
+  // 일정은 노트 입력 규칙: 지난 날짜도 그대로, 반복·"~이번주" 인식 없음 (F11 R2, F02 R17)
   const parsed = isNote
-    ? parseQuickInput(text, { allowPast: true, repeatable: false })
+    ? parseQuickInput(text, { allowPast: true, repeatable: false, weekable: false })
     : parseQuickInput(text);
 
   // [할 일] 저장될 내용 (R14): 텍스트 표기가 있으면 표기 우선, 없으면 선택기 날짜(마감)
@@ -71,6 +71,8 @@ export default function QuickInput() {
     }
     if (p.dateKind === "range")
       return `"${p.title}" — 📅 ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
+    if (p.dateKind === "week")
+      return `"${p.title}" — 🗓 이번 주(${weekRangeText(p)}) 안에 할 일로 저장됩니다`;
     const time = p.dueTime ? ` ${p.dueTime}` : ""; // 시간이 있으면 같이 (R15)
     if (p.dateKind === "day")
       // "당일 일정"이라고 쓰면 📢 일정과 헷갈리므로 "당일 할 일" (2026-09-28)

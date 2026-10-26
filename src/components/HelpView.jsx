@@ -23,6 +23,11 @@ export default function HelpView({ onBack }) {
             기간 · <code>~내일</code> <code>~모레</code> <code>~금요일</code>
           </li>
           <li>
+            <b>이번 주 중에</b>: <code>보고서 정리 ~이번주</code> — 요일은 안 정하고
+            이번 주(월~일) 안에 할 일. 오늘 탭 <b>🗓 이번 주에 할 일</b>에 매일 보이고,
+            일요일까지 못 끝내면 다음 주부터 "오늘 할 일"에 밀린 것으로 올라와요
+          </li>
+          <li>
             <b>시간</b>: 날짜 바로 뒤에 <code>14:00</code> 또는{" "}
             <code>14시</code> (예: <code>회의 9/7 14:00</code>) — 선택 사항
           </li>

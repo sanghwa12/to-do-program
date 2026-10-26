@@ -84,7 +84,9 @@ export function noteDatesFrom(parsed, fallbackDate = "") {
 /** 할 일 → 일정: 제목(+세부 메모) → 글, 날짜·기간·시간·예외 날짜는 그대로.
  *  완료 체크·반복처럼 일정에 없는 것은 옮기지 않음. now = 바꾼 시각(ISO) */
 export function taskToNote(task, now) {
-  const isRange = task.dateKind === "range" && task.startDate;
+  // "이번 주 중에" 할 일(F03 R10)은 그 주 월~일 기간 일정이 됨
+  const isRange =
+    (task.dateKind === "range" || task.dateKind === "week") && task.startDate;
   return {
     id: task.id,
     text: task.memo ? `${task.title}\n${task.memo}` : task.title,

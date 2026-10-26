@@ -16,8 +16,14 @@ import {
   nextBusinessDay,
   nextYearlyDate,
   dateOnly,
+  weekOf,
 } from "../date.js";
-import { WEEKDAY_LABEL, NTH_LABEL, repeatLabelOf } from "../labels.js";
+import {
+  WEEKDAY_LABEL,
+  NTH_LABEL,
+  repeatLabelOf,
+  weekRangeText,
+} from "../labels.js";
 import ExceptionDates from "./ExceptionDates.jsx";
 import {
   spanOfTask,
@@ -98,11 +104,17 @@ export default function TaskItem({
     if (kind === "range" && saveStart > saveDue) {
       [saveStart, saveDue] = [saveDue, saveStart];
     }
-    // 반복 정리 (F09 R1·R6·R8·R9·R10)
+    // 이번 주 중에 (F03 R10): 날짜 칸의 날짜가 든 주 → 월요일~일요일로 저장
+    if (kind === "week") {
+      const w = weekOf(dueDate);
+      saveStart = w.start;
+      saveDue = w.end;
+    }
+    // 반복 정리 (F09 R1·R6·R8·R9·R10) — 기간·이번 주에는 반복 없음
     let saveRepeat;
     let saveNth;
     let saveWeekday;
-    if (kind !== "range") {
+    if (kind !== "range" && kind !== "week") {
       if (presetChoice && presetChoice !== "custom") {
         // 프리셋 (R10): 규칙은 할 일의 날짜(없으면 등록날짜)에서 뽑고,
         // 날짜가 없던 할 일은 "다가오는 회차"를 첫 날짜로 (지난 날짜로 저장 방지)
@@ -176,7 +188,8 @@ export default function TaskItem({
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: saveDue,
-      dueTime: kind && kind !== "range" && dueTime ? dueTime : undefined, // 기간엔 시간 없음
+      // 기간·이번 주엔 시간 없음
+      dueTime: kind && kind !== "range" && kind !== "week" && dueTime ? dueTime : undefined,
       dateKind: kind,
       startDate: saveStart,
       skipDates: exc.skipDates,
@@ -282,7 +295,8 @@ export default function TaskItem({
           {/* F03: 날짜·반복 — 전부 선택 사항 */}
           <div className="edit-extras">
             <label>
-              날짜
+              {/* 이번 주 중에(F03 R10)를 고르면 이 날짜가 든 주(월~일)로 저장됨 */}
+              {dueDate && dateKind === "week" ? "날짜 (이 날이 든 주)" : "날짜"}
               <input
                 type="date"
                 value={dueDate}
@@ -300,11 +314,12 @@ export default function TaskItem({
                   <option value="due">마감 (~까지)</option>
                   <option value="day">당일</option>
                   <option value="range">기간</option>
+                  <option value="week">이번 주 중에 (요일 미정)</option>
                 </select>
               </label>
             )}
-            {/* 시간 (선택, R15) — 기간이 아닐 때만 */}
-            {dueDate && dateKind !== "range" && (
+            {/* 시간 (선택, R15) — 기간·이번 주가 아닐 때만 */}
+            {dueDate && dateKind !== "range" && dateKind !== "week" && (
               <label>
                 시간
                 <input
@@ -324,8 +339,8 @@ export default function TaskItem({
                 />
               </label>
             )}
-            {/* 반복 프리셋 (R10): 날짜에서 계산된 구체적 선택지를 한 번에 고름 */}
-            {!(dueDate && dateKind === "range") && (
+            {/* 반복 프리셋 (R10): 날짜에서 계산된 구체적 선택지를 한 번에 고름 — 기간·이번 주엔 없음 */}
+            {!(dueDate && (dateKind === "range" || dateKind === "week")) && (
               <label>
                 반복
                 <select
@@ -354,7 +369,7 @@ export default function TaskItem({
               </label>
             )}
             {/* 사용자화 (R8·R9): 날짜와 다른 규칙을 직접 조립 */}
-            {presetChoice === "custom" && dateKind !== "range" && (
+            {presetChoice === "custom" && dateKind !== "range" && dateKind !== "week" && (
               <label>
                 규칙
                 <select
@@ -371,7 +386,7 @@ export default function TaskItem({
             )}
             {presetChoice === "custom" &&
               repeat === "monthlyNth" &&
-              dateKind !== "range" && (
+              dateKind !== "range" && dateKind !== "week" && (
                 <label>
                   몇째 주
                   <select
@@ -388,7 +403,7 @@ export default function TaskItem({
               )}
             {presetChoice === "custom" &&
               (repeat === "weekly" || repeat === "monthlyNth") &&
-              dateKind !== "range" && (
+              dateKind !== "range" && dateKind !== "week" && (
                 <label>
                   요일
                   <select
@@ -405,7 +420,7 @@ export default function TaskItem({
               )}
             {presetChoice === "custom" &&
               repeat === "monthly" &&
-              dateKind !== "range" && (
+              dateKind !== "range" && dateKind !== "week" && (
                 <label>
                   며칠
                   <select
@@ -483,6 +498,13 @@ export default function TaskItem({
   function dateBadgeText() {
     if (isRange)
       return `📅 ${task.startDate} ~ ${task.dueDate}${exceptionText(task)}`;
+    // 이번 주 중에 (F03 R10): 오늘이 그 주면 "이번 주", 아니면 그 주의 날짜만
+    if (task.dateKind === "week" && task.startDate) {
+      const thisWeek = task.startDate <= today && today <= task.dueDate;
+      return thisWeek
+        ? `📅 이번 주 (${weekRangeText(task)})`
+        : `📅 ${weekRangeText(task)} 주`;
+    }
     const time = task.dueTime ? ` ${task.dueTime}` : ""; // 시간이 있으면 뒤에 (R15)
     if (task.dateKind === "day") return `📅 ${task.dueDate} 당일${time}`;
     return `📅 ~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
@@ -514,6 +536,11 @@ export default function TaskItem({
               {dateBadgeText()}
               {late && ` · ${daysLate(lastDay)}일 지남`}
               {ongoing && " · 진행중"}
+              {/* 이번 주의 마지막 날(일요일) (F03 R10) */}
+              {!task.done &&
+                task.dateKind === "week" &&
+                task.dueDate === today &&
+                " · 오늘까지"}
             </span>
           )}
           {/* 반복 주기 (F09 R5) */}
