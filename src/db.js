@@ -171,6 +171,19 @@ export async function updateTask(id, changes) {
   await db.tasks.update(id, changes);
 }
 
+/** "이번 주" 할 일을 다른 주로 옮기기 — "다음 주로" 버튼과 그 실행취소용 (F03 R11).
+ *  startDate = 옮길 주의 월요일, dueDate = 그 주의 일요일.
+ *  expectedDue를 주면(실행취소) 지금도 그 주에 그대로 있을 때만 옮김 —
+ *  미룬 뒤에 사용자가 날짜를 직접 고쳤다면 그 수정을 덮어쓰지 않게 */
+export async function moveTaskWeek(id, startDate, dueDate, expectedDue) {
+  if (expectedDue) {
+    const current = await db.tasks.get(id);
+    if (!current || current.dateKind !== "week" || current.dueDate !== expectedDue)
+      return;
+  }
+  await db.tasks.update(id, { startDate, dueDate });
+}
+
 // ------------------------------------------------------------
 // 휴지통 (소프트 삭제)
 // "삭제"는 진짜로 지우지 않고 deletedAt(버린 시각)을 찍어 휴지통으로 보냄.

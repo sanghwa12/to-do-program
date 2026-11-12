@@ -57,6 +57,7 @@ function presetFromTask(t) {
 
 // onConvert(할 일): "📢 일정으로 바꾸기"를 눌렀을 때 (F11 R9) — 안 주면 버튼이 안 보임
 // dayContext + onSkipDay(할 일, 날짜): 달력에서 고른 날짜 — 기간 할 일에 "이 날 빼기" (F03 R9)
+// onPostpone(할 일): "이번 주" 할 일의 "다음 주로" 버튼 (F03 R11) — 안 주면 버튼이 안 보임
 export default function TaskItem({
   task,
   onToggle,
@@ -64,6 +65,7 @@ export default function TaskItem({
   onConvert,
   dayContext,
   onSkipDay,
+  onPostpone,
 }) {
   const [editing, setEditing] = useState(false); // 편집 모드 여부
   const [confirmDelete, setConfirmDelete] = useState(false); // 삭제 확인 중?
@@ -574,6 +576,15 @@ export default function TaskItem({
               title="이 날짜만 빼기 — 기간의 다른 날은 그대로"
             >
               이 날 빼기
+            </button>
+          )}
+          {/* 다음 주로 미루기 (F03 R11) — 끝내지 않은 "이번 주" 할 일에만 */}
+          {onPostpone && !task.done && task.dateKind === "week" && task.startDate && (
+            <button
+              onClick={() => onPostpone(task)}
+              title="다음 주에 할 일로 미루기 — 다음 주 월요일부터 다시 보여요"
+            >
+              다음 주로
             </button>
           )}
           <button onClick={startEditing}>수정</button>

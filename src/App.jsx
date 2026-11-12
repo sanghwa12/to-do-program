@@ -23,6 +23,7 @@ import {
   restoreTaskFromNote,
   restoreNoteFromTask,
   setExceptions,
+  moveTaskWeek,
 } from "./db.js";
 import QuickInput from "./components/QuickInput.jsx";
 import ImportBox from "./components/ImportBox.jsx";
@@ -35,7 +36,7 @@ import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import EventItem from "./components/EventItem.jsx";
 import { todayStr, addDays } from "./date.js";
-import { WEEKDAY_LABEL } from "./labels.js";
+import { WEEKDAY_LABEL, weekRangeText } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
 import { sortForAllTab, byDueDateTime } from "./sort.js";
@@ -179,6 +180,25 @@ export default function App() {
     });
   }
 
+  // "이번 주" 할 일을 다음 주로 미루기 (F03 R11) — 월요일·일요일을 7일씩 뒤로.
+  // 실행취소를 위해 미루기 전의 주를 기억해 둠
+  async function handlePostponeWeek(task) {
+    const next = {
+      startDate: addDays(task.startDate, 7),
+      dueDate: addDays(task.dueDate, 7),
+    };
+    await moveTaskWeek(task.id, next.startDate, next.dueDate);
+    setUndo({
+      type: "postponeWeek",
+      id: task.id,
+      prevStart: task.startDate,
+      prevDue: task.dueDate,
+      nextDue: next.dueDate,
+      week: weekRangeText(next), // "11/16~11/22"
+      label: `"${task.title}"`,
+    });
+  }
+
   // 실행취소: 방금 한 동작을 되돌림
   async function handleUndo() {
     if (undo) {
@@ -189,6 +209,8 @@ export default function App() {
       else if (undo.type === "toTask") await restoreNoteFromTask(undo.note);
       else if (undo.type === "skipDay")
         await setExceptions(undo.kind, undo.id, undo.prevSkip, undo.prevExtra);
+      else if (undo.type === "postponeWeek")
+        await moveTaskWeek(undo.id, undo.prevStart, undo.prevDue, undo.nextDue);
       else if (undo.type === "repeat")
         await undoCompleteRepeating(
           undo.recordId,
@@ -335,6 +357,7 @@ export default function App() {
               onConvertToNote={handleConvertToNote}
               onConvertToTask={handleConvertToTask}
               onSkipDay={handleSkipDay}
+              onPostponeWeek={handlePostponeWeek}
             />
           )}
 
@@ -356,7 +379,9 @@ export default function App() {
                     ? "할 일로 바꿈"
                     : undo.type === "skipDay"
                       ? `${undo.day} 제외됨`
-                      : undo.type === "repeat"
+                      : undo.type === "postponeWeek"
+                        ? `다음 주(${undo.week})로 미룸`
+                        : undo.type === "repeat"
                         ? `완료 · 다음 ${undo.nextDue}`
                         : "완료됨"}
           </span>
@@ -388,6 +413,7 @@ function TaskView({
   onConvertToNote, // 할 일 → 일정 (F11 R9)
   onConvertToTask, // 일정 → 할 일
   onSkipDay, // 기간에서 그 날만 빼기 (F03 R9)
+  onPostponeWeek, // "이번 주" 할 일을 다음 주로 (F03 R11)
 }) {
   // 하루 기록에서 ◀▶로 보는 날짜 (F04 R9) — 오늘 탭의 할 일 목록도 이 날짜를 따라감
   // ⚠️ 훅은 항상 같은 순서로 호출돼야 하므로 반드시 탭 분기(return)보다 위에!
@@ -508,6 +534,7 @@ function TaskView({
               onToggle={onToggle}
               onDelete={onDelete}
               onConvert={onConvertToNote}
+              onPostpone={onPostponeWeek}
             />
           </>
         )}
@@ -685,7 +712,7 @@ function EmptyTrashButton({ count, onEmpty }) {
 }
 
 /** 할 일 목록 하나를 그리는 공통 부품 */
-function TaskList({ tasks, onToggle, onDelete, onConvert, emptyHint }) {
+function TaskList({ tasks, onToggle, onDelete, onConvert, onPostpone, emptyHint }) {
   if (tasks.length === 0) {
     return emptyHint ? <p className="hint">{emptyHint}</p> : null;
   }
@@ -698,6 +725,7 @@ function TaskList({ tasks, onToggle, onDelete, onConvert, emptyHint }) {
           onToggle={onToggle}
           onDelete={onDelete}
           onConvert={onConvert}
+          onPostpone={onPostpone}
         />
       ))}
     </ul>
