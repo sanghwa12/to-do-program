@@ -36,12 +36,11 @@ export default defineConfig({
         background_color: "#f5f5f5",
         theme_color: "#4a7dff",
         icons: [
-          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "icon-cat-calendar-192.png", sizes: "192x192", type: "image/png" },
           {
-            src: "icon-512.png",
+            src: "icon-cat-calendar-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
           },
         ],
       },
