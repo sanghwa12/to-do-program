@@ -6,6 +6,7 @@
 //   당일(day)  : "연구실 안전점검 7/7" (맨 날짜, 문장 끝만) → 그날
 //   기간(range): "학부실험 조교 11/11~11/23"             → 그 기간 동안
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
+// 메일·공지에서 복사한 여러 형식(2026년 9월 15일(화) 13:00부터 …)은 아래 "붙여 넣은 글" 단계가 맡음 (R18).
 // ============================================================
 import { todayStr, nextNthWeekday, nextBusinessDay, weekOf } from "./date.js";
 import { cleanExceptions } from "./span.js";
@@ -76,32 +77,168 @@ function resolveWord(word) {
 
 // 날짜 조각 패턴: (연도-)월-일, 구분자는 / - . 허용
 const D = "(?:(\\d{4})[/\\-.])?(\\d{1,2})[/\\-.](\\d{1,2})";
-// 시간 조각 (F02 R15): 14:00 / 14시 / 14시 30분 — 날짜 바로 뒤에만 인식
-const T = "(?:(\\d{1,2}):(\\d{2})|(\\d{1,2})시(?:\\s*(\\d{1,2})분)?)";
+// 시간 조각 (F02 R15): 14:00 / 14시 / 14시 30분 — 날짜 바로 뒤에만 인식.
+// 2026-11-16 넓힘 (R18): 오전·오후(AM·PM) / "2시 반" / 초(10:00:00)까지.
+// "2시간"(걸리는 시간)은 시간으로 보지 않음
+const T1 =
+  "(?:(?<![A-Za-z])(?:오전|오후|[AaPp]\\.?[Mm]\\.?)\\s*)?" +
+  "(?:\\d{1,2}:\\d{2}(?::\\d{2})?|\\d{1,2}시(?!간)(?:\\s*\\d{1,2}분|\\s*반)?)" +
+  "(?:\\s*[AaPp][Mm](?![A-Za-z]))?";
+// 시작 시간(괄호로 잡음) + 끝 시간 "~ 11:00" — 끝 시간은 읽기만 하고 버림 (앱은 시작 시간만 저장)
+const T = `(${T1})(?:\\s*[~\\-–]\\s*${T1})?`;
 // 기간: 날짜~날짜 (어디에 있어도 인식)
 const RANGE_RE = new RegExp(`\\(?\\s*${D}\\s*~\\s*${D}\\s*\\)?`);
 // 마감(숫자): ~날짜 (+시간) (어디에 있어도 인식). 닫는 괄호는 날짜 뒤·시간 뒤 어디든
-const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\)?(?:\\s+${T})?\\s*\\)?`);
+// (뒤에 바로 붙은 "까지"도 같이 뺌: "(~11/30까지)" — R18)
+const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\)?(?:\\s+${T})?(?:\\s*까지)?\\s*\\)?`);
 // 마감(말): ~오늘, ~내일, ~모레, ~월요일 ... ~일요일
-const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)\s*\)?/;
+const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)(?:\s*까지)?\s*\)?/;
 // 이번 주 중에 (F02 R17): ~이번주 / ~이번 주 / (~이번주) — 뒤에 다른 글자가 바로 붙으면 인식 안 함
 const WEEK_RE = /\(?\s*~\s*이번\s?주\s*\)?(?=\s|$)/;
 // 당일: 맨 날짜 (+시간) — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
 // 닫는 괄호는 날짜 뒤·시간 뒤 어디든: "(9/7) 14:00", "(9/7 14:00)" 모두 인식
 const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?(?:\\s+${T})?\\s*\\)?\\s*$`);
 
-/** 시간 조각(정규식 그룹 4개) → "HH:MM". 없거나 말이 안 되면(25시 등) null */
-function resolveTime(h1, m1, h2, m2) {
-  let hour, minute;
-  if (h1 !== undefined) {
-    hour = Number(h1);
-    minute = Number(m1);
-  } else if (h2 !== undefined) {
-    hour = Number(h2);
-    minute = m2 !== undefined ? Number(m2) : 0;
-  } else return null;
+/** 시간 글자("14:00", "오후 2시 30분", "8시 반", "2:00 PM") → "HH:MM".
+ *  없거나 말이 안 되면(25시 등) null */
+function resolveTime(str) {
+  if (!str) return null;
+  const m = str.match(/(\d{1,2}):(\d{2})|(\d{1,2})시(?:\s*(\d{1,2})분|\s*(반))?/);
+  if (!m) return null;
+  let hour = Number(m[1] ?? m[3]);
+  let minute = 0;
+  if (m[1] !== undefined) minute = Number(m[2]);
+  else if (m[5]) minute = 30; // "8시 반"
+  else if (m[4] !== undefined) minute = Number(m[4]);
+  // 오후 2시 → 14시, 오전 12시 → 0시 (오후 12시는 그대로 12시)
+  if (/오후|[Pp]\.?[Mm]/.test(str) && hour < 12) hour += 12;
+  if (/오전|[Aa]\.?[Mm]/.test(str) && hour === 12) hour = 0;
   if (hour > 23 || minute > 59) return null;
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+// ------------------------------------------------------------
+// 붙여 넣은 글의 여러 날짜 형식 (F02 R18, 2026-11-16)
+// 메일·공지에서 복사한 날짜는 모양이 제각각이라, 위의 기본 표기로 안 잡히는 것을 여기서 잡음:
+//   2026-11-30 10:00 ~ 11:00 / 2026. 11. 30.(월) / 2026년 9월 15일(화) 13:00부터
+//   11월 30일까지 / 11/30(월) 14:00 / (1106일마감) / 2026. 11. 16.(월) ~ 11. 20.(금)
+// 확실한 날짜(연도가 있거나 "월·일" 글자가 있는 것)는 문장 어디에 있어도 인식.
+// 짧은 표기(11/30, 11.30)는 뒤에 요일·시간·"까지/마감"이 붙었을 때만 — "3/4 분량" 오인 방지
+// ------------------------------------------------------------
+const FLEX_FORMS = [
+  // 연도까지 쓴 숫자 날짜: 2026-11-30 · 2026/11/30 · 2026.11.30. · 2026. 11. 30.
+  { src: "(?<![\\d.])(?<y>20\\d{2})\\s*[-/.]\\s*(?<mo>\\d{1,2})\\s*[-/.]\\s*(?<d>\\d{1,2})(?!\\d)\\.?" },
+  // 한글 날짜: 2026년 9월 15일 · 26년 9월 15일 · 11월 30일
+  { src: "(?<!\\d)(?:(?<y>(?:20)?\\d{2})년\\s*)?(?<mo>\\d{1,2})월\\s*(?<d>\\d{1,2})일" },
+  // 붙여 쓴 네 자리: 1106일마감 · 1106일까지 (뒤에 마감/까지가 있을 때만)
+  { src: "(?<!\\d)(?<mo>\\d{2})(?<d>\\d{2})일(?=\\s*(?:마감|까지))" },
+  // 짧은 표기: 11/30 · 11.30 · 11. 30. — weak = 뒤에 요일·시간·까지/마감이 있어야 날짜로 봄
+  { src: "(?<![\\d/.\\-:])(?<mo>\\d{1,2})\\s*[/.]\\s*(?<d>\\d{1,2})(?![\\d/:])일?\\.?", weak: true },
+];
+// 날짜 뒤에 붙는 것: 요일 "(화)"·"(화요일)"·"화요일" + 시간(끝 시간 포함)
+const FLEX_TAIL =
+  "(?<wd>\\s*\\(\\s*[일월화수목금토](?:요일)?\\s*\\)|\\s*[일월화수목금토]요일)?" +
+  `(?:\\s*(?<t>${T1})(?:\\s*[~\\-–]\\s*${T1})?)?`;
+for (const f of FLEX_FORMS) {
+  f.any = new RegExp(f.src + FLEX_TAIL, "g"); // 문장 어디서든 찾기
+  f.head = new RegExp("^" + f.src + FLEX_TAIL); // 바로 그 자리에서 시작하는지 (기간의 끝 날짜용)
+}
+// 기간의 끝이 "17일"처럼 일만 적힌 경우: 9월 15일 ~ 17일
+const DAY_ONLY_HEAD = new RegExp("^(?<d>\\d{1,2})일" + FLEX_TAIL);
+// 기간을 잇는 글자: ~ · - · – · 부터 (뒤에 날짜가 이어질 때만 기간으로 봄)
+const RANGE_JOIN = /^\s*(?:~|–|-|부터)\s*/;
+
+/** 문장 안의 날짜 후보들을 앞에서부터 차례로 */
+function flexCandidates(text) {
+  const found = [];
+  FLEX_FORMS.forEach((f, order) => {
+    for (const m of text.matchAll(f.any)) found.push({ f, m, order });
+  });
+  return found.sort((a, b) => a.m.index - b.m.index || a.order - b.order);
+}
+
+/** 두 자리 연도("26년")는 2000년대로: "26" → "2026" */
+function fullYear(y) {
+  return y && y.length === 2 ? "20" + y : y;
+}
+
+/** 인식한 구간 [from, to)를 제목에서 빼기 — 구간을 감싼 괄호 "( … )"도 같이 */
+function cutTitle(text, from, to) {
+  const before = text.slice(0, from);
+  const after = text.slice(to);
+  const open = before.match(/\(\s*$/);
+  const close = after.match(/^\s*\)/);
+  const head = open && close ? before.slice(0, open.index) : before;
+  const tail = open && close ? after.slice(close[0].length) : after;
+  return (head + " " + tail).replace(/\s+/g, " ").trim();
+}
+
+/** 붙여 넣은 형식의 "기간": 날짜 ~ 날짜 (끝 날짜에 연도·월이 없으면 시작 날짜 것을 따름) */
+function parseFlexRange(text, allowPast) {
+  for (const { m } of flexCandidates(text)) {
+    const g = m.groups;
+    let start = resolveYMD(fullYear(g.y), g.mo, g.d, true);
+    if (!start) continue;
+    const rest = text.slice(m.index + m[0].length);
+    const join = rest.match(RANGE_JOIN);
+    if (!join) continue;
+    const afterJoin = rest.slice(join[0].length);
+    let m2 = null;
+    for (const f of FLEX_FORMS) if ((m2 = afterJoin.match(f.head))) break;
+    m2 = m2 || afterJoin.match(DAY_ONLY_HEAD);
+    if (!m2) continue;
+    const g2 = m2.groups;
+    // 끝 날짜: 연도가 없으면 시작과 같은 해, 월도 없으면("17일") 같은 달
+    let end = resolveYMD(
+      fullYear(g2.y) || start.slice(0, 4),
+      g2.mo || start.slice(5, 7),
+      g2.d,
+      true
+    );
+    if (!end) continue;
+    if (end < start && !g2.y) end = plusOneYear(end); // 해를 넘는 기간 (12/28 ~ 1/3)
+    if (end <= start) continue;
+    // 연도 없이 쓴 기간이 통째로 지났으면 내년으로 (기본 기간 표기와 같은 규칙)
+    if (!allowPast && !g.y && !g2.y && end < todayStr()) {
+      start = plusOneYear(start);
+      end = plusOneYear(end);
+    }
+    const tailEnd = afterJoin.slice(m2[0].length).match(/^\s*까지/); // "…부터 …까지"의 까지
+    const to =
+      m.index + m[0].length + join[0].length + m2[0].length + (tailEnd ? tailEnd[0].length : 0);
+    const title = cutTitle(text, m.index, to);
+    if (title) return { title, startDate: start, dueDate: end, dateKind: "range" };
+  }
+  return null;
+}
+
+/** 붙여 넣은 형식의 날짜 하나 (+시간): 앞에 "~"가 있거나 뒤에 "까지/마감"이 붙으면 마감, 아니면 당일 */
+function parseFlexSingle(text, allowPast) {
+  for (const { f, m } of flexCandidates(text)) {
+    const g = m.groups;
+    const date = resolveYMD(fullYear(g.y), g.mo, g.d, allowPast);
+    if (!date) continue;
+    const before = text.slice(0, m.index);
+    const after = text.slice(m.index + m[0].length);
+    const tilde = before.match(/~\s*$/); // "~2026년 11월 30일"
+    const dueWord = after.match(/^\s*(?:까지|마감)/); // "11월 30일까지", "1106일마감"
+    // 날짜에 그냥 붙은 말은 같이 뺌: "13:00부터", "11월 30일에"
+    const filler = dueWord ? null : after.match(/^\s*부터|^에(?=[\s)]|$)/);
+    // 짧은 표기는 날짜라는 증거(요일·시간·마감 표시)가 있을 때만
+    if (f.weak && !g.wd && !g.t && !dueWord && !tilde) continue;
+    const from = tilde ? tilde.index : m.index;
+    const to = m.index + m[0].length + ((dueWord || filler)?.[0].length ?? 0);
+    const title = cutTitle(text, from, to);
+    if (!title) continue;
+    const time = resolveTime(g.t);
+    return {
+      title,
+      dueDate: date,
+      dateKind: tilde || dueWord ? "due" : "day",
+      ...(time && { dueTime: time }),
+    };
+  }
+  return null;
 }
 
 /** 인식된 표기를 제목에서 빼고 공백 정리 */
@@ -268,6 +405,10 @@ export function parseQuickInput(
       if (title) return { title, startDate: start, dueDate: end, dateKind: "range" };
     }
   }
+  // 1-2) 붙여 넣은 형식의 기간 (R18): 2026. 11. 16.(월) ~ 11. 20.(금), 9월 15일 ~ 17일
+  // (마감 ~보다 먼저 — 뒤쪽 "~ 11. 20." 만 마감으로 잡히지 않게)
+  const flexRange = parseFlexRange(text, allowPast);
+  if (flexRange) return flexRange;
 
   // 2) 마감: ~7/2 또는 ~내일 / ~금요일
   m = text.match(DUE_NUM_RE);
@@ -275,7 +416,7 @@ export function parseQuickInput(
     const due = resolveYMD(m[1], m[2], m[3], allowPast);
     if (due) {
       const title = stripTitle(text, m[0]);
-      const time = resolveTime(m[4], m[5], m[6], m[7]); // 날짜 뒤 시간 (R15)
+      const time = resolveTime(m[4]); // 날짜 뒤 시간 (R15)
       if (title)
         return { title, dueDate: due, dateKind: "due", ...(time && { dueTime: time }) };
     }
@@ -293,11 +434,15 @@ export function parseQuickInput(
     const day = resolveYMD(m[1], m[2], m[3], allowPast);
     if (day) {
       const title = stripTitle(text, m[0]);
-      const time = resolveTime(m[4], m[5], m[6], m[7]); // 날짜 뒤 시간 (R15)
+      const time = resolveTime(m[4]); // 날짜 뒤 시간 (R15)
       if (title)
         return { title, dueDate: day, dateKind: "day", ...(time && { dueTime: time }) };
     }
   }
+
+  // 4) 붙여 넣은 형식의 날짜 하나 (R18): 문장 앞·가운데의 날짜, 한글 날짜, 요일 괄호, 오전·오후 …
+  const flex = parseFlexSingle(text, allowPast);
+  if (flex) return flex;
 
   return plain; // 날짜 표기 없음
 }
