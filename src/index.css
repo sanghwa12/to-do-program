@@ -109,6 +109,10 @@ h1 {
   color: #222;
   padding: 4px 10px;
 }
+/* 검색 버튼 (F13) — ⋯ 왼쪽. 돋보기 그림은 ⋯보다 커 보여서 조금 작게 */
+.menu-btn.search-btn {
+  font-size: 1rem;
+}
 .menu-backdrop {
   position: fixed;
   inset: 0;
@@ -1419,4 +1423,38 @@ button.delete {
   padding: 5px 8px;
   border: 1px solid #ccc;
   border-radius: 6px;
+}
+
+/* ------------------------------------------------------------
+   검색 화면 (F13)
+   할 일·일정·노트 줄은 목록의 부품을 그대로 쓰므로 여기엔 하루 기록 줄만.
+   하루 기록 줄 = 같은 흰 카드 + 왼쪽 줄 (계획 주황 · 한 일 초록, D00)
+   ------------------------------------------------------------ */
+.task-item.search-day {
+  --line: var(--line-plan);
+  padding: 0; /* 줄 전체가 버튼이라 여백은 버튼이 가짐 */
+}
+.task-item.search-day.extra {
+  --line: var(--line-done);
+}
+.search-day button {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.search-day button:hover {
+  background: #f6f8ff;
+}
+.search-day-when {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: #999; /* 보조 글씨(날짜)는 회색 */
 }

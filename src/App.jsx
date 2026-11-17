@@ -35,6 +35,7 @@ import HelpView from "./components/HelpView.jsx";
 import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import EventItem from "./components/EventItem.jsx";
+import SearchView from "./components/SearchView.jsx";
 import { todayStr, addDays } from "./date.js";
 import { WEEKDAY_LABEL, weekRangeText } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
@@ -64,6 +65,9 @@ export default function App() {
   const [showTrash, setShowTrash] = useState(false); // 휴지통 화면 보는 중?
   const [showHelp, setShowHelp] = useState(false); // 도움말 화면 보는 중? (F10)
   const [showGcal, setShowGcal] = useState(false); // 구글 달력 설정 화면 보는 중? (F12)
+  const [showSearch, setShowSearch] = useState(false); // 검색 화면 보는 중? (F13)
+  // 오늘 탭에서 ◀▶로 보는 날짜 (F04 R9) — 검색에서 "그 날짜로 열기"를 하려고 여기서 들고 있음 (F13 R5)
+  const [dayDate, setDayDate] = useState(todayStr());
   const [menuOpen, setMenuOpen] = useState(false); // 상단 ⋯ 메뉴 열림?
   const [showImport, setShowImport] = useState(false); // 가져오기 박스 열림?
 
@@ -227,8 +231,20 @@ export default function App() {
       <header className="top">
         <h1>My planner</h1>
         {/* 자주 안 쓰는 액션은 ⋯ 메뉴 하나로 모음 (D00: 액션 정리) */}
-        {!showTrash && !showHelp && !showGcal && (
+        {!showTrash && !showHelp && !showGcal && !showSearch && (
           <div className="menu-wrap">
+            {/* 검색 (F13) — 누르면 검색 화면으로 */}
+            <button
+              className="menu-btn search-btn"
+              onClick={() => {
+                setShowSearch(true);
+                setMenuOpen(false);
+              }}
+              aria-label="검색"
+              title="검색"
+            >
+              🔍
+            </button>
             <button
               className="menu-btn"
               onClick={() => setMenuOpen((o) => !o)}
@@ -304,6 +320,23 @@ export default function App() {
         <GcalView onBack={() => setShowGcal(false)} />
       ) : showHelp ? (
         <HelpView onBack={() => setShowHelp(false)} />
+      ) : showSearch ? (
+        <SearchView
+          tasks={tasks ?? []}
+          memos={memos ?? []}
+          onBack={() => setShowSearch(false)}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          onConvertToNote={handleConvertToNote}
+          onDeleteMemo={handleDeleteMemo}
+          onConvertToTask={handleConvertToTask}
+          // 하루 기록 줄을 누르면: 오늘 탭을 그 날짜로 열고 검색을 닫음 (R5)
+          onOpenDay={(date) => {
+            setDayDate(date);
+            setTab("오늘");
+            setShowSearch(false);
+          }}
+        />
       ) : showTrash ? (
         <TrashView
           trash={trash}
@@ -351,6 +384,8 @@ export default function App() {
               tasks={tasks}
               memos={memos ?? []}
               boards={boards ?? []}
+              dayDate={dayDate}
+              onDayChange={setDayDate}
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
@@ -407,6 +442,8 @@ function TaskView({
   tasks,
   memos,
   boards,
+  dayDate, // 오늘 탭에서 ◀▶로 보는 날짜 (F04 R9) — 할 일 목록도 이 날짜를 따라감
+  onDayChange,
   onToggle,
   onDelete,
   onDeleteMemo,
@@ -415,10 +452,6 @@ function TaskView({
   onSkipDay, // 기간에서 그 날만 빼기 (F03 R9)
   onPostponeWeek, // "이번 주" 할 일을 다음 주로 (F03 R11)
 }) {
-  // 하루 기록에서 ◀▶로 보는 날짜 (F04 R9) — 오늘 탭의 할 일 목록도 이 날짜를 따라감
-  // ⚠️ 훅은 항상 같은 순서로 호출돼야 하므로 반드시 탭 분기(return)보다 위에!
-  const [dayDate, setDayDate] = useState(todayStr());
-
   // [메모] 날짜 없는 할 일들의 노란 판 — 독립 탭 (2026-08-05)
   // 스티커 여러 장으로 나눌 수 있음 (F03 R2d) — 빈 상태 안내도 판 안에서
   if (tab === "메모") {
@@ -504,7 +537,7 @@ function TaskView({
           onConvert={onConvertToTask}
         />
         {/* 하루 기록 (F04) — 계획/실제, ◀▶로 지난 날도 열람 */}
-        <DayView tasks={tasks} date={dayDate} onDateChange={setDayDate} />
+        <DayView tasks={tasks} date={dayDate} onDateChange={onDayChange} />
         {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
         <h2 className="group-title today-tasks-title">
           📋 {viewingToday ? "오늘 할 일" : `${dayLabel} 할 일`}{" "}
