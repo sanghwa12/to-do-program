@@ -73,6 +73,11 @@ export default function HelpView({ onBack }) {
             (체크 표시가 안 남는 게 정상)
           </li>
           <li>
+            <b>남은 날</b>: 날짜 옆에 <code>D-3</code>(3일 남음) ·{" "}
+            <code>D-day</code>(오늘) · 기간은 <code>시작 D-3</code>. 지난 것은
+            "○일 지남"
+          </li>
+          <li>
             항목에 <b>마우스를 올리면</b> 수정/삭제 버튼 — 삭제는 휴지통으로
             (⋯ 메뉴에서 복원)
           </li>

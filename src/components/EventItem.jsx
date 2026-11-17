@@ -12,7 +12,13 @@ import { useState } from "react";
 import { MemoEditor } from "./MemoView.jsx";
 import { todayStr } from "../date.js";
 import { noteDateText, noteLastDate } from "../notes.js";
-import { spanOfNote, isActiveOn, exceptionText, canSkip } from "../span.js";
+import {
+  spanOfNote,
+  isActiveOn,
+  exceptionText,
+  canSkip,
+  ddayText,
+} from "../span.js";
 
 /** "2026-10-06" → "10/6" */
 const md = (ds) => `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}`;
@@ -109,6 +115,7 @@ export default function EventItem({
   const today = todayStr();
   const isPast = noteLastDate(note) < today;
   const ongoing = note.endDate && isActiveOn(span, today); // 기간이 오늘을 지나는 중
+  const dday = ddayText(span, today); // 남은 날 "D-3" (F03 R12 — 할 일과 같은 규칙)
 
   return (
     <li className={"task-item event-item" + (isPast ? " past" : "")}>
@@ -125,6 +132,7 @@ export default function EventItem({
           {exceptions}
           {isPast && " · 지남"}
           {ongoing && " · 진행중"}
+          {dday && ` · ${dday}`}
         </span>
       </div>
       {actions("task-buttons")}

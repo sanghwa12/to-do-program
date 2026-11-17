@@ -15,6 +15,12 @@ export function daysLate(dueDate) {
   return Math.round((today - due) / (1000 * 60 * 60 * 24)); // 밀리초 차이를 일수로
 }
 
+/** from에서 to까지 며칠인지 (둘 다 "YYYY-MM-DD"). 예: 11/17 → 11/20 은 3, 같은 날은 0 */
+export function daysBetween(from, to) {
+  const ms = new Date(to + "T00:00:00") - new Date(from + "T00:00:00");
+  return Math.round(ms / (1000 * 60 * 60 * 24)); // 밀리초 차이를 일수로
+}
+
 /** "YYYY-MM-DD"에 n일 더하기 (빼려면 음수). 월·연 넘김은 자동 처리 */
 export function addDays(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);

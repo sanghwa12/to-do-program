@@ -32,6 +32,7 @@ import {
   cleanExceptions,
   exceptionText,
   canSkip,
+  ddayText,
 } from "../span.js";
 
 /** "YYYY-MM-DD"의 요일 (0=일~6=토) */
@@ -495,6 +496,10 @@ export default function TaskItem({
   const late = !task.done && lastDay && lastDay < today;
   // 기간이 오늘을 지나는 중인지 (예: 11/11~11/23 사이의 오늘). 제외한 날에는 아님
   const ongoing = !task.done && isRange && isActiveOn(span, today);
+  // 남은 날 (F03 R12): "D-3" · 오늘이면 "D-day" · 기간은 시작 전에 "시작 D-3".
+  // 끝낸 것과 "이번 주" 할 일(요일을 안 정한 것)에는 없음
+  const dday =
+    !task.done && task.dateKind !== "week" ? ddayText(span, today) : "";
 
   // 날짜 뱃지 문구: 종류에 따라 다르게 (F03 R2b). 기간의 예외 날짜도 뒤에 (R9)
   function dateBadgeText() {
@@ -532,12 +537,16 @@ export default function TaskItem({
           {task.dueDate && (
             <span
               className={
-                "badge" + (late ? " late" : "") + (ongoing ? " ongoing" : "")
+                "badge" +
+                (late ? " late" : "") +
+                // 오늘 걸린 것은 굵게: 진행 중인 기간, 오늘이 그날(D-day)
+                (ongoing || dday === "D-day" ? " ongoing" : "")
               }
             >
               {dateBadgeText()}
               {late && ` · ${daysLate(lastDay)}일 지남`}
               {ongoing && " · 진행중"}
+              {dday && ` · ${dday}`}
               {/* 이번 주의 마지막 날(일요일) (F03 R10) */}
               {!task.done &&
                 task.dateKind === "week" &&

@@ -8,7 +8,7 @@
 // 예외는 "기간"에만 붙는다 (하루짜리·마감·반복에는 없음).
 // 저장 이름: 할 일·일정 모두 skipDates(제외한 날들), extraDates(추가한 날들)
 // ============================================================
-import { addDays } from "./date.js";
+import { addDays, daysBetween } from "./date.js";
 
 /** 할 일 → span. 기간이 아니면 그 날짜 하루짜리(예외 없음). 날짜가 없으면 null */
 export function spanOfTask(t) {
@@ -83,6 +83,21 @@ export function nextActiveAfter(span, d) {
   }
   for (const e of span.extra) if (e > d) found.push(e);
   return found.sort()[0] ?? null;
+}
+
+/** 남은 날 표시 (D-day) — 할 일·일정 뱃지 공용 (F03 R12):
+ *   하루짜리(마감·당일·하루 일정): 오늘이면 "D-day", 앞날이면 "D-3"
+ *   기간: 시작 전이면 "시작 D-3". 오늘이 걸리는 날이면 빈 글자 ("진행중" 표시가 따로 있음)
+ *   지난 것은 빈 글자 ("N일 지남"·"지남" 표시가 따로 있음)
+ *  기간에서 날을 빼거나 더했으면 "다음으로 걸리는 날"까지 셈 */
+export function ddayText(span, today) {
+  if (!span) return "";
+  const isRange = span.start !== span.end || span.extra.length > 0;
+  if (isActiveOn(span, today)) return isRange ? "" : "D-day";
+  const next = nextActiveAfter(span, today);
+  if (!next) return ""; // 다 지나감
+  const n = daysBetween(today, next);
+  return isRange && next === firstActiveDate(span) ? `시작 D-${n}` : `D-${n}`;
 }
 
 /** 걸리는 날들을 이어진 것끼리 묶은 조각 [{ from, to }] (날짜 순).
