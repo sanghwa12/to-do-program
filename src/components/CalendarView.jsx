@@ -7,6 +7,7 @@
 // - 아래 목록에서 일정도 할 일처럼 수정/삭제 (F11 R10)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import TaskItem from "./TaskItem.jsx";
 import EventItem from "./EventItem.jsx";
 import { todayStr } from "../date.js";
@@ -80,13 +81,13 @@ export default function CalendarView({
       {/* 달 이동 헤더 */}
       <div className="cal-nav">
         <button onClick={() => handleMove(-1)} aria-label="이전 달">
-          ◀
+          <Icon name="left" />
         </button>
         <span className="cal-month-label">
           {year}년 {month}월
         </span>
         <button onClick={() => handleMove(1)} aria-label="다음 달">
-          ▶
+          <Icon name="right" />
         </button>
         <button className="cal-today-btn" onClick={handleToday}>
           오늘
@@ -100,64 +101,70 @@ export default function CalendarView({
         </p>
       )}
 
-      {/* 요일 머리줄 — 일요일은 빨강 (R10) */}
-      <div className="cal-grid cal-weekdays">
-        {WEEKDAYS.map((w, i) => (
-          <div key={w} className={"cal-weekday" + (i === 0 ? " red" : "")}>
-            {w}
-          </div>
-        ))}
-      </div>
+      <div className="calendar-sheet">
+        {/* 요일 머리줄 — 일요일은 빨강 (R10) */}
+        <div className="cal-grid cal-weekdays">
+          {WEEKDAYS.map((w, i) => (
+            <div key={w} className={"cal-weekday" + (i === 0 ? " red" : "")}>
+              {w}
+            </div>
+          ))}
+        </div>
 
-      {/* 날짜 칸들 */}
-      <div className="cal-grid">
-        {cells.map((day, i) => {
-          if (day === null) {
-            return <div key={i} className="cal-cell empty" />;
-          }
-          const ds = dateStrOf(year, month, day);
-          const holiday = holidayName(ds); // 공휴일 이름 (없으면 undefined)
-          const red = holiday || i % 7 === 0; // 빨간 날 = 공휴일 또는 일요일 (R10)
-          const dayNotes = notesOn(ds); // 공지 먼저, 그다음 할 일
-          const list = tasksOnDate(tasks, ds).sort(byDueDateTime);
-          const shownNotes = dayNotes.slice(0, MAX_CHIPS);
-          const shown = list.slice(0, Math.max(0, MAX_CHIPS - shownNotes.length));
-          const hidden = dayNotes.length + list.length - shownNotes.length - shown.length;
-          return (
-            <button
-              key={i}
-              className={
-                "cal-cell" +
-                (ds === today ? " today" : "") +
-                (ds === selected ? " selected" : "")
-              }
-              onClick={() => setSelected(ds === selected ? null : ds)}
-            >
-              <span className={"cal-day" + (red ? " red" : "")}>
-                {day}
-                {holiday && <span className="cal-holiday">{holiday}</span>}
-              </span>
-              {shownNotes.map((n) => (
-                <span key={n.id} className="cal-chip notice">
-                  📢 {n.time ? `${n.time} ` : ""}
-                  {firstLineOf(n.text)}
+        {/* 날짜 칸들 */}
+        <div className="cal-grid cal-days">
+          {cells.map((day, i) => {
+            if (day === null) {
+              return <div key={i} className="cal-cell empty" />;
+            }
+            const ds = dateStrOf(year, month, day);
+            const holiday = holidayName(ds); // 공휴일 이름 (없으면 undefined)
+            const red = holiday || i % 7 === 0; // 빨간 날 = 공휴일 또는 일요일 (R10)
+            const dayNotes = notesOn(ds); // 공지 먼저, 그다음 할 일
+            const list = tasksOnDate(tasks, ds).sort(byDueDateTime);
+            const shownNotes = dayNotes.slice(0, MAX_CHIPS);
+            const shown = list.slice(0, Math.max(0, MAX_CHIPS - shownNotes.length));
+            const hidden = dayNotes.length + list.length - shownNotes.length - shown.length;
+            return (
+              <button
+                key={i}
+                className={
+                  "cal-cell" +
+                  (ds === today ? " today" : "") +
+                  (ds === selected ? " selected" : "")
+                }
+                onClick={() => setSelected(ds === selected ? null : ds)}
+                aria-pressed={ds === selected}
+                aria-current={ds === today ? "date" : undefined}
+                aria-label={`${year}년 ${month}월 ${day}일${holiday ? ` ${holiday}` : ""}`}
+              >
+                <span className={"cal-day" + (red ? " red" : "")}>
+                  <span className="cal-day-number">{day}</span>
+                  {holiday && <span className="cal-holiday">{holiday}</span>}
                 </span>
-              ))}
-              {shown.map((t) => (
-                <span
-                  key={t.id}
-                  className={"cal-chip" + (t.done ? " done" : "")}
-                >
-                  {t.dueTime ? `${t.dueTime} ` : ""}
-                  {t.title}
-                </span>
-              ))}
-              {hidden > 0 && <span className="cal-more">+{hidden}</span>}
-            </button>
-          );
-        })}
-      </div>
+                {shownNotes.map((n) => (
+                  <span key={n.id} className="cal-chip notice" title={n.text}>
+                    {n.time ? `${n.time} ` : ""}
+                    {firstLineOf(n.text)}
+                  </span>
+                ))}
+                {shown.map((t) => (
+                  <span
+                    key={t.id}
+                    className={"cal-chip" + (t.done ? " done" : "")}
+                    title={t.title}
+                  >
+                    {t.dueTime ? `${t.dueTime} ` : ""}
+                    {t.title}
+                  </span>
+                ))}
+                {hidden > 0 && <span className="cal-more">+{hidden}</span>}
+              </button>
+            );
+          })}
+        </div>
 
+      </div>
       {/* 클릭한 날짜의 할 일 목록 (R6) */}
       {selected && (
         <div className="cal-selected">
@@ -249,8 +256,9 @@ function DayAdd({ date }) {
           type="button"
           className={"date-toggle kind-btn" + (kind === "task" ? " active" : "")}
           onClick={() => setKind("task")}
+          aria-pressed={kind === "task"}
         >
-          <span className="check-icon" aria-hidden="true" />
+          <Icon name="task" />
           할 일
         </button>
         <button
@@ -259,11 +267,12 @@ function DayAdd({ date }) {
             "date-toggle kind-btn kind-note" + (kind === "note" ? " active" : "")
           }
           onClick={() => setKind("note")}
+          aria-pressed={kind === "note"}
         >
-          📢 일정
+          <Icon name="calendar" /> 일정
         </button>
         <input
-          className={"notice-input" + (kind === "note" ? " note" : "")}
+          className="notice-input"
           type="text"
           placeholder={
             kind === "note" ? `${label}에 일정 + Enter` : `${label}에 할 일 + Enter`
@@ -277,12 +286,12 @@ function DayAdd({ date }) {
         <p className={"parse-hint" + (kind === "note" ? " event" : "")}>
           "{parsed.title}" —{" "}
           {kind === "note"
-            ? `📢 ${noteDateText(noteDates)} 일정으로 저장됩니다`
+            ? `${noteDateText(noteDates)} 일정으로 저장됩니다`
             : parsed.dateKind === "week"
-              ? `🗓 이번 주(${weekRangeText(parsed)}) 안에 할 일로 저장됩니다`
+              ? `이번 주(${weekRangeText(parsed)}) 안에 할 일로 저장됩니다`
               : typedDate
-              ? `텍스트의 날짜 표기대로 저장됩니다 (📅 ${parsed.dueDate})`
-              : `📅 ${date} 당일 할 일로 저장됩니다`}
+              ? `텍스트의 날짜 표기대로 저장됩니다 (${parsed.dueDate})`
+              : `${date} 당일 할 일로 저장됩니다`}
         </p>
       )}
     </form>

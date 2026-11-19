@@ -36,6 +36,7 @@ import GcalView from "./components/GcalView.jsx";
 import MemoView from "./components/MemoView.jsx";
 import EventItem from "./components/EventItem.jsx";
 import SearchView from "./components/SearchView.jsx";
+import Icon from "./components/Icon.jsx";
 import { todayStr, addDays } from "./date.js";
 import { WEEKDAY_LABEL, weekRangeText } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
@@ -57,6 +58,11 @@ import {
 // 오늘+하루 통합, 메모판 독립 (2026-08-05 사용자 결정)
 // 정보 탭 제거 (2026-09-04 사용자 결정): 노트는 메모 탭 하단 구역으로
 const TABS = ["오늘", "메모", "달력", "전체"];
+
+// 메모판에 남기는 "끝낸 메모"의 기준 시각 (F03 R2c, 2026-11-19):
+// 이 시각 뒤에 체크한 메모만 판에 체크 표시로 남는다.
+// (그 전에 끝낸 옛 메모들이 한꺼번에 판으로 돌아오지 않게 — 그것들은 전체 탭 "완료"에 그대로)
+const MEMO_DONE_SINCE = "2026-11-19T01:25:00.000Z";
 
 export default function App() {
   const [tab, setTab] = useState("오늘"); // 처음 열면 "오늘" 탭
@@ -103,7 +109,8 @@ export default function App() {
   }
 
   // 완료 체크: 미완료→완료로 바꿀 때만 실행취소 알림 (R5a)
-  // (오늘 탭·메모판에선 체크 즉시 사라지므로, 잘못 눌러도 여기서 복구)
+  // (오늘 탭에선 체크 즉시 사라지므로, 잘못 눌러도 여기서 복구.
+  //  메모판은 체크 표시만 남지만 같은 알림 — 2026-11-19)
   // 처리 중인 항목의 재클릭은 무시 — 반복 할 일 연타 시 완료 기록이 중복 생기는 것 방지
   const togglingRef = useRef(new Set());
   async function handleToggle(task) {
@@ -243,14 +250,15 @@ export default function App() {
               aria-label="검색"
               title="검색"
             >
-              🔍
+              <Icon name="search" />
             </button>
             <button
               className="menu-btn"
               onClick={() => setMenuOpen((o) => !o)}
               aria-label="메뉴"
+              aria-expanded={menuOpen}
             >
-              ⋯
+              <Icon name="more" />
             </button>
             {menuOpen && (
               <>
@@ -281,7 +289,7 @@ export default function App() {
                       setMenuOpen(false);
                     }}
                   >
-                    📆 구글 달력
+                    <Icon name="calendar" /> 구글 달력
                   </button>
                   <button
                     onClick={() => {
@@ -289,7 +297,7 @@ export default function App() {
                       setMenuOpen(false);
                     }}
                   >
-                    🗑 휴지통
+                    <Icon name="trash" /> 휴지통
                     {trash && trash.length > 0 ? ` (${trash.length})` : ""}
                   </button>
                   <button
@@ -298,7 +306,7 @@ export default function App() {
                       setMenuOpen(false);
                     }}
                   >
-                    ❓ 도움말
+                    <Icon name="help" /> 도움말
                   </button>
                   <button
                     className="danger"
@@ -364,12 +372,13 @@ export default function App() {
           )}
 
           {/* 정리 뷰 탭 */}
-          <nav className="tabs">
+          <nav className="tabs" aria-label="보기 선택">
             {TABS.map((name) => (
               <button
                 key={name}
                 className={"tab" + (tab === name ? " active" : "")}
                 onClick={() => setTab(name)}
+                aria-current={tab === name ? "page" : undefined}
               >
                 {name}
               </button>
@@ -426,7 +435,7 @@ export default function App() {
             onClick={() => setUndo(null)}
             aria-label="닫기"
           >
-            ✕
+            <Icon name="close" />
           </button>
         </div>
       )}
@@ -455,7 +464,11 @@ function TaskView({
   // [메모] 날짜 없는 할 일들의 노란 판 — 독립 탭 (2026-08-05)
   // 스티커 여러 장으로 나눌 수 있음 (F03 R2d) — 빈 상태 안내도 판 안에서
   if (tab === "메모") {
-    const undated = tasks.filter((t) => !t.done && !t.dueDate);
+    // 끝낸 메모도 사라지지 않고 체크 표시만 된 채 제자리에 남음 (R2c, 2026-11-19)
+    const undated = tasks.filter(
+      (t) =>
+        !t.dueDate && (!t.done || (t.completedAt ?? "") >= MEMO_DONE_SINCE)
+    );
     return (
       <div>
         <StickyBoard
@@ -467,7 +480,7 @@ function TaskView({
         {/* 노트 구역 (F11): 날짜 없는 기록 — 정보 탭에서 이사 옴 (2026-09-04).
             일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28) */}
         <div className="memo-area">
-          <h2 className="group-title">🗂 노트 (체크 없는 기록)</h2>
+          <h2 className="group-title"><Icon name="note" /> 노트 <span className="section-description">체크 없는 기록</span></h2>
           <MemoView
             memos={memos}
             onDelete={onDeleteMemo}
@@ -537,40 +550,41 @@ function TaskView({
           onConvert={onConvertToTask}
         />
         {/* 하루 기록 (F04) — 계획/실제, ◀▶로 지난 날도 열람 */}
-        <DayView tasks={tasks} date={dayDate} onDateChange={onDayChange} />
-        {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
-        <h2 className="group-title today-tasks-title">
-          📋 {viewingToday ? "오늘 할 일" : `${dayLabel} 할 일`}{" "}
-          <span className="group-count">{list.length}</span>
-        </h2>
-        <TaskList
-          tasks={list}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          onConvert={onConvertToNote}
-          emptyHint={
-            viewingToday
-              ? "오늘 마감인 할 일이 없어요."
-              : "이 날짜의 할 일이 없어요."
-          }
-        />
-        {/* 🗓 이번 주에 할 일 (F03 R10): "~이번주"로 넣은, 요일을 정하지 않은 할 일.
-            오늘을 볼 때만, 하나라도 있을 때만. 최신 입력이 위 */}
-        {viewingToday && weekList.length > 0 && (
-          <>
-            <h2 className="group-title">
-              🗓 이번 주에 할 일{" "}
-              <span className="group-count">{weekList.length}</span>
-            </h2>
-            <TaskList
-              tasks={weekList}
-              onToggle={onToggle}
-              onDelete={onDelete}
-              onConvert={onConvertToNote}
-              onPostpone={onPostponeWeek}
-            />
-          </>
-        )}
+        <DayView tasks={tasks} date={dayDate} onDateChange={onDayChange}>
+          {/* 오늘 마감·밀린 할 일 — 다른 날을 보는 중엔 그 날짜의 할 일 (F04 R9) */}
+          <h2 className="group-title today-tasks-title">
+            <Icon name="task" /> {viewingToday ? "오늘 할 일" : `${dayLabel} 할 일`}{" "}
+            <span className="group-count">{list.length}</span>
+          </h2>
+          <TaskList
+            tasks={list}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            onConvert={onConvertToNote}
+            emptyHint={
+              viewingToday
+                ? "오늘 마감인 할 일이 없어요."
+                : "이 날짜의 할 일이 없어요."
+            }
+          />
+          {/* 🗓 이번 주에 할 일 (F03 R10): "~이번주"로 넣은, 요일을 정하지 않은 할 일.
+              오늘을 볼 때만, 하나라도 있을 때만. 최신 입력이 위 */}
+          {viewingToday && weekList.length > 0 && (
+            <>
+              <h2 className="group-title">
+                <Icon name="calendar" /> 이번 주에 할 일{" "}
+                <span className="group-count">{weekList.length}</span>
+              </h2>
+              <TaskList
+                tasks={weekList}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onConvert={onConvertToNote}
+                onPostpone={onPostponeWeek}
+              />
+            </>
+          )}
+        </DayView>
       </div>
     );
   }
@@ -619,7 +633,7 @@ function EventBlock({ memos, date, today, onDelete, onConvert }) {
   return (
     <section className="event-block">
       <h2 className="event-block-title">
-        📢 {viewingToday ? "오늘 일정" : `${md(date)} 일정`}{" "}
+        <Icon name="calendar" /> {viewingToday ? "오늘 일정" : `${md(date)} 일정`}{" "}
         <span className="event-count">{dayEvents.length}</span>
       </h2>
       {dayEvents.length === 0 ? (
@@ -670,7 +684,7 @@ function TrashView({ trash, onBack, onRestore, onPurge, onEmpty }) {
     <div className="trash">
       <div className="trash-head">
         <button className="link-btn" onClick={onBack}>
-          ← 뒤로
+          <Icon name="left" /> 뒤로
         </button>
         <h2 className="trash-title">휴지통 ({items.length})</h2>
         {items.length > 0 && (

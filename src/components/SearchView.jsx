@@ -6,6 +6,7 @@
 //  · 하루 기록 줄은 누르면 오늘 탭이 그 날짜로 열림 (onOpenDay)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db.js";
 import { searchAll } from "../search.js";
@@ -37,7 +38,7 @@ export default function SearchView({
     <div className="search">
       <div className="trash-head">
         <button className="link-btn" onClick={onBack}>
-          ← 뒤로
+          <Icon name="left" /> 뒤로
         </button>
         <h2 className="trash-title">검색</h2>
         {typed && <span className="group-count">결과 {found.total}개</span>}
@@ -63,14 +64,14 @@ export default function SearchView({
       ) : (
         <>
           <TaskGroup
-            title="📋 할 일"
+            title={<><Icon name="task" /> 할 일</>}
             tasks={found.open}
             onToggle={onToggle}
             onDelete={onDelete}
             onConvert={onConvertToNote}
           />
           <TaskGroup
-            title="✅ 끝낸 할 일"
+            title={<><Icon name="check" /> 끝낸 할 일</>}
             tasks={found.done}
             onToggle={onToggle}
             onDelete={onDelete}
@@ -78,7 +79,7 @@ export default function SearchView({
           />
           {found.events.length > 0 && (
             <>
-              <GroupTitle title="📢 일정" count={found.events.length} />
+              <GroupTitle title={<><Icon name="calendar" /> 일정</>} count={found.events.length} />
               <ul className="task-list">
                 {found.events.map((m) => (
                   <EventItem
@@ -93,7 +94,7 @@ export default function SearchView({
           )}
           {found.notes.length > 0 && (
             <>
-              <GroupTitle title="📝 노트" count={found.notes.length} />
+              <GroupTitle title={<><Icon name="note" /> 노트</>} count={found.notes.length} />
               <ul className="memo-list">
                 {found.notes.map((m) => (
                   <NoteResult
@@ -108,7 +109,7 @@ export default function SearchView({
           )}
           {found.days.length > 0 && (
             <>
-              <GroupTitle title="📓 하루 기록" count={found.days.length} />
+              <GroupTitle title={<><Icon name="book" /> 하루 기록</>} count={found.days.length} />
               <ul className="task-list">
                 {found.days.map((d) => (
                   <li

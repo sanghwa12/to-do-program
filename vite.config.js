@@ -33,8 +33,8 @@ export default defineConfig({
         lang: "ko",
         start_url: "/",
         display: "standalone", // 설치하면 주소창 없는 독립 창으로
-        background_color: "#f5f5f5",
-        theme_color: "#4a7dff",
+        background_color: "#f6f7f9",
+        theme_color: "#f6f7f9",
         icons: [
           { src: "icon-cat-calendar-192.png", sizes: "192x192", type: "image/png" },
           {

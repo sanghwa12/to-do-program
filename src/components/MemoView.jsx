@@ -6,6 +6,7 @@
 //  · 아래 MemoEditor는 노트·일정 공용 에디터 (달력·오늘 탭의 일정 줄도 이걸 씀)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { addMemo, updateMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { dateOnly } from "../date.js";
@@ -65,7 +66,7 @@ export default function MemoView({ memos, onDelete, onConvert }) {
         />
         {quickDates.date && (
           <p className="parse-hint event">
-            "{parsed.title}" — 📢 {noteDateText(quickDates)} 일정으로 저장됩니다
+            "{parsed.title}" — {noteDateText(quickDates)} 일정으로 저장됩니다
             (달력·오늘 탭에 보여요)
           </p>
         )}
@@ -216,7 +217,7 @@ export function MemoEditor({ memo, onClose, onDelete, onConvert, rows = 12 }) {
             onClick={handleConvert}
             title="체크하는 할 일로 바꾸기 — 첫 줄은 제목, 나머지는 세부 메모가 돼요"
           >
-            <span className="check-icon" aria-hidden="true" />
+            <Icon name="task" />
             할 일로 바꾸기
           </button>
         )}

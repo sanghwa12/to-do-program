@@ -5,6 +5,7 @@
 // (우선순위는 2026-09-28, 카테고리는 2026-08-05에 화면에서 제거 — 저장된 값은 보존)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { updateTask } from "../db.js";
 import {
   todayStr,
@@ -473,7 +474,7 @@ export default function TaskItem({
                   onClick={() => handleConvert(false)}
                   title="체크 없는 일정으로 바꾸기 — 제목·메모·날짜는 그대로 옮겨져요"
                 >
-                  📢 일정으로 바꾸기
+                  <Icon name="calendar" /> 일정으로 바꾸기
                 </button>
               ))}
             <button type="submit">저장</button>
@@ -504,63 +505,65 @@ export default function TaskItem({
   // 날짜 뱃지 문구: 종류에 따라 다르게 (F03 R2b). 기간의 예외 날짜도 뒤에 (R9)
   function dateBadgeText() {
     if (isRange)
-      return `📅 ${task.startDate} ~ ${task.dueDate}${exceptionText(task)}`;
+      return `${task.startDate} ~ ${task.dueDate}${exceptionText(task)}`;
     // 이번 주 중에 (F03 R10): 오늘이 그 주면 "이번 주", 아니면 그 주의 날짜만
     if (task.dateKind === "week" && task.startDate) {
       const thisWeek = task.startDate <= today && today <= task.dueDate;
       return thisWeek
-        ? `📅 이번 주 (${weekRangeText(task)})`
-        : `📅 ${weekRangeText(task)} 주`;
+        ? `이번 주 (${weekRangeText(task)})`
+        : `${weekRangeText(task)} 주`;
     }
     const time = task.dueTime ? ` ${task.dueTime}` : ""; // 시간이 있으면 뒤에 (R15)
-    if (task.dateKind === "day") return `📅 ${task.dueDate} 당일${time}`;
-    return `📅 ~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
+    if (task.dateKind === "day") return `${task.dueDate} 당일${time}`;
+    return `~${task.dueDate}${time}`; // 마감 (예전 데이터도 마감으로 취급)
   }
 
   return (
-    <li className={"task-item" + (task.done ? " done" : "")}>
-      <div className="task-main-row">
-        <label className="task-main">
-          <input
-            type="checkbox"
-            checked={task.done}
-            onChange={() => onToggle(task)}
-          />
-          <span className="task-title">{task.title}</span>
-        </label>
-      </div>
-      {task.memo && <p className="task-memo">{task.memo}</p>}
-
-      {/* 날짜·카테고리 뱃지 (있는 것만 표시) */}
-      {task.dueDate && (
-        <div className="task-badges">
-          {task.dueDate && (
-            <span
-              className={
-                "badge" +
-                (late ? " late" : "") +
-                // 오늘 걸린 것은 굵게: 진행 중인 기간, 오늘이 그날(D-day)
-                (ongoing || dday === "D-day" ? " ongoing" : "")
-              }
-            >
-              {dateBadgeText()}
-              {late && ` · ${daysLate(lastDay)}일 지남`}
-              {ongoing && " · 진행중"}
-              {dday && ` · ${dday}`}
-              {/* 이번 주의 마지막 날(일요일) (F03 R10) */}
-              {!task.done &&
-                task.dateKind === "week" &&
-                task.dueDate === today &&
-                " · 오늘까지"}
-            </span>
-          )}
-          {/* 반복 주기 (F09 R5) */}
-          {task.repeat && (
-            <span className="badge">🔁 {repeatLabelOf(task)}</span>
-          )}
+    <li className={"task-item task-row" + (task.done ? " done" : "")}>
+      <div className="task-content">
+        <div className="task-main-row">
+          <label className="task-main">
+            <input
+              type="checkbox"
+              checked={task.done}
+              onChange={() => onToggle(task)}
+            />
+            <span className="task-title">{task.title}</span>
+          </label>
         </div>
-      )}
+        {task.memo && <p className="task-memo">{task.memo}</p>}
 
+        {/* 날짜·카테고리 뱃지 (있는 것만 표시) */}
+        {task.dueDate && (
+          <div className="task-badges">
+            {task.dueDate && (
+              <span
+                className={
+                  "badge" +
+                  (late ? " late" : "") +
+                  // 오늘 걸린 것은 굵게: 진행 중인 기간, 오늘이 그날(D-day)
+                  (ongoing || dday === "D-day" ? " ongoing" : "")
+                }
+              >
+                <Icon name="calendar" /> {dateBadgeText()}
+                {late && ` · ${daysLate(lastDay)}일 지남`}
+                {ongoing && " · 진행중"}
+                {dday && ` · ${dday}`}
+                {/* 이번 주의 마지막 날(일요일) (F03 R10) */}
+                {!task.done &&
+                  task.dateKind === "week" &&
+                  task.dueDate === today &&
+                  " · 오늘까지"}
+              </span>
+            )}
+            {/* 반복 주기 (F09 R5) */}
+            {task.repeat && (
+              <span className="badge"><Icon name="repeat" /> {repeatLabelOf(task)}</span>
+            )}
+          </div>
+        )}
+
+      </div>
       {/* 평소엔 수정/삭제 버튼, 삭제 누르면 그 자리에서 한 번 더 확인 (R7a) */}
       {confirmDelete ? (
         <div className="task-buttons confirm">
@@ -596,9 +599,9 @@ export default function TaskItem({
               다음 주로
             </button>
           )}
-          <button onClick={startEditing}>수정</button>
-          <button className="delete" onClick={() => setConfirmDelete(true)}>
-            삭제
+          <button className="icon-btn" onClick={startEditing} aria-label="수정" title="수정"><Icon name="edit" /></button>
+          <button className="icon-btn delete" onClick={() => setConfirmDelete(true)} aria-label="삭제" title="삭제">
+            <Icon name="trash" />
           </button>
         </div>
       )}

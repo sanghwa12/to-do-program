@@ -1,5 +1,6 @@
 // ------------------------------------------------------------
-// 메모판 (F03 R2c·R2d·R2e): 날짜 미정 + 미완료 할 일을 스티커 메모처럼
+// 메모판 (F03 R2c·R2d·R2e): 날짜 미정 할 일을 스티커 메모처럼
+//  · 끝낸 메모는 사라지지 않고 체크 표시(취소선)만 된 채 제자리에 남음 (2026-11-19)
 //  · 기본 스티커 "📌 메모" + 사용자가 만든 스티커들
 //  · 세로 열 3개 — 스티커의 ⠿ 손잡이를 끌어 원하는 열·순서에 배치 (R2e)
 //    (다른 스티커 위에 놓으면 그 아래로, 열의 빈 곳에 놓으면 그 열 맨 아래로)
@@ -11,6 +12,7 @@
 // 날짜 붙이기 같은 세부 작업은 "전체" 탭에서.
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import {
   updateTask,
   addBoard,
@@ -253,7 +255,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
       <Sticker
         key="__default__"
         name=""
-        title="📌 메모"
+        title="메모"
         tasks={tasksOf("")}
         onToggle={onToggle}
         onDelete={onDelete}
@@ -326,7 +328,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         />
       </form>
       <p className="sticky-hint">
-        체크하면 완료 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
+        체크하면 완료 표시(다시 누르면 해제) · ✕로 치우기 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
         바꾸기·다른 스티커로 · 스티커는 ⠿를 끌어서 배치
       </p>
     </section>
@@ -371,7 +373,7 @@ function Sticker({
             title="끌어서 스티커 위치 옮기기"
             {...handleProps(name)}
           >
-            ⠿
+            <Icon name="grip" />
           </span>
         )}
         {renaming ? (
@@ -405,7 +407,9 @@ function Sticker({
             }
             title={isDefault ? undefined : "클릭해서 이름 바꾸기"}
           >
-            {title} <span className="group-count">{tasks.length}</span>
+            {isDefault && <Icon name="note" />} {title}{" "}
+            {/* 개수는 아직 안 끝낸 메모만 */}
+            <span className="group-count">{tasks.filter((t) => !t.done).length}</span>
           </h2>
         )}
         {/* 스티커 삭제 (기본 스티커는 삭제 불가) — 한 번 더 확인 */}
@@ -425,7 +429,7 @@ function Sticker({
               aria-label="스티커 삭제"
               title="스티커 삭제"
             >
-              ✕
+              <Icon name="close" />
             </button>
           ))}
       </div>
@@ -518,6 +522,7 @@ function StickyItem({ task, onToggle, onDelete, dropMark }) {
     <li
       className={
         "sticky-item" +
+        (task.done ? " done" : "") + // 끝낸 메모: 취소선 + 회색
         (dragging ? " dragging" : "") +
         (dropMark ? " drop-" + dropMark : "")
       }
@@ -573,7 +578,7 @@ function StickyItem({ task, onToggle, onDelete, dropMark }) {
           aria-label="메모 삭제"
           title="휴지통으로"
         >
-          ✕
+          <Icon name="close" />
         </button>
       )}
     </li>

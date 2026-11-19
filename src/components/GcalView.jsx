@@ -4,6 +4,7 @@
 // 클라이언트 ID는 이 브라우저의 IndexedDB(settings)에만 저장 — 코드·깃에 남지 않음
 // ------------------------------------------------------------
 import { useState, useEffect } from "react";
+import Icon from "./Icon.jsx";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, setSetting } from "../db.js";
 import { connectGoogle, currentToken, sendAll, resendAll } from "../gcal.js";
@@ -106,9 +107,9 @@ export default function GcalView({ onBack }) {
     <div className="gcal">
       <div className="trash-head">
         <button className="link-btn" onClick={onBack}>
-          ← 뒤로
+          <Icon name="left" /> 뒤로
         </button>
-        <h2 className="trash-title">📆 구글 달력</h2>
+        <h2 className="trash-title"><Icon name="calendar" /> 구글 달력</h2>
       </div>
 
       <section className="help-section">

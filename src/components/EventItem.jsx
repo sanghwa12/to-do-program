@@ -9,6 +9,7 @@
 // dayContext + onSkipDay(일정, 날짜): 달력에서 고른 날짜 — 기간 일정에 "이 날 빼기" (F03 R9)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { MemoEditor } from "./MemoView.jsx";
 import { todayStr } from "../date.js";
 import { noteDateText, noteLastDate } from "../notes.js";
@@ -84,9 +85,9 @@ export default function EventItem({
             이 날 빼기
           </button>
         )}
-        <button onClick={() => setEditing(true)}>수정</button>
-        <button className="delete" onClick={() => setConfirmDelete(true)}>
-          삭제
+        <button className="icon-btn" onClick={() => setEditing(true)} aria-label="수정" title="수정"><Icon name="edit" /></button>
+        <button className="icon-btn delete" onClick={() => setConfirmDelete(true)} aria-label="삭제" title="삭제">
+          <Icon name="trash" />
         </button>
       </div>
     );
@@ -118,22 +119,24 @@ export default function EventItem({
   const dday = ddayText(span, today); // 남은 날 "D-3" (F03 R12 — 할 일과 같은 규칙)
 
   return (
-    <li className={"task-item event-item" + (isPast ? " past" : "")}>
-      <div className="task-main-row">
-        <span className="event-mark" aria-hidden="true">
-          📢
-        </span>
-        <span className="task-title">{first}</span>
-      </div>
-      {detail && <p className="task-memo">{detail}</p>}
-      <div className="task-badges">
-        <span className="badge">
-          📅 {noteDateText(note)}
-          {exceptions}
-          {isPast && " · 지남"}
-          {ongoing && " · 진행중"}
-          {dday && ` · ${dday}`}
-        </span>
+    <li className={"task-item task-row event-item" + (isPast ? " past" : "")}>
+      <div className="task-content">
+        <div className="task-main-row">
+          <span className="event-mark" aria-hidden="true">
+            <Icon name="calendar" />
+          </span>
+          <span className="task-title">{first}</span>
+        </div>
+        {detail && <p className="task-memo">{detail}</p>}
+        <div className="task-badges">
+          <span className="badge">
+            <Icon name="calendar" /> {noteDateText(note)}
+            {exceptions}
+            {isPast && " · 지남"}
+            {ongoing && " · 진행중"}
+            {dday && ` · ${dday}`}
+          </span>
+        </div>
       </div>
       {actions("task-buttons")}
     </li>

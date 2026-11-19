@@ -5,6 +5,7 @@
 // (비교 요약 줄과 한 줄 회고는 2026-09-29 화면에서 제거 — 저장된 회고는 보존, 백업에 계속 담김)
 // ------------------------------------------------------------
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   db,
@@ -80,7 +81,7 @@ function InlineEdit({ value, onSave, className }) {
 }
 
 // date(보는 날짜)는 부모(오늘 탭)가 관리 — 아래 할 일 목록과 날짜를 공유하기 위해 (F04 R9)
-export default function DayView({ tasks, date, onDateChange }) {
+export default function DayView({ tasks, date, onDateChange, children }) {
   const today = todayStr();
   const [planText, setPlanText] = useState("");
   const [extraText, setExtraText] = useState("");
@@ -118,14 +119,14 @@ export default function DayView({ tasks, date, onDateChange }) {
   return (
     <div className="day-view">
       {/* 오늘 탭에 포함된 블록 (2026-08-05 통합) — ◀▶로 지난 날 기록 열람 */}
-      <h2 className="group-title">📓 하루 기록</h2>
+      <h2 className="group-title"><Icon name="book" /> 하루 기록</h2>
       {/* 날짜 이동 */}
       <div className="cal-nav">
         <button
           onClick={() => onDateChange(shiftDate(date, -1))}
           aria-label="어제"
         >
-          ◀
+          <Icon name="left" />
         </button>
         <span className="cal-month-label">
           {date} ({weekday})
@@ -138,7 +139,7 @@ export default function DayView({ tasks, date, onDateChange }) {
           onClick={() => onDateChange(shiftDate(date, 1))}
           aria-label="다음날"
         >
-          ▶
+          <Icon name="right" />
         </button>
         <button
           className="cal-today-btn"
@@ -148,95 +149,101 @@ export default function DayView({ tasks, date, onDateChange }) {
         </button>
       </div>
 
-      {/* 오늘의 계획 (R3) — 자유 작성. 주황 줄 카드 (D00 종류 색) */}
-      <section className="day-block plan">
-        <h2 className="group-title">
-          📝 오늘의 계획 <span className="group-count">{plans.length}</span>
-        </h2>
-        <ul className="day-list">
-          {plans.map((p) => (
-            <PlanLine key={p.id} date={date} line={p} today={today} />
-          ))}
-        </ul>
-        {/* 미완료 일괄 미루기 (R8) — 이미 미룬 것은 제외 */}
-        {deferrable.length > 1 && (
-          <button
-            className="link-btn"
-            onClick={async () => {
-              const next = shiftDate(date, 1);
-              for (const p of deferrable) {
-                await movePlanLine(date, p.id, next);
-              }
-            }}
-          >
-            미완료 {deferrable.length}개 모두{" "}
-            {date === today ? "내일로" : "다음날로"} →
-          </button>
-        )}
-        <form onSubmit={handleAddPlan}>
-          <input
-            className="day-input"
-            type="text"
-            placeholder="계획 한 줄 쓰고 Enter (자유롭게)"
-            value={planText}
-            onChange={(e) => setPlanText(e.target.value)}
-          />
-        </form>
-      </section>
-
-      {/* 실제 한 일 (R4). 초록 줄 카드 */}
-      <section className="day-block done">
-        <h2 className="group-title">
-          ✅ 실제 한 일{" "}
-          <span className="group-count">
-            {doneTasks.length + extras.length}
-          </span>
-        </h2>
-        {doneTasks.length === 0 && extras.length === 0 && (
-          <p className="hint small">
-            아직 없어요. 할 일을 완료하면 여기 자동으로 쌓여요.
-          </p>
-        )}
-        <ul className="day-list">
-          {doneTasks.map((t) => (
-            <li key={t.id} className="day-line auto">
-              <span className="day-text">✓ {t.title}</span>
-              <span className="day-time">
-                {new Date(t.completedAt).toLocaleTimeString("ko-KR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            </li>
-          ))}
-          {extras.map((x) => (
-            <li key={x.id} className="day-line">
-              <span className="day-plus">+</span>
-              <InlineEdit
-                value={x.text}
-                className="day-text editable"
-                onSave={(v) => updateExtraLine(date, x.id, v)}
-              />
+      {/* 넓은 창에서는 기록과 할 일을 나란히, 좁은 창에서는 원래 순서대로 표시. */}
+      <div className="today-columns">
+        <div className="day-records">
+          {/* 오늘의 계획 (R3) — 자유 작성. 주황 줄 카드 (D00 종류 색) */}
+          <section className="day-block plan">
+            <h2 className="group-title">
+              <Icon name="edit" /> 오늘의 계획 <span className="group-count">{plans.length}</span>
+            </h2>
+            <ul className="day-list">
+              {plans.map((p) => (
+                <PlanLine key={p.id} date={date} line={p} today={today} />
+              ))}
+            </ul>
+            {/* 미완료 일괄 미루기 (R8) — 이미 미룬 것은 제외 */}
+            {deferrable.length > 1 && (
               <button
-                className="day-delete"
-                onClick={() => deleteExtraLine(date, x.id)}
-                aria-label="계획 외 줄 삭제"
+                className="link-btn"
+                onClick={async () => {
+                  const next = shiftDate(date, 1);
+                  for (const p of deferrable) {
+                    await movePlanLine(date, p.id, next);
+                  }
+                }}
               >
-                ✕
+                미완료 {deferrable.length}개 모두{" "}
+                {date === today ? "내일로" : "다음날로"} →
               </button>
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={handleAddExtra}>
-          <input
-            className="day-input"
-            type="text"
-            placeholder="계획에 없었는데 한 일 + Enter"
-            value={extraText}
-            onChange={(e) => setExtraText(e.target.value)}
-          />
-        </form>
-      </section>
+            )}
+            <form onSubmit={handleAddPlan}>
+              <input
+                className="day-input"
+                type="text"
+                placeholder="계획 한 줄 쓰고 Enter (자유롭게)"
+                value={planText}
+                onChange={(e) => setPlanText(e.target.value)}
+              />
+            </form>
+          </section>
+
+          {/* 실제 한 일 (R4). 초록 줄 카드 */}
+          <section className="day-block done">
+            <h2 className="group-title">
+              <Icon name="check" /> 실제 한 일{" "}
+              <span className="group-count">
+                {doneTasks.length + extras.length}
+              </span>
+            </h2>
+            {doneTasks.length === 0 && extras.length === 0 && (
+              <p className="hint small">
+                아직 없어요. 할 일을 완료하면 여기 자동으로 쌓여요.
+              </p>
+            )}
+            <ul className="day-list">
+              {doneTasks.map((t) => (
+                <li key={t.id} className="day-line auto">
+                  <span className="day-text">✓ {t.title}</span>
+                  <span className="day-time">
+                    {new Date(t.completedAt).toLocaleTimeString("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </li>
+              ))}
+              {extras.map((x) => (
+                <li key={x.id} className="day-line">
+                  <span className="day-plus">+</span>
+                  <InlineEdit
+                    value={x.text}
+                    className="day-text editable"
+                    onSave={(v) => updateExtraLine(date, x.id, v)}
+                  />
+                  <button
+                    className="day-delete"
+                    onClick={() => deleteExtraLine(date, x.id)}
+                    aria-label="계획 외 줄 삭제"
+                  >
+                    <Icon name="close" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <form onSubmit={handleAddExtra}>
+              <input
+                className="day-input"
+                type="text"
+                placeholder="계획에 없었는데 한 일 + Enter"
+                value={extraText}
+                onChange={(e) => setExtraText(e.target.value)}
+              />
+            </form>
+          </section>
+        </div>
+        <aside className="today-tasks" aria-label="날짜별 할 일">{children}</aside>
+      </div>
     </div>
   );
 }
@@ -267,7 +274,7 @@ function PlanLine({ date, line, today }) {
           onClick={() => deletePlanLine(date, line.id)}
           aria-label="계획 줄 삭제"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </li>
     );
@@ -312,7 +319,7 @@ function PlanLine({ date, line, today }) {
         onClick={() => deletePlanLine(date, line.id)}
         aria-label="계획 줄 삭제"
       >
-        ✕
+        <Icon name="close" />
       </button>
       {showDatePick && (
         <input

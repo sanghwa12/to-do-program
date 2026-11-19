@@ -1,25 +1,61 @@
-/* 최소한의 스타일 — UI 디자인은 나중에 다듬기로 했으므로 깔끔한 기본만. */
+/* 공통 화면 규칙: 흰 카드·검은 글자, 종류는 왼쪽 색 줄로만 구분. */
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
-  font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
-  background: #f5f5f5;
+  font-family: "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  background: #f6f7f9;
   color: #222;
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+input::placeholder, textarea::placeholder {
+  color: #7b8089;
+}
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--input-accent, #4a7dff);
+  outline-offset: 3px;
+}
+input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #4a7dff;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  vertical-align: -0.22em;
+  pointer-events: none;
 }
 
 .app {
   /* 560px → 1100px (2026-08-11 사용자 결정): 모든 탭에서 화면 폭을 넓게 사용 */
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 32px 24px 56px;
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
   margin: 0;
 }
 
@@ -28,7 +64,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 .export-btn {
   padding: 6px 12px;
@@ -40,12 +76,14 @@ h1 {
   width: 100%;
   padding: 12px 14px;
   font-size: 1rem;
-  border: 2px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid #dce0e6;
+  border-radius: 10px;
+  background: #fff;
 }
 .quick-input:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
 }
 
 .hint {
@@ -57,23 +95,46 @@ h1 {
 /* 입력줄: 텍스트 + 📅 버튼 (R14) */
 .quick-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: stretch;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid #dce0e6;
+  border-radius: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .quick-row .quick-input {
   flex: 1;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 10px 12px;
+}
+.quick-row:focus-within {
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
+}
+/* 일정의 입력칸·날짜 버튼·편집칸에서 같은 포커스 색을 유지한다. */
+.quick-capture:has(.kind-note.active),
+.cal-add:has(.kind-note.active),
+.event-item,
+.event-line {
+  --input-accent: var(--line-event);
+  --input-ring: #8a5cf514;
 }
 .date-toggle {
   flex-shrink: 0;
   padding: 0 12px;
   font-size: 1rem;
-  border: 2px solid #ccc;
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: #fff;
+  background: transparent;
 }
 .date-toggle.active {
-  border-color: #4a7dff;
   background: #eef3ff;
+}
+.date-toggle.active .icon {
+  color: #4a7dff;
 }
 .quick-date-row {
   display: flex;
@@ -107,7 +168,7 @@ h1 {
   font-size: 1.3rem;
   line-height: 1;
   color: #222;
-  padding: 4px 10px;
+  padding: 9px;
 }
 /* 검색 버튼 (F13) — ⋯ 왼쪽. 돋보기 그림은 ⋯보다 커 보여서 조금 작게 */
 .menu-btn.search-btn {
@@ -140,6 +201,7 @@ h1 {
   border-radius: 6px;
   font-size: 0.9rem;
   color: #222;
+  justify-content: flex-start;
 }
 .menu button:hover {
   background: #f0f0f0;
@@ -163,7 +225,8 @@ h1 {
 }
 .import-textarea:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
 }
 .import-actions {
   display: flex;
@@ -180,27 +243,27 @@ h1 {
 /* 정리 뷰 탭 (F03) */
 .tabs {
   display: flex;
-  gap: 4px;
-  margin-top: 14px;
-  border-bottom: 2px solid #e0e0e0;
+  gap: 8px;
+  margin-top: 22px;
+  border-bottom: 1px solid #e2e5eb;
 }
 .tab {
   border: none;
   background: none;
-  padding: 8px 12px;
+  padding: 10px 18px;
   font-size: 0.9rem;
   color: #222;
-  border-radius: 6px 6px 0 0;
+  border-radius: 8px 8px 0 0;
   cursor: pointer;
 }
 .tab:hover {
-  background: #ececec;
+  background: #eef0f4;
 }
 .tab.active {
   color: #4a7dff;
   font-weight: bold;
   border-bottom: 2px solid #4a7dff;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
 }
 
 /* 작은 입력줄 — 노트 입력, 달력의 날짜 클릭 입력, 구글 달력 설정에서 공용 */
@@ -213,7 +276,8 @@ h1 {
 }
 .notice-input:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
 }
 .notice-text {
   margin-right: auto;
@@ -232,7 +296,7 @@ h1 {
 }
 .event-mark {
   flex-shrink: 0;
-  width: 27px; /* 할 일의 체크박스 자리와 같은 폭 → 제목·뱃지 위치가 할 일과 맞음 */
+  width: 19px; /* 할 일의 체크박스 자리와 같은 폭 */
   text-align: center;
 }
 .event-item .memo-editor {
@@ -243,9 +307,7 @@ h1 {
   margin-top: 12px;
 }
 .today-tasks-title {
-  margin-top: 24px; /* 하루 기록 블록과 오늘 할 일 목록 사이 구분 (2026-08-05 통합) */
-  padding-top: 14px;
-  border-top: 1px solid #e0e0e0;
+  margin-top: 0;
 }
 
 /* 메모판 (F03 R2c) — 스티커 메모 은유의 연한 노랑 (D00 색 예외로 문서화됨) */
@@ -261,10 +323,10 @@ h1 {
   grid-template-columns: 1fr; /* 스티커를 안 만들었으면 예전처럼 넓은 한 판 */
 }
 .sticky-board {
-  background: #fdf6d8;
-  border: 1px solid #f0e6b8;
-  border-radius: 8px;
-  padding: 12px 14px;
+  background: #fffae8;
+  border: 1px solid #eee6c8;
+  border-radius: 12px;
+  padding: 18px;
   min-height: 80px;
 }
 /* 끌고 온 메모를 받을 준비가 된 스티커 */
@@ -277,9 +339,9 @@ h1 {
    스티커를 놓을 수 있게 (거기서 놓으면 그 열 맨 아래로) */
 .board-cols {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
 }
 @media (max-width: 760px) {
   .board-cols {
@@ -289,7 +351,8 @@ h1 {
 .board-col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  min-width: 0;
   min-height: 100px; /* 빈 열에도 스티커를 놓을 수 있게 */
   border-radius: 8px;
 }
@@ -300,7 +363,7 @@ h1 {
 }
 .sticky-handle {
   flex-shrink: 0;
-  color: #c9b24a;
+  color: #9b906b;
   cursor: grab;
   font-size: 0.9rem;
   user-select: none;
@@ -312,14 +375,17 @@ h1 {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee6c8;
 }
 .sticky-title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   margin: 0;
   color: #222;
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .sticky-title.editable {
   cursor: pointer;
@@ -342,16 +408,16 @@ h1 {
 .sticky-empty {
   margin: 0;
   font-size: 0.78rem;
-  color: #b3a76a;
+  color: #7c7356;
 }
 .sticky-new {
   width: 100%;
   box-sizing: border-box;
-  margin-top: 10px;
+  margin-top: 16px;
   font-size: 0.85rem;
-  padding: 6px 10px;
-  border: 1px dashed #d8c97a;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border: 1px solid #e2dcc6;
+  border-radius: 8px;
   background: transparent;
 }
 .sticky-new:focus {
@@ -375,10 +441,10 @@ h1 {
 }
 .sticky-item {
   break-inside: avoid;
-  padding: 6px 0; /* 2px → 6px: 다닥다닥 붙지 않게 (R2d) */
+  padding: 8px 0;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 9px;
   cursor: grab;
 }
 .sticky-item.dragging {
@@ -410,7 +476,8 @@ h1 {
   font-size: 0.75rem;
   padding: 0 2px;
 }
-.sticky-item:hover .sticky-del {
+.sticky-item:hover .sticky-del,
+.sticky-item:focus-within .sticky-del {
   visibility: visible;
 }
 .sticky-del:hover {
@@ -418,7 +485,7 @@ h1 {
 }
 .sticky-item input[type="checkbox"] {
   flex-shrink: 0;
-  transform: translateY(1px);
+  transform: translateY(3px);
   cursor: pointer;
 }
 /* 글자 클릭 = 바로 수정 (2026-08-05) */
@@ -439,15 +506,22 @@ h1 {
   font-family: inherit;
 }
 .sticky-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
   color: #222;
   flex: 1;
   min-width: 0;
 }
+/* 끝낸 메모 (2026-11-19): 판에 그대로 남고 취소선 + 회색 */
+.sticky-item.done .sticky-text {
+  text-decoration: line-through;
+  color: #999;
+}
 .sticky-hint {
   margin: 8px 0 0;
-  font-size: 0.72rem;
-  color: #a89b5e;
+  font-size: 0.8rem;
+  color: #7c7356;
 }
 /* 세부 내용 (2026-09-16): 글자 클릭 시 제목 칸 아래에 세부 내용 칸이 함께 열림 */
 .sticky-item.editing {
@@ -478,13 +552,13 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 2px;
-  font-size: 0.9rem;
+  padding: 7px 0;
+  font-size: 0.9375rem;
   flex-wrap: wrap; /* 날짜 선택기가 다음 줄로 떨어지게 (R8) */
 }
 .day-line label {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   cursor: pointer;
   flex: 1;
@@ -492,6 +566,11 @@ h1 {
 }
 .day-line .day-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.day-line label input[type="checkbox"] {
+  margin-top: 3px;
 }
 .day-line.done .day-text {
   text-decoration: line-through;
@@ -538,7 +617,7 @@ h1 {
 
 /* 미룬 계획 줄 (R8) — 기록은 남되 흐리게 */
 .day-line.moved {
-  opacity: 0.5;
+  color: #818792;
 }
 .day-moved-mark {
   color: #999;
@@ -568,11 +647,11 @@ h1 {
   opacity: 1;
 }
 .day-actions button {
-  font-size: 0.72rem;
-  padding: 2px 7px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background: #fafafa;
+  font-size: 0.75rem;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #f3f4f6;
 }
 .day-datepick {
   margin-left: 26px;
@@ -583,14 +662,16 @@ h1 {
 }
 .day-input {
   width: 100%;
-  padding: 7px 10px;
+  padding: 9px 12px;
   font-size: 0.85rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  margin-top: 6px;
 }
 .day-input:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
 }
 .hint.small {
   margin: 4px 0;
@@ -603,11 +684,11 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 14px 0 10px;
+  margin: 20px 0 18px;
 }
 .cal-month-label {
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 1.125rem;
   min-width: 110px;
   text-align: center;
 }
@@ -616,64 +697,87 @@ h1 {
 }
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-sheet {
+  overflow: hidden;
+  border: 1px solid #e2e5eb;
+  border-radius: 12px;
+  background: #fff;
+}
+.cal-days {
+  gap: 1px;
+  background: #e8ebf0;
 }
 .cal-weekdays {
-  margin-bottom: 4px;
+  border-bottom: 1px solid #e2e5eb;
 }
 .cal-weekday {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: #222;
-  padding: 2px 0;
+  padding: 10px 0;
 }
 .cal-cell {
   background: #fff;
   border: none;
-  border-radius: 6px;
-  min-height: 72px;
-  padding: 4px;
+  border-radius: 0;
+  min-height: 112px;
+  padding: 8px;
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  align-items: stretch;
+  justify-content: flex-start;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   overflow: hidden;
   font: inherit;
 }
 .cal-cell:hover {
   background: #f6f8ff;
 }
+.cal-cell:focus-visible {
+  outline-offset: -3px;
+}
 .cal-cell.empty {
-  background: none;
+  background: #fafbfc;
   box-shadow: none;
   cursor: default;
 }
 .cal-cell.today {
-  outline: 2px solid #4a7dff;
-  outline-offset: -2px;
+  background: #fff;
 }
 .cal-cell.selected {
   background: #eef3ff;
+  box-shadow: inset 0 0 0 2px #4a7dff;
 }
 .cal-day {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: #222;
 }
-.cal-cell.today .cal-day {
-  color: #4a7dff;
-  font-weight: bold;
+.cal-day-number {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.cal-cell.today .cal-day-number {
+  box-shadow: inset 0 0 0 2px #4a7dff;
+  font-weight: 700;
 }
 /* 칩: 회색 바탕 + 검정 글자, 종류는 왼쪽 줄 색으로 (할 일 파랑 · 일정 보라 · 완료 회색) */
 .cal-chip {
-  font-size: 0.65rem;
-  background: #f0f0f0;
+  font-size: 0.78125rem;
+  line-height: 1.5;
+  background: #f4f5f7;
   color: #222;
   border-left: 3px solid var(--line-task);
   border-radius: 0 4px 4px 0; /* 줄이 있는 왼쪽은 각지게 — 줄이 곧게 보이도록 */
-  padding: 1px 4px;
+  padding: 2px 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -681,12 +785,12 @@ h1 {
 }
 .cal-chip.done {
   text-decoration: line-through;
-  color: #bbb;
+  color: #878d97;
   border-left-color: var(--line-off);
 }
 .cal-more {
-  font-size: 0.65rem;
-  color: #999;
+  font-size: 0.75rem;
+  color: #727985;
 }
 .cal-selected {
   margin-top: 14px;
@@ -694,21 +798,33 @@ h1 {
 
 /* 그룹 제목 (날짜/우선순위/카테고리 뷰) */
 .group-title {
-  font-size: 0.95rem;
-  margin: 18px 2px 6px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  margin: 24px 0 12px;
   color: #222;
 }
 .group-count {
   font-size: 0.75rem;
-  color: #999;
+  color: #727985;
   font-weight: normal;
+  margin-left: 4px;
+}
+.group-title .icon, .event-block-title .icon {
+  margin-right: 5px;
+}
+.section-description {
+  font-size: 0.8125rem;
+  font-weight: normal;
+  color: #727985;
+  margin-left: 6px;
 }
 
 /* 할 일 목록 */
 .task-list {
   list-style: none;
   padding: 0;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
 }
 
 /* 흰 카드 + 왼쪽의 가는 줄(종류 색, D00): 할 일 파랑 · 끝난 것(완료·휴지통) 회색.
@@ -716,10 +832,25 @@ h1 {
 .task-item {
   --line: var(--line-task);
   background: #fff;
-  border-radius: 8px;
-  padding: 10px 12px 10px 14px;
+  border: 1px solid #e8ebf0;
+  border-radius: 10px;
+  padding: 12px 14px 12px 17px;
   margin-bottom: 8px;
-  box-shadow: inset 4px 0 0 var(--line), 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 4px 0 0 var(--line);
+}
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.task-content {
+  flex: 1;
+  min-width: 0;
+}
+.task-title {
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
 }
 .task-item.done,
 .task-item.trashed {
@@ -734,7 +865,7 @@ h1 {
 
 .task-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   cursor: pointer;
   flex: 1;
@@ -742,8 +873,9 @@ h1 {
 }
 
 .task-main input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
+  margin-top: 3px;
   flex-shrink: 0;
 }
 
@@ -758,24 +890,30 @@ h1 {
 }
 
 .task-memo {
-  margin: 6px 0 0 28px; /* 체크박스(18)+간격(10) 아래 제목 위치에 맞춤 */
+  margin: 6px 0 0 27px; /* 체크박스(17)+간격(10) 아래 제목 위치에 맞춤 */
   font-size: 0.85rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* 날짜·반복 뱃지 */
 .task-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 6px 0 0 28px; /* 제목 위치에 맞춤 (위 .task-memo와 같은 값) */
+  gap: 5px;
+  margin: 5px 0 0 27px;
 }
 .badge {
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: #f0f0f0;
+  font-size: 0.78125rem;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #f3f4f6;
   color: #222;
+  overflow-wrap: anywhere;
+}
+.badge .icon {
+  width: 13px;
+  height: 13px;
 }
 /* D00 색 줄이기: 강조색(빨강)은 '밀림'에만. 나머지는 회색 기본 */
 .badge.late {
@@ -790,9 +928,11 @@ h1 {
 /* D00 항목 버튼 숨기기: 평소엔 안 보이고, 마우스 올리거나 포커스 때만 노출 */
 .task-buttons {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 0;
+  align-items: center;
+  flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.12s;
 }
@@ -805,17 +945,38 @@ h1 {
 .task-item.trashed .task-buttons {
   opacity: 1;
 }
+.task-row > .task-buttons.confirm {
+  flex-basis: 100%;
+  flex-wrap: wrap;
+}
 
 button {
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fafafa;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 11px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
+  background: #fff;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 button:hover {
-  background: #eee;
+  background: #f0f2f6;
+}
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-color: transparent;
+  background: transparent;
+}
+.icon-btn .icon {
+  width: 16px;
+  height: 16px;
 }
 button.delete {
   color: #c00;
@@ -877,15 +1038,15 @@ button.delete {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 5px;
   width: 100%;
   text-align: left;
   background: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: 1px solid #e8ebf0;
+  border-radius: 10px;
+  padding: 16px 18px;
   margin-bottom: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   cursor: pointer;
   font: inherit;
 }
@@ -905,8 +1066,8 @@ button.delete {
   max-width: 100%;
 }
 .memo-date {
-  font-size: 0.72rem;
-  color: #bbb;
+  font-size: 0.75rem;
+  color: #727985;
 }
 .memo-editor-date {
   display: flex;
@@ -935,14 +1096,17 @@ button.delete {
   padding: 12px 14px;
   font-size: 0.92rem;
   line-height: 1.6;
-  border: 2px solid #ccc;
+  border: 1px solid #dce0e6;
   border-radius: 8px;
   font-family: inherit;
   resize: vertical;
 }
-.memo-textarea:focus {
+.memo-textarea:focus,
+.edit-form input:focus,
+.edit-form textarea:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: var(--input-accent, #4a7dff);
+  box-shadow: 0 0 0 3px var(--input-ring, #4a7dff14);
 }
 .memo-delete {
   margin-right: auto; /* 삭제는 왼쪽, 저장/취소는 오른쪽 */
@@ -1070,6 +1234,7 @@ button.delete {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 /* 편집 모드의 날짜·우선순위·카테고리 입력 줄 */
@@ -1138,7 +1303,7 @@ button.delete {
 }
 .cal-holiday {
   margin-left: 4px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 .cal-no-holiday {
   margin: 0 0 6px;
@@ -1161,39 +1326,14 @@ button.delete {
 .kind-btn {
   font-size: 0.85rem;
   padding: 0 10px;
-}
-/* 할 일 토글 앞의 파란 체크 — 앱 아이콘(파란 바탕 + 흰 체크)과 같은 모양.
-   이모지는 색을 못 바꿔서(초록) CSS로 직접 그림: 파란 네모 + 기울인 ㄴ자 = 체크 */
-.check-icon {
-  display: inline-block;
-  position: relative;
-  width: 1.05em;
-  height: 1.05em;
-  margin-right: 5px;
-  border-radius: 4px;
-  background: #4a7dff;
-  vertical-align: -0.17em;
-}
-.check-icon::after {
-  content: "";
-  position: absolute;
-  left: 0.36em;
-  top: 0.13em;
-  width: 0.25em;
-  height: 0.53em;
-  border: solid #fff;
-  border-width: 0 0.15em 0.15em 0;
-  transform: rotate(45deg);
+  white-space: nowrap;
 }
 .date-toggle.kind-note.active {
-  border-color: var(--event-accent); /* 할 일의 진한 파랑 테두리와 같은 세기로 */
   background: var(--event-bg);
-  /* 글자색은 바꾸지 않음 — 할 일 버튼처럼 검은색 그대로 (사용자 요청) */
+  /* 두 종류 모두 테두리 없이 배경·아이콘 색으로 선택을 표시한다. */
 }
-/* 일정을 고른 동안엔 입력칸의 포커스 테두리도 파랑 대신 보라 */
-.quick-input.note:focus,
-.notice-input.note:focus {
-  border-color: var(--event-accent);
+.date-toggle.kind-note.active .icon {
+  color: var(--line-event);
 }
 .quick-row .quick-input {
   min-width: 0; /* 토글이 늘어도 좁은 창에서 줄이 넘치지 않게 */
@@ -1212,9 +1352,8 @@ button.delete {
   --line-done: #2f9e44; /* 실제 한 일 = 초록 */
   --line-off: #cfcfcf; /* 끝난 것 (완료·휴지통) = 회색 */
   /* 입력칸의 [📢 일정] 토글·미리보기에 쓰는 보라 (할 일의 파랑과 짝) */
-  --event-bg: #efe7fb; /* 연보라 바탕 — 고른 토글 */
+  --event-bg: #f5f0ff; /* 파란 선택 배경과 비슷한 농도의 연보라 */
   --event-fg: #5a3d9a; /* 진보라 글자 — 입력 미리보기 */
-  --event-accent: var(--line-event); /* 고른 토글·포커스 테두리 */
 }
 .parse-hint.event {
   color: var(--event-fg);
@@ -1224,20 +1363,21 @@ button.delete {
    (할 일·일정 한 줄짜리 카드는 .task-item이 같은 방식으로 그림) */
 .event-block,
 .day-block {
-  padding: 10px 14px 10px 16px;
-  border-radius: 8px;
+  padding: 18px 18px 18px 21px;
+  border: 1px solid #e8ebf0;
+  border-radius: 12px;
   background: #fff;
-  box-shadow: inset 4px 0 0 var(--line), 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 4px 0 0 var(--line);
 }
 
 /* 오늘 탭 맨 위 일정 블록 (F11 R5) */
 .event-block {
   --line: var(--line-event);
-  margin-top: 14px;
+  margin-top: 24px;
 }
 /* 하루 기록의 블록 (F04): 오늘의 계획 = 주황, 실제 한 일 = 초록 */
 .day-block {
-  margin-top: 10px;
+  margin-top: 0;
 }
 .day-block.plan {
   --line: var(--line-plan);
@@ -1246,11 +1386,30 @@ button.delete {
   --line: var(--line-done);
 }
 .day-block .group-title {
-  margin: 0 0 6px; /* 카드 안에선 위 여백 없이 */
+  margin: 0 0 12px;
+}
+.today-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.day-records {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.today-tasks {
+  min-width: 0;
+}
+.today-tasks > .group-title:first-child {
+  margin-top: 0;
 }
 .event-block-title {
-  font-size: 0.95rem;
-  margin: 0 0 6px;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  margin: 0 0 12px;
 }
 .event-count {
   font-size: 0.75rem;
@@ -1266,14 +1425,16 @@ button.delete {
   display: flex;
   gap: 10px;
   align-items: baseline;
-  padding: 2px 0;
-  font-size: 0.9rem;
+  padding: 7px 0;
+  font-size: 0.9375rem;
+  flex-wrap: wrap;
 }
 .event-line.today {
   font-weight: bold;
 }
 .event-text {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* 줄마다 수정/삭제 (F11 R10) — 할 일처럼 마우스를 올릴 때만 보임 */
 .event-actions {
@@ -1291,17 +1452,8 @@ button.delete {
 .event-actions.confirm {
   opacity: 1;
 }
-.event-actions button {
-  padding: 1px 8px; /* 블록의 줄 간격이 벌어지지 않게 작게 */
-  font-size: 0.75rem;
-}
 .event-actions .confirm-text {
   margin-right: 0;
-}
-/* 일정을 고치는 에디터의 글 칸 포커스 테두리도 보라 (입력칸과 같은 원칙) */
-.event-item .memo-textarea:focus,
-.event-line .memo-textarea:focus {
-  border-color: var(--event-accent);
 }
 /* 수정 중인 줄: 그 자리에 에디터가 펼쳐짐 */
 .event-line.editing {
@@ -1457,4 +1609,72 @@ button.delete {
   flex-shrink: 0;
   font-size: 0.8rem;
   color: #999; /* 보조 글씨(날짜)는 회색 */
+}
+
+/* 창 크기에 맞춰 밀도만 조정한다. 메모판의 저장된 열·순서는 바꾸지 않는다. */
+@media (max-width: 1000px) {
+  .today-columns {
+    grid-template-columns: 1fr;
+  }
+  .today-tasks {
+    padding-top: 8px;
+  }
+  .board-cols {
+    gap: 12px;
+  }
+  .sticky-board {
+    padding: 14px;
+  }
+}
+@media (max-width: 600px) {
+  .app {
+    padding: 20px 14px 40px;
+  }
+  .quick-row, .cal-add {
+    flex-wrap: wrap;
+  }
+  .quick-row .quick-input, .cal-add .notice-input {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .quick-row .kind-btn {
+    min-height: 34px;
+  }
+  .quick-row > .date-toggle:last-child {
+    margin-left: auto;
+  }
+  .cal-cell {
+    min-height: 100px;
+    padding: 4px 2px;
+  }
+  .cal-chip {
+    padding: 2px 3px;
+    font-size: 0.75rem;
+  }
+  .cal-month-label {
+    font-size: 1rem;
+    min-width: 0;
+  }
+  .day-line label {
+    flex-basis: calc(100% - 42px);
+  }
+  .day-actions {
+    margin-left: 25px;
+    order: 1;
+  }
+  .day-datepick {
+    order: 2;
+  }
+  .task-buttons, .day-actions, .day-delete, .event-actions {
+    opacity: 1;
+  }
+  .search-day button {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button, .quick-row, .task-buttons, .day-actions, .day-delete, .event-actions {
+    transition: none;
+  }
 }

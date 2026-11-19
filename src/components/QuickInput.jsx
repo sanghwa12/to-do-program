@@ -8,6 +8,7 @@
 // ※ 날짜·우선순위 등을 따로 묻지 않음 — 입력을 느리게 하지 않기 위해 (핵심 원칙!)
 // ------------------------------------------------------------
 import { useState, useRef } from "react";
+import Icon from "./Icon.jsx";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { repeatLabelOf, weekRangeText } from "../labels.js";
@@ -67,21 +68,21 @@ export default function QuickInput() {
   // 인식된 날짜 종류에 따른 미리보기 문구 (F02 R10)
   function previewText(p) {
     if (p.repeat) {
-      return `"${p.title}" — 🔁 ${repeatLabelOf(p)} 반복 · 첫 날짜 ${p.dueDate}로 저장됩니다`;
+      return `"${p.title}" — ${repeatLabelOf(p)} 반복 · 첫 날짜 ${p.dueDate}로 저장됩니다`;
     }
     if (p.dateKind === "range")
-      return `"${p.title}" — 📅 ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
+      return `"${p.title}" — ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
     if (p.dateKind === "week")
-      return `"${p.title}" — 🗓 이번 주(${weekRangeText(p)}) 안에 할 일로 저장됩니다`;
+      return `"${p.title}" — 이번 주(${weekRangeText(p)}) 안에 할 일로 저장됩니다`;
     const time = p.dueTime ? ` ${p.dueTime}` : ""; // 시간이 있으면 같이 (R15)
     if (p.dateKind === "day")
       // "당일 일정"이라고 쓰면 📢 일정과 헷갈리므로 "당일 할 일" (2026-09-28)
-      return `"${p.title}" — 📅 ${p.dueDate}${time} 당일 할 일로 저장됩니다`;
-    return `"${p.title}" — 📅 ${p.dueDate}${time}까지 마감으로 저장됩니다`;
+      return `"${p.title}" — ${p.dueDate}${time} 당일 할 일로 저장됩니다`;
+    return `"${p.title}" — ${p.dueDate}${time}까지 마감으로 저장됩니다`;
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="quick-capture" onSubmit={handleSubmit}>
       <div className="quick-row">
         {/* R16: 무엇으로 저장할지 — 기본은 할 일 (안 건드리면 예전과 똑같이 동작) */}
         <button
@@ -89,9 +90,9 @@ export default function QuickInput() {
           className={"date-toggle kind-btn" + (!isNote ? " active" : "")}
           onClick={() => switchKind("task")}
           title="체크하는 할 일로 저장"
+          aria-pressed={!isNote}
         >
-          {/* 파란 체크 아이콘 — 이모지(초록)가 아니라 CSS로 그림 (사용자 요청) */}
-          <span className="check-icon" aria-hidden="true" />
+          <Icon name="task" />
           할 일
         </button>
         <button
@@ -99,12 +100,13 @@ export default function QuickInput() {
           className={"date-toggle kind-btn kind-note" + (isNote ? " active" : "")}
           onClick={() => switchKind("note")}
           title="체크 없는 일정으로 저장 (달력·오늘 탭에 보라색 줄로 표시)"
+          aria-pressed={isNote}
         >
-          📢 일정
+          <Icon name="calendar" /> 일정
         </button>
         <input
           ref={inputRef}
-          className={"quick-input" + (isNote ? " note" : "")}
+          className="quick-input"
           type="text"
           placeholder={
             isNote
@@ -120,20 +122,22 @@ export default function QuickInput() {
           type="button"
           className={
             "date-toggle" +
-            (isNote ? " kind-note" : "") + // 일정을 고른 동안엔 보라 테두리
+            (isNote ? " kind-note" : "") + // 고른 종류의 색상으로 표시
             (pickedDate ? " active" : "")
           }
           onClick={() => setShowPicker((s) => !s)}
           title="날짜 붙이기 (선택)"
           aria-label="날짜 붙이기"
+          aria-expanded={showPicker}
         >
-          📅
+          <Icon name="calendar" />
         </button>
       </div>
       {showPicker && (
         <div className="quick-date-row">
           <input
             type="date"
+            aria-label="붙일 날짜"
             value={pickedDate}
             onChange={(e) => setPickedDate(e.target.value)}
           />
@@ -153,18 +157,18 @@ export default function QuickInput() {
         (isNote ? (
           noteDates.date ? (
             <p className="parse-hint event">
-              "{parsed.title}" — 📢 {noteDateText(noteDates)} 일정으로 저장됩니다
+              "{parsed.title}" — {noteDateText(noteDates)} 일정으로 저장됩니다
             </p>
           ) : (
             <p className="parse-hint muted">
-              "{parsed.title}" — 날짜가 없어 📝 노트로 저장됩니다 (📅로 날짜 붙이기)
+              "{parsed.title}" — 날짜가 없어 노트로 저장됩니다 (달력 버튼으로 날짜 붙이기)
             </p>
           )
         ) : effective.dueDate ? (
           <p className="parse-hint">{previewText(effective)}</p>
         ) : (
           <p className="parse-hint muted">
-            "{effective.title}" — 메모(날짜 없음)로 저장됩니다 (📅로 날짜 붙이기)
+            "{effective.title}" — 메모(날짜 없음)로 저장됩니다 (달력 버튼으로 날짜 붙이기)
           </p>
         ))}
     </form>

@@ -3,12 +3,14 @@
 // ⚠️ 기능이 바뀌면 이 내용도 같이 고칠 것 (spec-check 대상, R2)
 // ------------------------------------------------------------
 
+import Icon from "./Icon.jsx";
+
 export default function HelpView({ onBack }) {
   return (
     <div className="help">
       <div className="trash-head">
         <button className="link-btn" onClick={onBack}>
-          ← 뒤로
+          <Icon name="left" /> 뒤로
         </button>
         <h2 className="trash-title">도움말</h2>
       </div>
@@ -51,8 +53,7 @@ export default function HelpView({ onBack }) {
           </li>
           <li>
             <b>
-              [<span className="check-icon" aria-hidden="true" />할 일] [📢
-              일정] 토글
+              [<Icon name="task" /> 할 일] [<Icon name="calendar" /> 일정] 토글
             </b>
             : 기본은 할 일. <b>일정</b>을 고르면
             체크 없는 일정으로 저장 — 달력·오늘 탭에 <b>보라색 줄</b>로 보여요
@@ -78,7 +79,8 @@ export default function HelpView({ onBack }) {
             "○일 지남"
           </li>
           <li>
-            항목에 <b>마우스를 올리면</b> 수정/삭제 버튼 — 삭제는 휴지통으로
+            항목에 <b>마우스를 올리거나 Tab으로 이동하면</b> 연필(수정)·휴지통(삭제) 버튼
+            — 삭제는 휴지통으로
             (⋯ 메뉴에서 복원)
           </li>
           <li>
@@ -103,15 +105,17 @@ export default function HelpView({ onBack }) {
             주황 · 실제 한 일 초록 (끝난 것은 회색)
           </li>
           <li>
-            <b>오늘</b>: 하루의 조종석 — 📢 일정(오늘 것 + 다가오는 7일 —
-            줄에 마우스를 올려 <b>수정/삭제</b>) → 📓 하루 기록(계획
-            vs 실제, ◀▶로 지난 날) → 📋 오늘 마감·밀린 할 일. ◀▶로
+            <b>오늘</b>: 일정(오늘 것 + 다가오는 7일 —
+            줄에 마우스를 올려 <b>수정/삭제</b>), 하루 기록(계획
+            vs 실제), 오늘 마감·밀린 할 일. 넓은 창에서는 기록과 할 일을
+            나란히 보여주고, 좁은 창에서는 세로로 보여줘요. 날짜 화살표로
             다른 날을 보면 <b>할 일 목록도 그 날짜 것</b>으로 바뀜. 못한
             계획은 마우스 올려 <b>내일로/날짜…/메모로</b> 미루기. 글자를 누르면
             바로 수정
           </li>
           <li>
-            <b>메모</b>: 노란 📌 메모판 — 날짜 없는 할 일 전부. 체크=완료,
+            <b>메모</b>: 노란 📌 메모판 — 날짜 없는 할 일 전부. 체크=완료 표시(사라지지
+            않고 줄 그어진 채 남아요 · 다시 누르면 해제),
             글자 클릭=제목·세부 내용 수정(세부 내용 있으면 ⋯ 표시, 올리면 미리보기),
             ✕=휴지통. 메모를 <b>끌어서 순서 바꾸기</b> — 놓일 자리가 갈색
             줄로 보여요 (새 메모는 맨 위에). <b>"+ 새 스티커"</b>로 판을
