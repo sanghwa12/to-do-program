@@ -23,7 +23,7 @@ import {
   WEEKDAY_LABEL,
   NTH_LABEL,
   repeatLabelOf,
-  weekRangeText,
+  weekLabelOf,
 } from "../labels.js";
 import ExceptionDates from "./ExceptionDates.jsx";
 import {
@@ -318,7 +318,7 @@ export default function TaskItem({
                   <option value="due">마감 (~까지)</option>
                   <option value="day">당일</option>
                   <option value="range">기간</option>
-                  <option value="week">이번 주 중에 (요일 미정)</option>
+                  <option value="week">그 주 안에 (요일 미정)</option>
                 </select>
               </label>
             )}
@@ -506,12 +506,9 @@ export default function TaskItem({
   function dateBadgeText() {
     if (isRange)
       return `${task.startDate} ~ ${task.dueDate}${exceptionText(task)}`;
-    // 이번 주 중에 (F03 R10): 오늘이 그 주면 "이번 주", 아니면 그 주의 날짜만
+    // 그 주 안에 (F03 R10): "이번 주"·"다음 주"·"다다음 주", 그 밖엔 그 주의 날짜만
     if (task.dateKind === "week" && task.startDate) {
-      const thisWeek = task.startDate <= today && today <= task.dueDate;
-      return thisWeek
-        ? `이번 주 (${weekRangeText(task)})`
-        : `${weekRangeText(task)} 주`;
+      return weekLabelOf(task, today);
     }
     const time = task.dueTime ? ` ${task.dueTime}` : ""; // 시간이 있으면 뒤에 (R15)
     if (task.dateKind === "day") return `${task.dueDate} 당일${time}`;

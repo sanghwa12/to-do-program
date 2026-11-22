@@ -11,7 +11,8 @@ import { useState, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
-import { repeatLabelOf, weekRangeText } from "../labels.js";
+import { todayStr } from "../date.js";
+import { repeatLabelOf, weekLabelOf } from "../labels.js";
 import { noteDatesFrom, noteDateText } from "../notes.js";
 
 export default function QuickInput() {
@@ -73,7 +74,8 @@ export default function QuickInput() {
     if (p.dateKind === "range")
       return `"${p.title}" — ${p.startDate} ~ ${p.dueDate} 기간으로 저장됩니다`;
     if (p.dateKind === "week")
-      return `"${p.title}" — 이번 주(${weekRangeText(p)}) 안에 할 일로 저장됩니다`;
+      // 이번 주 / 다음 주 / 다다음 주 / 그 밖엔 날짜만 (F02 R17)
+      return `"${p.title}" — ${weekLabelOf(p, todayStr())} 안에 할 일로 저장됩니다`;
     const time = p.dueTime ? ` ${p.dueTime}` : ""; // 시간이 있으면 같이 (R15)
     if (p.dateKind === "day")
       // "당일 일정"이라고 쓰면 📢 일정과 헷갈리므로 "당일 할 일" (2026-09-28)

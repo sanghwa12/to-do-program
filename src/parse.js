@@ -8,7 +8,7 @@
 // 날짜 표기가 없으면 그냥 제목만 있는 할 일.
 // 메일·공지에서 복사한 여러 형식(2026년 9월 15일(화) 13:00부터 …)은 아래 "붙여 넣은 글" 단계가 맡음 (R18).
 // ============================================================
-import { todayStr, nextNthWeekday, nextBusinessDay, weekOf } from "./date.js";
+import { todayStr, addDays, nextNthWeekday, nextBusinessDay, weekOf } from "./date.js";
 import { cleanExceptions } from "./span.js";
 
 /** 연·월·일 숫자를 "YYYY-MM-DD" 문자열로 */
@@ -93,8 +93,14 @@ const RANGE_RE = new RegExp(`\\(?\\s*${D}\\s*~\\s*${D}\\s*\\)?`);
 const DUE_NUM_RE = new RegExp(`\\(?\\s*~\\s*${D}\\)?(?:\\s+${T})?(?:\\s*까지)?\\s*\\)?`);
 // 마감(말): ~오늘, ~내일, ~모레, ~월요일 ... ~일요일
 const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요일)(?:\s*까지)?\s*\)?/;
-// 이번 주 중에 (F02 R17): ~이번주 / ~이번 주 / (~이번주) — 뒤에 다른 글자가 바로 붙으면 인식 안 함
-const WEEK_RE = /\(?\s*~\s*이번\s?주\s*\)?(?=\s|$)/;
+// 그 주 안에 (F02 R17): ~이번주 / ~다음주 / ~다다음주 / ~12/7주(그 날짜가 든 주)
+// 띄어 써도 되고("~다음 주") 뒤에 "까지"가 붙어도 됨. 괄호 (~다음주)도.
+// 뒤에 다른 글자가 바로 붙으면 인식 안 함 ("~12/7 주간회의"의 '주'를 잡지 않게)
+const WEEK_RE = new RegExp(
+  `\\(?\\s*~\\s*(?:(이번|다음|다다음)\\s?주|${D}\\s?주)(?:\\s*까지)?\\s*\\)?(?=\\s|$)`
+);
+// "이번/다음/다다음 주" = 오늘에서 며칠 뒤가 든 주인가
+const WEEK_WORD_DAYS = { 이번: 0, 다음: 7, 다다음: 14 };
 // 당일: 맨 날짜 (+시간) — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
 // 닫는 괄호는 날짜 뒤·시간 뒤 어디든: "(9/7) 14:00", "(9/7 14:00)" 모두 인식
 const DAY_RE = new RegExp(`(?:^|\\s)\\(?${D}\\)?(?:\\s+${T})?\\s*\\)?\\s*$`);
@@ -325,7 +331,7 @@ function detectRepeat(text) {
  * 날짜 표기가 없거나 이상하면 전체를 제목으로 그대로 반환.
  * opts.allowPast: 지난 날짜를 내년으로 올리지 않음 (공지처럼 "있었던 날"도 유효할 때)
  * opts.repeatable: 반복 표기(매주 등) 인식 여부 (기본 켜짐 — 공지 입력에선 끔)
- * opts.weekable: "~이번주" 인식 여부 (기본 켜짐 — 📢 일정 입력에선 끔, F02 R17)
+ * opts.weekable: "~이번주"·"~다음주" 같은 주 표기 인식 여부 (기본 켜짐 — 📢 일정 입력에선 끔, F02 R17)
  */
 export function parseQuickInput(
   text,
@@ -372,12 +378,18 @@ export function parseQuickInput(
 
   const plain = { title: text.trim() };
 
-  // 0) 이번 주 중에 (F03 R10): ~이번주 → 이번 주 월요일~일요일, 요일은 정하지 않음
+  // 0) 그 주 안에 (F03 R10): ~이번주·~다음주·~12/7주 → 그 주 월요일~일요일, 요일은 정하지 않음
   let m = weekable ? text.match(WEEK_RE) : null;
   if (m) {
     const title = stripTitle(text, m[0]);
-    if (title) {
-      const week = weekOf(todayStr());
+    // 그 주에 든 날짜 하나: 말로 쓰면 오늘에서 0·7·14일 뒤, 날짜로 쓰면 그 날짜 (m[2]~m[4] = 연·월·일)
+    const base = m[1]
+      ? addDays(todayStr(), WEEK_WORD_DAYS[m[1]])
+      : resolveYMD(m[2], m[3], m[4], true);
+    if (title && base) {
+      let week = weekOf(base);
+      // 연도 없이 쓴 주가 통째로 지났으면 내년의 그 날짜가 든 주로 (기간 표기와 같은 규칙)
+      if (!m[1] && !m[2] && week.end < todayStr()) week = weekOf(plusOneYear(base));
       return { title, startDate: week.start, dueDate: week.end, dateKind: "week" };
     }
   }

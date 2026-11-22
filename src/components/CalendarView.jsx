@@ -15,7 +15,7 @@ import { byDueDateTime } from "../sort.js";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
 import { holidayName, hasHolidayData } from "../holidays.js";
-import { weekRangeText } from "../labels.js";
+import { weekLabelOf } from "../labels.js";
 import {
   firstLineOf,
   notesOnDate,
@@ -288,7 +288,7 @@ function DayAdd({ date }) {
           {kind === "note"
             ? `${noteDateText(noteDates)} 일정으로 저장됩니다`
             : parsed.dateKind === "week"
-              ? `이번 주(${weekRangeText(parsed)}) 안에 할 일로 저장됩니다`
+              ? `${weekLabelOf(parsed, todayStr())} 안에 할 일로 저장됩니다`
               : typedDate
               ? `텍스트의 날짜 표기대로 저장됩니다 (${parsed.dueDate})`
               : `${date} 당일 할 일로 저장됩니다`}
