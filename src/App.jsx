@@ -467,7 +467,9 @@ function TaskView({
     // 끝낸 메모도 사라지지 않고 체크 표시만 된 채 제자리에 남음 (R2c, 2026-11-19)
     const undated = tasks.filter(
       (t) =>
-        !t.dueDate && (!t.done || (t.completedAt ?? "") >= MEMO_DONE_SINCE)
+        !t.dueDate &&
+        !t.soon && // "빨리 하면 좋은 일"은 오늘 탭의 제 칸에 (F03 R13)
+        (!t.done || (t.completedAt ?? "") >= MEMO_DONE_SINCE)
     );
     return (
       <div>
@@ -536,6 +538,10 @@ function TaskView({
     const weekList = tasks
       .filter((t) => isThisWeekTask(t, today))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // 빨리 하면 좋은 일 (F03 R13): 날짜는 없지만 빨리 처리하면 좋은 것 — 최신 입력이 위
+    const soonList = tasks
+      .filter((t) => !t.done && t.soon && !t.dueDate)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     // 다른 날 제목용 "M/D" (예: "8/9 할 일")
     const dayLabel = `${Number(dayDate.slice(5, 7))}/${Number(dayDate.slice(8, 10))}`;
 
@@ -567,6 +573,22 @@ function TaskView({
                 : "이 날짜의 할 일이 없어요."
             }
           />
+          {/* ⚡ 빨리 하면 좋은 일 (F03 R13): "~빨리"로 넣은, 날짜 없는 할 일.
+              오늘을 볼 때만, 하나라도 있을 때만. 체크할 때까지 계속 여기 있음 */}
+          {viewingToday && soonList.length > 0 && (
+            <>
+              <h2 className="group-title">
+                <Icon name="bolt" /> 빨리 하면 좋은 일{" "}
+                <span className="group-count">{soonList.length}</span>
+              </h2>
+              <TaskList
+                tasks={soonList}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onConvert={onConvertToNote}
+              />
+            </>
+          )}
           {/* 🗓 이번 주에 할 일 (F03 R10): "~이번주"로 넣은, 요일을 정하지 않은 할 일.
               오늘을 볼 때만, 하나라도 있을 때만. 최신 입력이 위 */}
           {viewingToday && weekList.length > 0 && (

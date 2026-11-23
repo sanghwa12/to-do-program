@@ -31,11 +31,13 @@ export default function QuickInput() {
     : parseQuickInput(text);
 
   // [할 일] 저장될 내용 (R14): 텍스트 표기가 있으면 표기 우선, 없으면 선택기 날짜(마감)
+  // 📅로 날짜를 고르면 "~빨리" 표시는 뺌 — 빨리는 날짜 없는 일에만 (F02 R19)
+  const { soon: _soon, ...parsedNoSoon } = parsed;
   const effective =
     parsed.dueDate || parsed.repeat
       ? parsed
       : pickedDate
-        ? { ...parsed, dueDate: pickedDate, dateKind: "due" }
+        ? { ...parsedNoSoon, dueDate: pickedDate, dateKind: "due" }
         : parsed;
 
   // [일정] 날짜 칸(날짜·기간의 끝·시간): 텍스트 표기 우선, 없으면 📅로 고른 날짜.
@@ -168,6 +170,11 @@ export default function QuickInput() {
           )
         ) : effective.dueDate ? (
           <p className="parse-hint">{previewText(effective)}</p>
+        ) : effective.soon ? (
+          // "~빨리" (F02 R19): 날짜 없이 오늘 탭의 "빨리 하면 좋은 일"로
+          <p className="parse-hint">
+            "{effective.title}" — 빨리 하면 좋은 일로 저장됩니다 (오늘 탭에 보여요)
+          </p>
         ) : (
           <p className="parse-hint muted">
             "{effective.title}" — 메모(날짜 없음)로 저장됩니다 (달력 버튼으로 날짜 붙이기)

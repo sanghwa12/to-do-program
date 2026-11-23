@@ -99,6 +99,9 @@ const DUE_WORD_RE = /\(?\s*~\s*(오늘|내일|모레|[일월화수목금토]요�
 const WEEK_RE = new RegExp(
   `\\(?\\s*~\\s*(?:(이번|다음|다다음)\\s?주|${D}\\s?주)(?:\\s*까지)?\\s*\\)?(?=\\s|$)`
 );
+// 빨리 하면 좋은 일 (F02 R19): ~빨리 / (~빨리) — 날짜는 없지만 빨리 처리하면 좋은 일
+// 뒤에 다른 글자가 바로 붙으면 인식 안 함 ("~빨리끝내기")
+const SOON_RE = /\(?\s*~\s*빨리\s*\)?(?=\s|$)/;
 // "이번/다음/다다음 주" = 오늘에서 며칠 뒤가 든 주인가
 const WEEK_WORD_DAYS = { 이번: 0, 다음: 7, 다다음: 14 };
 // 당일: 맨 날짜 (+시간) — 문장 "끝"에 있을 때만 ("3/4 분량 읽기" 오인 방지)
@@ -331,12 +334,28 @@ function detectRepeat(text) {
  * 날짜 표기가 없거나 이상하면 전체를 제목으로 그대로 반환.
  * opts.allowPast: 지난 날짜를 내년으로 올리지 않음 (공지처럼 "있었던 날"도 유효할 때)
  * opts.repeatable: 반복 표기(매주 등) 인식 여부 (기본 켜짐 — 공지 입력에선 끔)
- * opts.weekable: "~이번주"·"~다음주" 같은 주 표기 인식 여부 (기본 켜짐 — 📢 일정 입력에선 끔, F02 R17)
+ * opts.weekable: 할 일 전용 표기 인식 여부 — "~이번주"·"~다음주" 같은 주 표기(F02 R17)와
+ *                "~빨리"(F02 R19). 기본 켜짐 — 📢 일정 입력에선 끔
  */
 export function parseQuickInput(
   text,
   { allowPast = false, repeatable = true, weekable = true } = {}
 ) {
+  // 빨리 하면 좋은 일 (F02 R19): ~빨리 → 표기를 빼고 나머지를 평소대로 해석.
+  // 날짜·반복이 같이 적혀 있으면 그쪽이 우선 ("빨리"는 날짜 없는 일에만 붙는 표시)
+  if (weekable) {
+    const s = text.match(SOON_RE);
+    if (s) {
+      const inner = parseQuickInput(stripTitle(text, s[0]), {
+        allowPast,
+        repeatable,
+        weekable,
+      });
+      if (inner.title === "") return { title: text.trim() }; // 제목이 없으면 인식 취소
+      return inner.dueDate || inner.repeat ? inner : { ...inner, soon: true };
+    }
+  }
+
   // 반복 표기 먼저 확인 (F09) — 찾으면 표기를 뺀 나머지로 날짜·제목을 계속 해석
   if (repeatable) {
     const rep = detectRepeat(text);
@@ -556,6 +575,7 @@ export function parseImportLine(line) {
     if (exc.skipDates) draft.skipDates = exc.skipDates;
     if (exc.extraDates) draft.extraDates = exc.extraDates;
   }
+  if (parsed.soon) draft.soon = true; // 빨리 하면 좋은 일 (F03 R13) — 내보내기가 "~빨리"로 적음
   if (parsed.repeat) draft.repeat = parsed.repeat;
   if (parsed.repeatNth !== undefined) draft.repeatNth = parsed.repeatNth;
   if (parsed.repeatWeekday !== undefined) draft.repeatWeekday = parsed.repeatWeekday;

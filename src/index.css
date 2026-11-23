@@ -1250,6 +1250,20 @@ button.delete {
   font-size: 0.75rem;
   color: #222;
 }
+/* 체크 하나짜리 칸 (빨리 하면 좋은 일, F03 R13): 체크박스와 글자를 한 줄로 */
+.edit-extras label.edit-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-end;
+  padding-bottom: 6px;
+  cursor: pointer;
+}
+.edit-extras label.edit-check input {
+  width: auto; /* 편집칸 공통의 "폭 100%"가 체크박스에 걸리지 않게 */
+  padding: 0;
+  flex-shrink: 0;
+}
 .edit-extras input,
 .edit-extras select {
   padding: 5px 8px;

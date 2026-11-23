@@ -79,6 +79,7 @@ export default function TaskItem({
   const [memo, setMemo] = useState(task.memo || "");
   const [dueDate, setDueDate] = useState(task.dueDate || "");
   const [dueTime, setDueTime] = useState(task.dueTime || ""); // 시간 (선택, F02 R15)
+  const [soon, setSoon] = useState(!!task.soon); // 빨리 하면 좋은 일 (F03 R13)
   const [dateKind, setDateKind] = useState(task.dateKind || "due"); // 날짜의 의미
   const [startDate, setStartDate] = useState(task.startDate || ""); // 기간의 시작
   const [repeat, setRepeat] = useState(task.repeat || ""); // 반복 주기 (F09, 사용자화용)
@@ -192,6 +193,8 @@ export default function TaskItem({
       title: newTitle,
       memo: memo.trim() || undefined,       // 비워두면 필드 자체를 없앰
       dueDate: saveDue,
+      // 빨리 하면 좋은 일 (F03 R13): 날짜 없는 일에만 — 날짜를 붙이면 표시는 사라짐
+      soon: !saveDue && soon ? true : undefined,
       // 기간·이번 주엔 시간 없음
       dueTime: kind && kind !== "range" && kind !== "week" && dueTime ? dueTime : undefined,
       dateKind: kind,
@@ -235,6 +238,7 @@ export default function TaskItem({
     setMemo(task.memo || "");
     setDueDate(task.dueDate || "");
     setDueTime(task.dueTime || "");
+    setSoon(!!task.soon);
     setDateKind(task.dateKind || "due");
     setStartDate(task.startDate || "");
     setRepeat(task.repeat || "");
@@ -307,6 +311,18 @@ export default function TaskItem({
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </label>
+            {/* 빨리 하면 좋은 일 (F03 R13) — 날짜가 없을 때만. 켜면 오늘 탭의 "빨리 하면 좋은 일"에,
+                끄면 메모판에 보임 */}
+            {!dueDate && (
+              <label className="edit-check">
+                <input
+                  type="checkbox"
+                  checked={soon}
+                  onChange={(e) => setSoon(e.target.checked)}
+                />
+                빨리 하면 좋은 일 (오늘 탭에 보이기)
+              </label>
+            )}
             {/* 날짜의 의미: ~까지 마감 / 그날 당일 / 기간 */}
             {dueDate && (
               <label>
@@ -530,6 +546,12 @@ export default function TaskItem({
         </div>
         {task.memo && <p className="task-memo">{task.memo}</p>}
 
+        {/* 빨리 하면 좋은 일 표시 (F03 R13) — 날짜 없는 것만 (전체 탭·검색에서 알아보게) */}
+        {task.soon && !task.dueDate && (
+          <div className="task-badges">
+            <span className="badge"><Icon name="bolt" /> 빨리</span>
+          </div>
+        )}
         {/* 날짜·카테고리 뱃지 (있는 것만 표시) */}
         {task.dueDate && (
           <div className="task-badges">

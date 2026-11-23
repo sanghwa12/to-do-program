@@ -31,6 +31,8 @@ function taskToLine(task) {
     line += ` 🗓 ${task.startDate} ~ ${task.dueDate}`;
   else if (task.dateKind === "day") line += ` 📅 ${task.dueDate} 당일`;
   else if (task.dueDate) line += ` 📅 ~${task.dueDate}`;
+  // 빨리 하면 좋은 일 (F03 R13): 날짜 없는 것만 — 입력 표기 그대로 적어 가져오기가 복원
+  else if (task.soon) line += ` ~빨리`;
   // 시간 (R15) — 날짜 바로 뒤에 두면 가져오기가 그대로 읽음
   if (task.dueTime && task.dateKind !== "range") line += ` ${task.dueTime}`;
   if (task.repeat) line += ` 🔁 ${repeatLabelOf(task)}`;
