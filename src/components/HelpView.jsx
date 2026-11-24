@@ -52,7 +52,7 @@ export default function HelpView({ onBack }) {
             <code>2026-11-30 10:00 ~ 11:00</code> ·{" "}
             <code>2026년 9월 15일(화) 13:00부터</code> ·{" "}
             <code>2026/09/30 오전 8시</code> · <code>11월 30일까지</code> ·{" "}
-            <code>(1106일마감)</code>. 끝 시간은 버리고 시작 시간만 저장해요.
+            <code>(1106일마감)</code> · <code>20261126</code> · <code>261126</code>(문장 끝에). 끝 시간은 버리고 시작 시간만 저장해요.
             미리보기에서 날짜가 맞는지 확인하고 Enter
           </li>
           <li>
