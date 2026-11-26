@@ -10,9 +10,11 @@
 //  · 스티커 제목 클릭 = 이름 바꾸기, ✕ = 삭제(메모는 기본으로 돌아감)
 //  · 메모 줄의 ✕ = 휴지통으로 (한 번 더 확인 — R7a. 실행취소 가능)
 //    끝낸 메모의 ✕ = 판에서만 치우기 — 지우지 않음, 전체 탭·하루 기록엔 그대로 (2026-11-26)
-// 날짜 붙이기 같은 세부 작업은 "전체" 탭에서.
+//  · 메모 줄의 ⚡ = 빨리 하면 좋은 일로, 📅 = 날짜(마감)를 골라 할 일로 (R2g, 2026-11-27)
+//    — 둘 다 메모판에서 빠져 오늘 탭·달력 쪽으로 옮겨 감. 실행취소 가능
+// 기간·시간·반복 같은 세부 작업은 "전체" 탭에서.
 // ------------------------------------------------------------
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Icon from "./Icon.jsx";
 import {
   updateTask,
@@ -132,7 +134,7 @@ function computeColumns(rows) {
   return cols;
 }
 
-export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide }) {
+export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide, onPromote }) {
   const [newName, setNewName] = useState("");
   // 끌고 있는 메모를 지금 받을 스티커 이름 (강조용). "" = 기본 스티커, null = 없음
   const [dragOver, setDragOver] = useState(null);
@@ -261,6 +263,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide 
         onToggle={onToggle}
         onDelete={onDelete}
         onHide={onHide}
+        onPromote={onPromote}
         highlighted={dragOver === ""}
         dropAt={dropAt}
         solo={solo}
@@ -281,6 +284,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide 
         onToggle={onToggle}
         onDelete={onDelete}
         onHide={onHide}
+        onPromote={onPromote}
         highlighted={dragOver === n}
         dropAt={dropAt}
         solo={solo}
@@ -331,7 +335,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide 
         />
       </form>
       <p className="sticky-hint">
-        체크하면 완료 표시(다시 누르면 해제) · 끝낸 메모는 ✕로 판에서 치우기(기록은 남음) · 안 끝낸 메모의 ✕는 휴지통 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
+        체크하면 완료 표시(다시 누르면 해제) · 줄에 마우스를 올려 <Icon name="bolt" /> 빨리 하면 좋은 일로 · <Icon name="calendar" /> 날짜를 골라 할 일로 · 끝낸 메모는 ✕로 판에서 치우기(기록은 남음) · 안 끝낸 메모의 ✕는 휴지통 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
         바꾸기·다른 스티커로 · 스티커는 ⠿를 끌어서 배치
       </p>
     </section>
@@ -346,6 +350,7 @@ function Sticker({
   onToggle,
   onDelete,
   onHide,
+  onPromote,
   highlighted,
   dropAt, // 끌고 있는 메모가 놓일 자리 { id, before } (R2f)
   solo,
@@ -448,6 +453,7 @@ function Sticker({
               onToggle={onToggle}
               onDelete={onDelete}
               onHide={onHide}
+              onPromote={onPromote}
               // 이 줄 앞/뒤가 놓일 자리면 "before"/"after" (갈색 줄)
               dropMark={
                 dropAt?.id === t.id ? (dropAt.before ? "before" : "after") : ""
@@ -463,7 +469,8 @@ function Sticker({
 // 메모 한 줄: 체크박스 + 글자(클릭하면 그 자리 수정) + ✕(휴지통 / 끝낸 메모는 판에서 치우기). 끌 수 있음
 // 글자를 클릭하면 제목 칸 아래에 세부 내용 칸(task.memo)이 함께 열림 (2026-09-16)
 // data-id는 끌어다 놓을 때 "어느 줄 근처인지" 찾는 표식 (dropSpot, R2f)
-function StickyItem({ task, onToggle, onDelete, onHide, dropMark }) {
+function StickyItem({ task, onToggle, onDelete, onHide, onPromote, dropMark }) {
+  const dateRef = useRef(null); // 📅를 누르면 띄울, 눈에 안 보이는 날짜 칸 (R2g)
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(task.title);
   const [memoText, setMemoText] = useState(task.memo || ""); // 세부 내용
@@ -568,6 +575,42 @@ function StickyItem({ task, onToggle, onDelete, onHide, dropMark }) {
           </span>
         )}
       </span>
+      {/* 할 일로 올리기 (R2g, 2026-11-27) — 안 끝낸 메모에만, 줄에 마우스를 올리면 보임.
+          ⚡ = 빨리 하면 좋은 일(오늘 탭)로 / 📅 = 달력에서 날짜를 고르면 그날까지 마감인 할 일로 */}
+      {!task.done && !confirmDel && (
+        <>
+          <button
+            className="sticky-act"
+            onClick={() => onPromote(task, { soon: true })}
+            aria-label="빨리 하면 좋은 일로"
+            title="빨리 하면 좋은 일로 (오늘 탭에 보이기)"
+          >
+            <Icon name="bolt" />
+          </button>
+          <span className="sticky-date">
+            <button
+              className="sticky-act"
+              onClick={() => dateRef.current?.showPicker?.()}
+              aria-label="날짜 붙이기"
+              title="날짜를 골라 할 일로 (그날까지 마감)"
+            >
+              <Icon name="calendar" />
+            </button>
+            {/* 달력을 띄우기 위한 숨은 날짜 칸 — 날짜를 고르는 순간 바로 저장 */}
+            <input
+              ref={dateRef}
+              type="date"
+              tabIndex={-1}
+              aria-hidden="true"
+              value=""
+              onChange={(e) => {
+                if (e.target.value)
+                  onPromote(task, { dueDate: e.target.value, dateKind: "due" });
+              }}
+            />
+          </span>
+        </>
+      )}
       {/* 끝낸 메모의 ✕ (2026-11-26): 판에서만 치움 — 지우는 게 아니라서 확인 없이 바로 (실행취소 가능).
           안 끝낸 메모의 ✕ (2026-08-11): 휴지통으로 — 한 번 더 확인, 실행취소 가능 */}
       {task.done ? (

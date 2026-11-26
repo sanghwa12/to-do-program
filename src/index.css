@@ -489,6 +489,41 @@ h1 {
 .sticky-del:hover {
   color: #a33;
 }
+/* 메모를 할 일로 올리는 ⚡·📅 (R2g) — ✕처럼 줄에 마우스를 올리면 보임 */
+.sticky-act {
+  flex-shrink: 0;
+  visibility: hidden;
+  background: none;
+  border: none;
+  color: #b3a76a;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+.sticky-item:hover .sticky-act,
+.sticky-item:focus-within .sticky-act {
+  visibility: visible;
+}
+.sticky-act:hover {
+  color: #4a7dff;
+}
+/* 📅 버튼 + 숨은 날짜 칸: 칸은 안 보이지만 자리는 버튼 밑에 있어 달력이 그 근처에 뜸 */
+.sticky-date {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+}
+.sticky-date input[type="date"] {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 .sticky-item input[type="checkbox"] {
   flex-shrink: 0;
   transform: translateY(3px);

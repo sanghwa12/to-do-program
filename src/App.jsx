@@ -156,6 +156,19 @@ export default function App() {
     setUndo({ type: "hideMemo", id: task.id, label: `"${task.title}"` });
   }
 
+  // 메모를 할 일로 올리기 (F03 R2g, 2026-11-27) — 메모판 줄의 ⚡·📅 버튼.
+  // changes: { soon: true } (빨리 하면 좋은 일) 또는 { dueDate, dateKind: "due" } (그날까지 마감)
+  // 날짜나 빨리 표시가 붙으면 메모판에서 빠지고 오늘 탭·달력 쪽에 나옴. 실행취소 가능
+  async function handlePromoteMemo(task, changes) {
+    await updateTask(task.id, changes);
+    setUndo({
+      type: "promote",
+      id: task.id,
+      dueDate: changes.dueDate, // 없으면 "빨리"로 올린 것
+      label: `"${task.title}"`,
+    });
+  }
+
   // 전체 → 휴지통
   async function handleClearAll() {
     const all = tasks ?? [];
@@ -241,6 +254,13 @@ export default function App() {
       else if (undo.type === "done") await uncheckTasks(undo.ids);
       else if (undo.type === "hideMemo")
         await updateTask(undo.id, { memoHidden: undefined });
+      else if (undo.type === "promote")
+        // 붙였던 날짜·빨리 표시를 떼어 다시 메모로
+        await updateTask(undo.id, {
+          soon: undefined,
+          dueDate: undefined,
+          dateKind: undefined,
+        });
       else if (undo.type === "memoDone") await setMemoDone(undo.id, false);
       else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "toNote") await restoreTaskFromNote(undo.task);
@@ -429,6 +449,7 @@ export default function App() {
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
               onHideMemo={handleHideMemo}
+              onPromoteMemo={handlePromoteMemo}
               onToggleMemoDone={handleToggleMemoDone}
               onConvertToNote={handleConvertToNote}
               onConvertToTask={handleConvertToTask}
@@ -449,6 +470,10 @@ export default function App() {
               ? "휴지통으로 이동"
               : undo.type === "hideMemo"
                 ? "메모판에서 치움 (기록은 남아요)"
+              : undo.type === "promote"
+                ? undo.dueDate
+                  ? `${Number(undo.dueDate.slice(5, 7))}/${Number(undo.dueDate.slice(8, 10))}까지 할 일로 옮김`
+                  : "빨리 하면 좋은 일로 옮김 (오늘 탭)"
               : undo.type === "memoDone"
                 ? "완료 (노트 탭에서 안 보여요)"
               : undo.type === "memo"
@@ -493,6 +518,7 @@ function TaskView({
   onDelete,
   onDeleteMemo,
   onHideMemo, // 끝낸 메모를 메모판에서만 치우기 (F03 R2c)
+  onPromoteMemo, // 메모에 빨리·날짜를 붙여 할 일로 올리기 (F03 R2g)
   onToggleMemoDone, // 노트 완료 / 완료 취소 (F11 R12)
   onConvertToNote, // 할 일 → 일정 (F11 R9)
   onConvertToTask, // 일정 → 할 일
@@ -517,6 +543,7 @@ function TaskView({
         onToggle={onToggle}
         onDelete={onDelete}
         onHide={onHideMemo}
+        onPromote={onPromoteMemo}
       />
     );
   }
