@@ -43,7 +43,7 @@ import { todayStr, addDays } from "./date.js";
 import { WEEKDAY_LABEL, weekRangeText } from "./labels.js";
 import { tasksOnDate } from "./calendar.js";
 import { exportBackup } from "./export.js";
-import { sortForAllTab, byDueDateTime } from "./sort.js";
+import { sortForAllTab, byDueDateTime, compareTime } from "./sort.js";
 import { firstLineOf, notesOnDate, byNoteTime } from "./notes.js";
 import {
   spanOfTask,
@@ -53,6 +53,7 @@ import {
   skipDay,
   isDueToday,
   isThisWeekTask,
+  thisMonthDate,
 } from "./span.js";
 
 // 탭 최소화 (D00 D안, 2026-08-03 사용자 결정):
@@ -580,6 +581,14 @@ function TaskView({
     const weekList = tasks
       .filter((t) => isThisWeekTask(t, today))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // 이번 달에 할 일 (F03 R14): 날짜가 이번 달 안(내일~말일)에 걸린 할 일을 모아 보여줌.
+    // 따로 입력하는 게 아니라 날짜만 보고 자동으로 — 달이 바뀌면 그 달 것이 올라옴.
+    // 가까운 날부터, 같은 날은 시간 순
+    const monthList = tasks
+      .map((t) => ({ t, when: thisMonthDate(t, today) }))
+      .filter((x) => x.when)
+      .sort((a, b) => a.when.localeCompare(b.when) || compareTime(a.t.dueTime, b.t.dueTime))
+      .map((x) => x.t);
     // 빨리 하면 좋은 일 (F03 R13): 날짜는 없지만 빨리 처리하면 좋은 것 — 최신 입력이 위
     const soonList = tasks
       .filter((t) => !t.done && t.soon && !t.dueDate)
@@ -645,6 +654,22 @@ function TaskView({
                 onDelete={onDelete}
                 onConvert={onConvertToNote}
                 onPostpone={onPostponeWeek}
+              />
+            </>
+          )}
+          {/* 🗓 이번 달에 할 일 (F03 R14): 날짜가 이번 달 안에 걸린 할 일 (위 묶음에 나온 것은 빼고).
+              오늘을 볼 때만, 하나라도 있을 때만. 가까운 날부터 */}
+          {viewingToday && monthList.length > 0 && (
+            <>
+              <h2 className="group-title">
+                <Icon name="calendar" /> 이번 달에 할 일{" "}
+                <span className="group-count">{monthList.length}</span>
+              </h2>
+              <TaskList
+                tasks={monthList}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onConvert={onConvertToNote}
               />
             </>
           )}

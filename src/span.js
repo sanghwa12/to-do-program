@@ -208,3 +208,21 @@ export function isThisWeekTask(task, today) {
     today <= task.dueDate
   );
 }
+
+/** 오늘 탭 "이번 달에 할 일" 묶음에 나올 할 일이면 그 날짜를, 아니면 null (F03 R14).
+ *  따로 입력하는 종류가 아니라, 날짜가 이번 달 안(내일 ~ 말일)에 걸린 할 일을 모아 보여주는 것.
+ *   · 이미 위 묶음(오늘 할 일·이번 주에 할 일)에 나온 것은 뺌 — 같은 일이 두 번 보이지 않게
+ *   · 매일·주중 매일 반복은 뺌 — 늘 "내일" 회차가 걸려 있어서 자리만 차지함
+ *   · 기간은 오늘 뒤에 처음으로 걸리는 날, "그 주 안에"는 그 주 월요일이 기준
+ *  돌려주는 날짜는 묶음 안에서 가까운 순으로 줄 세우는 데 씀 */
+export function thisMonthDate(task, today) {
+  if (task.done || !task.dueDate) return null;
+  if (isDueToday(task, today) || isThisWeekTask(task, today)) return null;
+  if (task.repeat === "daily" || task.repeat === "weekdays") return null;
+  const next =
+    task.dateKind === "week"
+      ? task.startDate ?? task.dueDate
+      : nextActiveAfter(spanOfTask(task), today);
+  // 같은 달인지: "YYYY-MM"까지가 같으면 이번 달 ("2026-12-21".slice(0, 7) → "2026-12")
+  return next && next > today && next.slice(0, 7) === today.slice(0, 7) ? next : null;
+}
