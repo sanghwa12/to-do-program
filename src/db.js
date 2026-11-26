@@ -392,6 +392,15 @@ export async function restoreNoteFromTask(note) {
   });
 }
 
+/** 노트 완료 / 완료 취소 (F11 R12, 2026-11-26): 지우지 않고 완료한 시각(doneAt)만 적어 둠 —
+ *  노트 탭에서는 안 보이고 데이터는 그대로 (검색으로 찾아서 다시 꺼낼 수 있음).
+ *  수정 시각(updatedAt)은 건드리지 않음 — 다시 꺼냈을 때 원래 자리로 돌아오게 */
+export async function setMemoDone(id, done) {
+  await db.memos.update(id, {
+    doneAt: done ? new Date().toISOString() : undefined,
+  });
+}
+
 /** 메모 삭제 (실행취소는 restoreMemos로) */
 export async function deleteMemo(id) {
   await db.memos.delete(id);

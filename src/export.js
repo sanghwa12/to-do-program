@@ -101,7 +101,8 @@ export async function exportBackup() {
           `- 📢 ${first} 📅 ${noteDateText(m)}${m.endDate ? exceptionMarks(m) : ""}`
         );
       } else {
-        lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}`);
+        // 완료한 노트(F11 R12)도 백업엔 그대로 — 제목 줄에 표시만
+        lines.push(`### 📝 ${m.updatedAt.slice(0, 10)}${m.doneAt ? " (완료)" : ""}`);
         lines.push(`📝 ${first}`);
       }
       for (const ln of rest) {

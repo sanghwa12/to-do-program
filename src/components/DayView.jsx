@@ -118,8 +118,8 @@ export default function DayView({ tasks, date, onDateChange, children }) {
 
   return (
     <div className="day-view">
-      {/* 오늘 탭에 포함된 블록 (2026-08-05 통합) — ◀▶로 지난 날 기록 열람 */}
-      <h2 className="group-title"><Icon name="book" /> 하루 기록</h2>
+      {/* 오늘 탭에 포함된 블록 (2026-08-05 통합) — ◀▶로 지난 날 기록 열람.
+          "하루 기록" 제목 줄은 없앰 (2026-11-26 사용자 요청 — 한눈에 들어오게) */}
       {/* 날짜 이동 */}
       <div className="cal-nav">
         <button

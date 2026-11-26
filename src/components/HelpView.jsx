@@ -61,7 +61,8 @@ export default function HelpView({ onBack }) {
             <code>매월 첫째주 월요일</code> · <code>주중</code>(월~금)
           </li>
           <li>
-            <b>📅 버튼</b>: 표기 없이 달력에서 날짜 고르기 (마감으로 등록)
+            <b>📅 버튼</b>: 누르면 날짜 고르는 달력이 바로 떠요 — 표기 없이 날짜 붙이기
+            (마감으로 등록)
           </li>
           <li>
             <b>
@@ -110,7 +111,7 @@ export default function HelpView({ onBack }) {
       </section>
 
       <section className="help-section">
-        <h3>🗂 탭</h3>
+        <h3>🗂 탭 (화면 왼쪽에 세로로 — 창이 좁으면 위에 가로로)</h3>
         <ul>
           <li>
             <b>왼쪽 줄의 색 = 종류</b>: 할 일 파랑 · 일정 보라 · 오늘의 계획
@@ -134,6 +135,10 @@ export default function HelpView({ onBack }) {
             줄로 보여요 (새 메모는 맨 위에). <b>"+ 새 스티커"</b>로 판을
             나누고, 메모를 <b>끌어서</b> 다른 스티커로 옮기기 (제목 클릭=이름
             바꾸기). 스티커 자체는 <b>⠿ 손잡이</b>를 끌어 원하는 열·순서에 배치
+          </li>
+          <li>
+            <b>노트</b>: 체크 없는 기록·참고 정보. 카드 오른쪽 <b>완료</b>를 누르면
+            지우지 않고 이 탭에서만 안 보여요 (아래 "📝 노트" 참고)
           </li>
           <li>
             <b>달력</b>: 월간 보기 — 날짜 칸 클릭하면 그날 할 일·일정이 아래에
@@ -178,7 +183,7 @@ export default function HelpView({ onBack }) {
       </section>
 
       <section className="help-section">
-        <h3>📝 노트 (메모 탭 아래 구역)</h3>
+        <h3>📝 노트 (노트 탭)</h3>
         <ul>
           <li>
             할 일이 아닌 <b>기록·참고 정보</b>는 노트로 — 한 줄 쓰고 Enter,
@@ -187,6 +192,13 @@ export default function HelpView({ onBack }) {
           <li>
             노트에 <b>날짜를 붙이면 일정</b>이 되어 달력·오늘 탭으로 옮겨가요
             (일정에서 날짜를 지우면 다시 노트로)
+          </li>
+          <li>
+            <b>완료</b>: 다 본 노트는 카드 오른쪽 <b>완료</b> — 지우는 게 아니라
+            노트 탭에서만 안 보이게 해요 (잘못 눌렀으면 아래 알림의 <b>실행취소</b>).
+            완료한 노트는 <b>🔍 검색</b>으로 찾을 수 있고("완료" 표시), 열어서{" "}
+            <b>완료 취소</b>를 누르면 노트 탭에 다시 나와요. 아예 지우려면 노트를
+            열어 <b>삭제</b>
           </li>
         </ul>
       </section>

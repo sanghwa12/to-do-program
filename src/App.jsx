@@ -17,6 +17,7 @@ import {
   emptyTrash,
   deleteMemo,
   restoreMemos,
+  setMemoDone,
   completeRepeatingTask,
   undoCompleteRepeating,
   convertTaskToNote,
@@ -58,7 +59,8 @@ import {
 // 날짜(→달력이 대체)·우선순위·카테고리 탭 제거. 점·뱃지·정렬은 유지.
 // 오늘+하루 통합, 메모판 독립 (2026-08-05 사용자 결정)
 // 정보 탭 제거 (2026-09-04 사용자 결정): 노트는 메모 탭 하단 구역으로
-const TABS = ["오늘", "메모", "달력", "전체"];
+// 노트 탭 추가 (2026-11-26 사용자 결정): 메모 탭 하단에 있던 노트 구역을 제 탭으로
+const TABS = ["오늘", "메모", "노트", "달력", "전체"];
 
 // 메모판에 남기는 "끝낸 메모"의 기준 시각 (F03 R2c, 2026-11-19):
 // 이 시각 뒤에 체크한 메모만 판에 체크 표시로 남는다.
@@ -168,6 +170,19 @@ export default function App() {
     setUndo({ type: "memo", memos: [memo], label: `"${title}" 노트` });
   }
 
+  // 노트 완료 / 완료 취소 (F11 R12): 지우지 않고 노트 탭에서만 안 보이게.
+  // 완료할 때는 실행취소 알림 (취소할 때는 다시 보이게 되는 것뿐이라 알림 없음)
+  async function handleToggleMemoDone(memo) {
+    await setMemoDone(memo.id, !memo.doneAt);
+    if (!memo.doneAt) {
+      const title = firstLineOf(memo.text).slice(0, 20);
+      setUndo({ type: "memoDone", id: memo.id, label: `"${title}" 노트` });
+    } else {
+      // 방금 완료한 그 노트의 알림이 아직 떠 있으면 닫음 (이미 되돌렸으니)
+      setUndo((u) => (u?.type === "memoDone" && u.id === memo.id ? null : u));
+    }
+  }
+
   // 할 일 → 일정 (F11 R9). 실행취소를 위해 바꾸기 전 할 일을 통째로 기억해 둠
   async function handleConvertToNote(task) {
     await convertTaskToNote(task);
@@ -225,6 +240,7 @@ export default function App() {
       else if (undo.type === "done") await uncheckTasks(undo.ids);
       else if (undo.type === "hideMemo")
         await updateTask(undo.id, { memoHidden: undefined });
+      else if (undo.type === "memoDone") await setMemoDone(undo.id, false);
       else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "toNote") await restoreTaskFromNote(undo.task);
       else if (undo.type === "toTask") await restoreNoteFromTask(undo.note);
@@ -347,6 +363,7 @@ export default function App() {
           onDelete={handleDelete}
           onConvertToNote={handleConvertToNote}
           onDeleteMemo={handleDeleteMemo}
+          onToggleMemoDone={handleToggleMemoDone}
           onConvertToTask={handleConvertToTask}
           // 하루 기록 줄을 누르면: 오늘 탭을 그 날짜로 열고 검색을 닫음 (R5)
           onOpenDay={(date) => {
@@ -364,7 +381,23 @@ export default function App() {
           onEmpty={emptyTrash}
         />
       ) : (
-        <>
+        // 왼쪽에 세로 탭, 오른쪽에 입력칸과 내용 (2026-11-26 사용자 결정 — 한눈에 들어오게)
+        <div className="layout">
+          {/* 정리 뷰 탭 */}
+          <nav className="tabs" aria-label="보기 선택">
+            {TABS.map((name) => (
+              <button
+                key={name}
+                className={"tab" + (tab === name ? " active" : "")}
+                onClick={() => setTab(name)}
+                aria-current={tab === name ? "page" : undefined}
+              >
+                {name}
+              </button>
+            ))}
+          </nav>
+
+          <div className="layout-main">
           <QuickInput />
 
           {/* F02 R12: 여러 줄 붙여넣기 (⋯ 메뉴 > 가져오기 에서 엶) */}
@@ -381,20 +414,6 @@ export default function App() {
             </div>
           )}
 
-          {/* 정리 뷰 탭 */}
-          <nav className="tabs" aria-label="보기 선택">
-            {TABS.map((name) => (
-              <button
-                key={name}
-                className={"tab" + (tab === name ? " active" : "")}
-                onClick={() => setTab(name)}
-                aria-current={tab === name ? "page" : undefined}
-              >
-                {name}
-              </button>
-            ))}
-          </nav>
-
           {tasks === undefined ? (
             <p className="hint">불러오는 중...</p>
           ) : (
@@ -409,14 +428,15 @@ export default function App() {
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
               onHideMemo={handleHideMemo}
+              onToggleMemoDone={handleToggleMemoDone}
               onConvertToNote={handleConvertToNote}
               onConvertToTask={handleConvertToTask}
               onSkipDay={handleSkipDay}
               onPostponeWeek={handlePostponeWeek}
             />
           )}
-
-        </>
+          </div>
+        </div>
       )}
 
       {/* 실행취소 알림 (실행취소 또는 닫기를 누를 때까지 계속 떠 있음) */}
@@ -428,6 +448,8 @@ export default function App() {
               ? "휴지통으로 이동"
               : undo.type === "hideMemo"
                 ? "메모판에서 치움 (기록은 남아요)"
+              : undo.type === "memoDone"
+                ? "완료 (노트 탭에서 안 보여요)"
               : undo.type === "memo"
                 ? "삭제됨"
                 : undo.type === "toNote"
@@ -470,6 +492,7 @@ function TaskView({
   onDelete,
   onDeleteMemo,
   onHideMemo, // 끝낸 메모를 메모판에서만 치우기 (F03 R2c)
+  onToggleMemoDone, // 노트 완료 / 완료 취소 (F11 R12)
   onConvertToNote, // 할 일 → 일정 (F11 R9)
   onConvertToTask, // 일정 → 할 일
   onSkipDay, // 기간에서 그 날만 빼기 (F03 R9)
@@ -487,24 +510,27 @@ function TaskView({
         (!t.done || (!t.memoHidden && (t.completedAt ?? "") >= MEMO_DONE_SINCE))
     );
     return (
-      <div>
-        <StickyBoard
-          tasks={undated}
-          boards={boards}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          onHide={onHideMemo}
+      <StickyBoard
+        tasks={undated}
+        boards={boards}
+        onToggle={onToggle}
+        onDelete={onDelete}
+        onHide={onHideMemo}
+      />
+    );
+  }
+
+  // [노트] 체크 없는 기록 (F11) — 메모 탭 하단에서 제 탭으로 (2026-11-26).
+  // 일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28)
+  if (tab === "노트") {
+    return (
+      <div className="note-tab">
+        <MemoView
+          memos={memos}
+          onDelete={onDeleteMemo}
+          onConvert={onConvertToTask}
+          onToggleDone={onToggleMemoDone}
         />
-        {/* 노트 구역 (F11): 날짜 없는 기록 — 정보 탭에서 이사 옴 (2026-09-04).
-            일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28) */}
-        <div className="memo-area">
-          <h2 className="group-title"><Icon name="note" /> 노트 <span className="section-description">체크 없는 기록</span></h2>
-          <MemoView
-            memos={memos}
-            onDelete={onDeleteMemo}
-            onConvert={onConvertToTask}
-          />
-        </div>
       </div>
     );
   }

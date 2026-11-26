@@ -24,6 +24,7 @@ export default function SearchView({
   onDelete,
   onConvertToNote,
   onDeleteMemo,
+  onToggleMemoDone, // 노트 완료 / 완료 취소 (F11 R12)
   onConvertToTask,
   onOpenDay, // 하루 기록 줄을 눌렀을 때 (날짜)
 }) {
@@ -102,6 +103,7 @@ export default function SearchView({
                     memo={m}
                     onDelete={onDeleteMemo}
                     onConvert={onConvertToTask}
+                    onToggleDone={onToggleMemoDone}
                   />
                 ))}
               </ul>
@@ -168,8 +170,9 @@ function TaskGroup({ title, tasks, onToggle, onDelete, onConvert }) {
   );
 }
 
-/** 노트 한 장 — 메모 탭의 카드와 같은 모양. 누르면 그 자리에 에디터 (R5) */
-function NoteResult({ memo, onDelete, onConvert }) {
+/** 노트 한 장 — 노트 탭의 카드와 같은 모양. 누르면 그 자리에 에디터 (R5).
+ *  완료한 노트도 찾아짐 — "완료" 표시가 붙고, 에디터의 "완료 취소"로 다시 꺼냄 (F11 R12) */
+function NoteResult({ memo, onDelete, onConvert, onToggleDone }) {
   const [editing, setEditing] = useState(false);
   if (editing) {
     return (
@@ -180,6 +183,7 @@ function NoteResult({ memo, onDelete, onConvert }) {
           onClose={() => setEditing(false)}
           onDelete={onDelete}
           onConvert={onConvert}
+          onToggleDone={onToggleDone}
         />
       </li>
     );
@@ -191,7 +195,10 @@ function NoteResult({ memo, onDelete, onConvert }) {
       <button className="memo-card" onClick={() => setEditing(true)}>
         <span className="memo-title">{first || "(빈 노트)"}</span>
         {preview && <span className="memo-preview">{preview}</span>}
-        <span className="memo-date">{dateOnly(memo.updatedAt)}</span>
+        <span className="memo-date">
+          {dateOnly(memo.updatedAt)}
+          {memo.doneAt && " · 완료"}
+        </span>
       </button>
     </li>
   );

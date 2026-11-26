@@ -2,12 +2,12 @@
 // 쏟아붓기 입력창 (F02): 제목 쓰고 Enter만 누르면 추가.
 // 추가 후 입력창은 비워지고 커서는 그대로 → 연속 입력 가능.
 // "도서 반납 (~7/2)"처럼 쓰면 마감일을 자동 인식 (F02 R9)
-// 📅 버튼으로 표기 없이 날짜를 붙일 수도 있음 (F02 R14)
+// 📅 버튼으로 표기 없이 날짜를 붙일 수도 있음 (F02 R14) — 누르면 날짜 고르는 달력이 바로 뜸
 // 종류 토글 [할 일] [📢 일정] (F02 R16): 기본은 할 일. 일정을 고르면 체크 없는
 //   일정(날짜 있는 노트, F11)으로 저장 — 고른 종류는 바꿀 때까지 유지
 // ※ 날짜·우선순위 등을 따로 묻지 않음 — 입력을 느리게 하지 않기 위해 (핵심 원칙!)
 // ------------------------------------------------------------
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "./Icon.jsx";
 import { addTask, addMemo } from "../db.js";
 import { parseQuickInput } from "../parse.js";
@@ -21,6 +21,13 @@ export default function QuickInput() {
   const [showPicker, setShowPicker] = useState(false); // 📅 날짜 선택기 열림?
   const [pickedDate, setPickedDate] = useState(""); // 선택기로 고른 날짜
   const inputRef = useRef(null); // 토글을 눌러도 커서가 입력칸으로 돌아오게
+  const dateRef = useRef(null); // 날짜 칸 — 📅를 누르면 달력을 바로 띄우려고 (R14)
+
+  // 📅를 눌러 날짜 칸이 나타나면, 한 번 더 누를 필요 없이 날짜 고르는 달력을 바로 띄움
+  // (2026-11-26 사용자 요청). showPicker = 브라우저가 가진 "달력 열기" 기능
+  useEffect(() => {
+    if (showPicker) dateRef.current?.showPicker?.();
+  }, [showPicker]);
 
   const isNote = kind === "note";
 
@@ -140,6 +147,7 @@ export default function QuickInput() {
       {showPicker && (
         <div className="quick-date-row">
           <input
+            ref={dateRef}
             type="date"
             aria-label="붙일 날짜"
             value={pickedDate}
