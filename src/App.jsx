@@ -10,6 +10,7 @@ import {
   db,
   toggleDone,
   uncheckTasks,
+  updateTask,
   trashTasks,
   restoreTasks,
   permanentDeleteTasks,
@@ -145,6 +146,13 @@ export default function App() {
     showUndo("trash", [task.id], `"${task.title}"`);
   }
 
+  // 끝낸 메모를 메모판에서만 치우기 (F03 R2c, 2026-11-26) — 지우는 게 아니라 판에서 안 보이게만.
+  // 전체 탭 "완료"와 하루 기록에는 그대로 남음
+  async function handleHideMemo(task) {
+    await updateTask(task.id, { memoHidden: true });
+    setUndo({ type: "hideMemo", id: task.id, label: `"${task.title}"` });
+  }
+
   // 전체 → 휴지통
   async function handleClearAll() {
     const all = tasks ?? [];
@@ -215,6 +223,8 @@ export default function App() {
     if (undo) {
       if (undo.type === "trash") await restoreTasks(undo.ids);
       else if (undo.type === "done") await uncheckTasks(undo.ids);
+      else if (undo.type === "hideMemo")
+        await updateTask(undo.id, { memoHidden: undefined });
       else if (undo.type === "memo") await restoreMemos(undo.memos);
       else if (undo.type === "toNote") await restoreTaskFromNote(undo.task);
       else if (undo.type === "toTask") await restoreNoteFromTask(undo.note);
@@ -398,6 +408,7 @@ export default function App() {
               onToggle={handleToggle}
               onDelete={handleDelete}
               onDeleteMemo={handleDeleteMemo}
+              onHideMemo={handleHideMemo}
               onConvertToNote={handleConvertToNote}
               onConvertToTask={handleConvertToTask}
               onSkipDay={handleSkipDay}
@@ -415,6 +426,8 @@ export default function App() {
             {undo.label}{" "}
             {undo.type === "trash"
               ? "휴지통으로 이동"
+              : undo.type === "hideMemo"
+                ? "메모판에서 치움 (기록은 남아요)"
               : undo.type === "memo"
                 ? "삭제됨"
                 : undo.type === "toNote"
@@ -456,6 +469,7 @@ function TaskView({
   onToggle,
   onDelete,
   onDeleteMemo,
+  onHideMemo, // 끝낸 메모를 메모판에서만 치우기 (F03 R2c)
   onConvertToNote, // 할 일 → 일정 (F11 R9)
   onConvertToTask, // 일정 → 할 일
   onSkipDay, // 기간에서 그 날만 빼기 (F03 R9)
@@ -465,11 +479,12 @@ function TaskView({
   // 스티커 여러 장으로 나눌 수 있음 (F03 R2d) — 빈 상태 안내도 판 안에서
   if (tab === "메모") {
     // 끝낸 메모도 사라지지 않고 체크 표시만 된 채 제자리에 남음 (R2c, 2026-11-19)
+    // — 단, 끝낸 뒤 ✕로 치운 것(memoHidden)은 판에서 뺌 (2026-11-26)
     const undated = tasks.filter(
       (t) =>
         !t.dueDate &&
         !t.soon && // "빨리 하면 좋은 일"은 오늘 탭의 제 칸에 (F03 R13)
-        (!t.done || (t.completedAt ?? "") >= MEMO_DONE_SINCE)
+        (!t.done || (!t.memoHidden && (t.completedAt ?? "") >= MEMO_DONE_SINCE))
     );
     return (
       <div>
@@ -478,6 +493,7 @@ function TaskView({
           boards={boards}
           onToggle={onToggle}
           onDelete={onDelete}
+          onHide={onHideMemo}
         />
         {/* 노트 구역 (F11): 날짜 없는 기록 — 정보 탭에서 이사 옴 (2026-09-04).
             일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28) */}

@@ -53,6 +53,7 @@ type Task = {
   category?: string;                   // 카테고리 (예: "업무", "개인") (선택 — UI는 정리됨, 데이터만 보존)
   board?: string;                      // 메모판 스티커 이름 (날짜 없는 할 일용, 선택 — F03 R2d)
   memoOrder?: number;                  // 메모판 스티커 안에서의 순서 (끌어서 옮겼을 때만 — F03 R2f)
+  memoHidden?: boolean;                // 끝낸 메모를 메모판에서 치움 (지운 게 아님. 체크를 풀면 같이 지워짐 — F03 R2c)
   soon?: boolean;                      // 빨리 하면 좋은 일 (날짜 없는 할 일용 — 오늘 탭의 제 칸에, F03 R13)
   done: boolean;                       // 완료 여부
   completedAt?: string;                // 완료 체크한 시각 (해제하면 제거 — 하루 기록용)

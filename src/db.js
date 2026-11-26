@@ -115,7 +115,8 @@ export async function toggleDone(task) {
   await db.tasks.update(
     task.id,
     task.done
-      ? { done: false, completedAt: undefined } // 해제하면 시각도 제거
+      ? // 해제하면 시각도 제거. 메모판에서 치워 둔 표시도 지움 — 다시 판에 보이게 (F03 R2c)
+        { done: false, completedAt: undefined, memoHidden: undefined }
       : { done: true, completedAt: new Date().toISOString() }
   );
 }
@@ -125,7 +126,7 @@ export async function uncheckTasks(ids) {
   await db.tasks
     .where("id")
     .anyOf(ids)
-    .modify({ done: false, completedAt: undefined });
+    .modify({ done: false, completedAt: undefined, memoHidden: undefined });
 }
 
 // ------------------------------------------------------------

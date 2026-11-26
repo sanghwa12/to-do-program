@@ -9,6 +9,7 @@
 //    다른 스티커에 놓으면 그리로 이동 (R2d) — 놓일 자리는 갈색 줄로 미리 보임
 //  · 스티커 제목 클릭 = 이름 바꾸기, ✕ = 삭제(메모는 기본으로 돌아감)
 //  · 메모 줄의 ✕ = 휴지통으로 (한 번 더 확인 — R7a. 실행취소 가능)
+//    끝낸 메모의 ✕ = 판에서만 치우기 — 지우지 않음, 전체 탭·하루 기록엔 그대로 (2026-11-26)
 // 날짜 붙이기 같은 세부 작업은 "전체" 탭에서.
 // ------------------------------------------------------------
 import { useState } from "react";
@@ -131,7 +132,7 @@ function computeColumns(rows) {
   return cols;
 }
 
-export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
+export default function StickyBoard({ tasks, boards, onToggle, onDelete, onHide }) {
   const [newName, setNewName] = useState("");
   // 끌고 있는 메모를 지금 받을 스티커 이름 (강조용). "" = 기본 스티커, null = 없음
   const [dragOver, setDragOver] = useState(null);
@@ -259,6 +260,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         tasks={tasksOf("")}
         onToggle={onToggle}
         onDelete={onDelete}
+        onHide={onHide}
         highlighted={dragOver === ""}
         dropAt={dropAt}
         solo={solo}
@@ -278,6 +280,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         tasks={tasksOf(n)}
         onToggle={onToggle}
         onDelete={onDelete}
+        onHide={onHide}
         highlighted={dragOver === n}
         dropAt={dropAt}
         solo={solo}
@@ -328,7 +331,7 @@ export default function StickyBoard({ tasks, boards, onToggle, onDelete }) {
         />
       </form>
       <p className="sticky-hint">
-        체크하면 완료 표시(다시 누르면 해제) · ✕로 치우기 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
+        체크하면 완료 표시(다시 누르면 해제) · 끝낸 메모는 ✕로 판에서 치우기(기록은 남음) · 안 끝낸 메모의 ✕는 휴지통 · 글자를 누르면 제목·세부 내용 수정 · 메모를 끌어서 순서
         바꾸기·다른 스티커로 · 스티커는 ⠿를 끌어서 배치
       </p>
     </section>
@@ -342,6 +345,7 @@ function Sticker({
   tasks,
   onToggle,
   onDelete,
+  onHide,
   highlighted,
   dropAt, // 끌고 있는 메모가 놓일 자리 { id, before } (R2f)
   solo,
@@ -443,6 +447,7 @@ function Sticker({
               task={t}
               onToggle={onToggle}
               onDelete={onDelete}
+              onHide={onHide}
               // 이 줄 앞/뒤가 놓일 자리면 "before"/"after" (갈색 줄)
               dropMark={
                 dropAt?.id === t.id ? (dropAt.before ? "before" : "after") : ""
@@ -455,10 +460,10 @@ function Sticker({
   );
 }
 
-// 메모 한 줄: 체크박스 + 글자(클릭하면 그 자리 수정) + ✕(휴지통). 끌 수 있음
+// 메모 한 줄: 체크박스 + 글자(클릭하면 그 자리 수정) + ✕(휴지통 / 끝낸 메모는 판에서 치우기). 끌 수 있음
 // 글자를 클릭하면 제목 칸 아래에 세부 내용 칸(task.memo)이 함께 열림 (2026-09-16)
 // data-id는 끌어다 놓을 때 "어느 줄 근처인지" 찾는 표식 (dropSpot, R2f)
-function StickyItem({ task, onToggle, onDelete, dropMark }) {
+function StickyItem({ task, onToggle, onDelete, onHide, dropMark }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(task.title);
   const [memoText, setMemoText] = useState(task.memo || ""); // 세부 내용
@@ -563,8 +568,18 @@ function StickyItem({ task, onToggle, onDelete, dropMark }) {
           </span>
         )}
       </span>
-      {/* 삭제 (2026-08-11 추가): 휴지통으로 — 한 번 더 확인, 실행취소 가능 */}
-      {confirmDel ? (
+      {/* 끝낸 메모의 ✕ (2026-11-26): 판에서만 치움 — 지우는 게 아니라서 확인 없이 바로 (실행취소 가능).
+          안 끝낸 메모의 ✕ (2026-08-11): 휴지통으로 — 한 번 더 확인, 실행취소 가능 */}
+      {task.done ? (
+        <button
+          className="sticky-del"
+          onClick={() => onHide(task)}
+          aria-label="메모판에서 치우기"
+          title="메모판에서 치우기 (지우지 않아요 — 전체 탭·하루 기록엔 남음)"
+        >
+          <Icon name="close" />
+        </button>
+      ) : confirmDel ? (
         <span className="danger-confirm small">
           <button className="delete" onClick={() => onDelete(task)}>
             삭제
