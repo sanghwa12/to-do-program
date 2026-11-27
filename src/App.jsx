@@ -419,7 +419,9 @@ export default function App() {
           </nav>
 
           <div className="layout-main">
-          <QuickInput />
+          {/* 노트 탭에서는 할 일·일정 입력칸을 숨김 (2026-11-27 사용자 요청) —
+              노트 탭엔 노트 입력줄이 따로 있어서 입력칸이 둘이면 헷갈림 */}
+          {tab !== "노트" && <QuickInput />}
 
           {/* F02 R12: 여러 줄 붙여넣기 (⋯ 메뉴 > 가져오기 에서 엶) */}
           <ImportBox open={showImport} onClose={() => setShowImport(false)} />
@@ -552,14 +554,12 @@ function TaskView({
   // 일정(날짜 있는 노트)은 달력·오늘 탭에서 보고 고침 (2026-09-28)
   if (tab === "노트") {
     return (
-      <div className="note-tab">
-        <MemoView
-          memos={memos}
-          onDelete={onDeleteMemo}
-          onConvert={onConvertToTask}
-          onToggleDone={onToggleMemoDone}
-        />
-      </div>
+      <MemoView
+        memos={memos}
+        onDelete={onDeleteMemo}
+        onConvert={onConvertToTask}
+        onToggleDone={onToggleMemoDone}
+      />
     );
   }
 

@@ -1060,9 +1060,6 @@ button.delete {
 
 /* 메모장 (F11) */
 /* 노트 탭: 맨 위 입력칸과 노트 입력줄 사이를 띄움 */
-.note-tab {
-  margin-top: 20px;
-}
 .memo-new {
   margin: 14px 0 10px;
   padding: 8px 14px;
